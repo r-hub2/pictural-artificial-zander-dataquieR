@@ -1,0 +1,12 @@
+---
+title: "dataquieR"
+output: "rmarkdown::html_vignette"
+vignette: >
+  %\VignetteIndexEntry{dataquieR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+[Please refer to our website: https://dataquality.qihs.uni-greifswald.de/](https://dataquality.qihs.uni-greifswald.de/).
+

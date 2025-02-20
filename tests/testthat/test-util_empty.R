@@ -1,0 +1,11 @@
+test_that("util_empty works", {
+  skip_on_cran()
+  expect_identical(util_empty(c()), logical(0))
+  expect_identical(util_empty(c()), logical(0))
+  expect_identical(util_empty(c("", "k")), c(TRUE, FALSE))
+  expect_identical(util_empty(c("", "k", NA)), c(TRUE, FALSE, TRUE))
+  expect_identical(util_empty(NA), TRUE)
+  expect_identical(util_empty(Inf), FALSE)
+  expect_identical(util_empty(NaN), TRUE)
+  expect_identical(util_empty(0), FALSE)
+})
