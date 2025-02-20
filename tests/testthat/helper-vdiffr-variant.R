@@ -45,5 +45,7 @@ if (requireNamespace("vdiffr", quietly = TRUE) &&
                           }
                         })
   }
-  environment(expect_doppelganger2) <- asNamespace("vdiffr")
+  if (requireNamespace("vdiffr", quietly = TRUE)) {
+    environment(expect_doppelganger2) <- asNamespace("vdiffr")
+  }
 }
