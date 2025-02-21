@@ -1,5 +1,7 @@
 # dataquieR (development version)
 
+# dataquieR 2.5.0
+
 ## New features 
   * improved support for categorical variables, including: 
      * time trends w/ and w/o grouping variable

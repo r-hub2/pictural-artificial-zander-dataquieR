@@ -130,7 +130,7 @@ and trusting our files loaded from
 
 ## Funding – see also [here](https://dataquality.qihs.uni-greifswald.de/Contact.html)
 
-- [German Research Foundation](https://www.dfg.de/) (DFG:
+- German Research Foundation (`https://www.dfg.de/`) (DFG:
   `SCHM 2744/3–1` – initial concept and dataquieR development,
   `SCHM 2744/9-1` – `NFDI` Task Force `COVID-19` use case application;
   `SCHM 2744/3-4` – concept extensions, ongoing )
@@ -146,6 +146,6 @@ and trusting our files loaded from
   Data](https://www.nfdi4health.de/en/): `NFDI 13/1` – extension based
   on revised metadata concept, ongoing.
 
-- [German National Cohort (NAKO Gesundheitsstudie)
-  NAKO](https://nako.de/): `BMBF` (`https://www.bmbf.de/`): `01ER1301A`
-  and `01ER1801A`
+- German National Cohort (NAKO Gesundheitsstudie) NAKO
+  (`https://nako.de/`): `BMBF` (`https://www.bmbf.de/`): `01ER1301A` and
+  `01ER1801A`

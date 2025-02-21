@@ -1,6 +1,6 @@
 Package: dataquieR
 Title: Data Quality in Epidemiological Research
-Version: 2.5.0
+Version: 2.5.0.9003
 Authors@R: 
     c(person(given = "University Medicine Greifswald",
              role = "cph"),
@@ -84,7 +84,7 @@ Config/testthat/start-first: dq_report_by_sm, dq_report2,
         util_correct_variable_use
 BuildManual: TRUE
 NeedsCompilation: no
-Packaged: 2025-02-20 14:52:06 UTC; struckmanns
+Packaged: 2025-02-21 18:28:10 UTC; struckmanns
 Author: University Medicine Greifswald [cph],
   Elisa Kasbohm [aut] (<https://orcid.org/0000-0001-5261-538X>),
   Joany Marino [aut] (<https://orcid.org/0000-0002-4657-3758>),

@@ -160,7 +160,7 @@ util_acc_loess_bin <- function(
       n_prior - n_post, " observations were excluded",
       ifelse(nchar(msg) > 0, " additionally.", "."))
   }
-  if (nchar(msg) > 0) {
+  if (!is.null(msg) && nchar(msg) > 0) {
     util_message(trimws(msg),
                  applicability_problem = FALSE)
   }
