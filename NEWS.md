@@ -1,8 +1,15 @@
 # dataquieR (development version)
 
+* News
+  * properly deprecated the argument `threshold_value` from `acc_varcomp()`
+
+* Amendment to 2.5.0 news
+  * deprecated (and accidentally removed already) the argument `threshold_value`
+    from `acc_varcomp()`
+
 # dataquieR 2.5.0
 
-## New features 
+* New features 
   * improved support for categorical variables, including: 
      * time trends w/ and w/o grouping variable
      * observer/device effects
@@ -49,7 +56,7 @@
     where it is possible to state variables to be computed from the provided 
     study data.
     
-## Breaking changes 
+* Breaking changes 
   * moved example data from the package to our website. If you are
     already using `prep_get_data_frame("ship")` or 
     `prep_get_data_frame("study_data")` in your code to access example data,
@@ -81,7 +88,7 @@
      * in `prep_add_computed_variables`, the column `resp_vars` is now named 
        `VAR_NAMES`, to be more in line with other data frames.
   
-## Reporting 
+* Reporting 
   * improved button to export Excel, pdf, and print (colors supported)
   * improved rendering time introducing thumbnails as first visible result in 
     the report. Clicking on the image, the thumbnail is replaced by `plotly`'s 
@@ -101,7 +108,7 @@
     You have to call `print()` or to put `lapply()` in brackets:
     `(lapply())`
 
-## (Indicator) Functions related 
+* (Indicator) Functions related 
   * `acc_distributions()` was split in `acc_distributions()` and
     `acc_distributions_ecdf()` 
     (`prep_acc_distributions_with_ecdf()` creates the original plot)
@@ -129,7 +136,7 @@
   * `acc_loess()` uses `lowess` instead of `loess` (both from the `stats` 
     package)   
 
-## General
+* General
   * test coverage increased, again
   * fixed bug in `prep_check_for_dataquieR_updates()`, so, maybe, you need to
     manually install the latest beta release using 
