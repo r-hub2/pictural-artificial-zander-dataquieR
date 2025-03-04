@@ -283,7 +283,7 @@ con_contradictions_redcap <- function(study_data,
 
     cls_rx <- NULL
     rm("cls_rx")
-    makeActiveBinding("cls_rx", util_make_cls_binding(rx,
+    makeActiveBinding("cls_rx", util_make_cls_binding(rx,##
                                                       meta_data = meta_data),
                       environment())
 
@@ -499,7 +499,7 @@ con_contradictions_redcap <- function(study_data,
 
     cls_summary_df2 <- NULL
     rm("cls_summary_df2")
-    makeActiveBinding("cls_summary_df2", util_make_cls_binding(summary_df2,
+    makeActiveBinding("cls_summary_df2", util_make_cls_binding(summary_df2,####
                                                                meta_data =
                                                                  meta_data),
                       environment())

@@ -11,7 +11,7 @@
 #' @family summary_functions
 #' @export
 prep_render_pie_chart_from_summaryclasses_plotly <- function(data, # FIXME: If use_plotly is FALSE?
-                                                      meta_data = "item_level") {
+                                                      meta_data = "item_level") { # https://plotly.com/r/sunburst-charts/
 # FIXME: Amend prep_render_pie_chart_from_summaryclasses_ggplot2 to handle this also.
   te <- topenv(parent.frame(1)) # see https://stackoverflow.com/a/27870803
   if (!(isNamespace(te) && getNamespaceName(te) == "dataquieR")) {

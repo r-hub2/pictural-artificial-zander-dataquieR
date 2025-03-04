@@ -7,8 +7,8 @@
 #'
 #' @return [data.frame] modified study data
 #' @keywords internal
-util_adjust_data_type <- function(study_data, # TODO: Use maybe readr::type_convert
-                                  meta_data,
+util_adjust_data_type <- function(study_data,
+                                  meta_data, # TODO: Use maybe readr::type_convert
                                   relevant_vars_for_warnings) {
   # prevent repeated data type checks if adjusted previously
   if (!isTRUE(attr(study_data, "Data_type_matches"))) {
