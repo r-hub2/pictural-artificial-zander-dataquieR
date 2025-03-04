@@ -27,6 +27,8 @@ This package features the following \code{options()}:
 \item \link{dataquieR.WARNINGS_WITH_CALLER}
 \item \link{dataquieR.acc_loess.exclude_constant_subgroups}
 \item \link{dataquieR.acc_loess.mark_time_points}
+\item \link{dataquieR.acc_loess.min_bw}
+\item \link{dataquieR.acc_loess.min_proportion}
 \item \link{dataquieR.acc_loess.plot_format}
 \item \link{dataquieR.acc_loess.plot_observations}
 \item \link{dataquieR.acc_margins_num}
@@ -84,6 +86,8 @@ Other options:
 \code{\link{dataquieR.WARNINGS_WITH_CALLER}},
 \code{\link{dataquieR.acc_loess.exclude_constant_subgroups}},
 \code{\link{dataquieR.acc_loess.mark_time_points}},
+\code{\link{dataquieR.acc_loess.min_bw}},
+\code{\link{dataquieR.acc_loess.min_proportion}},
 \code{\link{dataquieR.acc_loess.plot_format}},
 \code{\link{dataquieR.acc_loess.plot_observations}},
 \code{\link{dataquieR.acc_margins_num}},
