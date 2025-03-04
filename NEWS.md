@@ -1,7 +1,11 @@
-# dataquieR (development version)
+# dataquieR 2.5.0.9008
 
 * News
+  * fixed a bug found by latest R-developer-version caused by parentheses in 
+    the wrong position in encapsulated function calls. this did not cause any 
+    harm, but was nevertheless a bug.
   * properly deprecated the argument `threshold_value` from `acc_varcomp()`
+  * `loess` and margins plot slightly improved
 
 * Amendment to 2.5.0 news
   * deprecated (and accidentally removed already) the argument `threshold_value`

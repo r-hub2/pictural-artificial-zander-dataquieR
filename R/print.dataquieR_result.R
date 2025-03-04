@@ -395,7 +395,7 @@ print.master_result <- function(x, ...) {
 #'
 #' @return calls the next print method
 #' @export
-print.Slot <- function(x, ...) { # TODO: STS: See also withVisible
+print.Slot <- function(x, ...) {
   if (any(inherits(x, c("Other", "ReportSummaryTable")))) {
     return(NextMethod())
   }
