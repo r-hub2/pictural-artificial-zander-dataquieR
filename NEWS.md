@@ -1,4 +1,4 @@
-# dataquieR 2.5.0.9008
+# dataquieR 2.5.1
 
 * News
   * fixed a bug found by latest R-developer-version caused by parentheses in 
