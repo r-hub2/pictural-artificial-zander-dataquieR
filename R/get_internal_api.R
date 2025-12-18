@@ -8,7 +8,7 @@
 #' @return an API object
 #' @export
 #'
-#' @keywords internal
+#' @noRd
 .get_internal_api <- function(fkt, version = API_VERSION, or_newer = TRUE) {
   # TODO: more life-cycle stuff, also for deprecation
   version <- try(as.package_version(version), silent = TRUE)
@@ -43,7 +43,7 @@
 
 #' Version of the API
 #'
-#' @seealso [.get_internal_api()]
+#' @seealso `.get_internal_api()`
 #'
 #' @export
 #' @keywords internal

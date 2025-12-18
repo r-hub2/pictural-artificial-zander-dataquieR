@@ -6,7 +6,7 @@
 #'
 #' @family system_functions
 #' @concept process
-#' @keywords internal
+#' @noRd
 util_detect_cores <- function() {
   if (requireNamespace("parallelly", quietly = TRUE)) {
     return(parallelly::availableCores())

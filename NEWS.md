@@ -1,3 +1,99 @@
+# dataquieR 2.5.1.9014
+
+* bug fixes with new `S7` rendering
+* fixed handling of `options()`
+* disable `plotly` in `dq_report_by`, if not installed rather than stopping
+  with the proposal to install `plotly`.
+* test coverage improved
+* added a forgotten check for the suggested `rvest` package being installed
+* some tests skipped, if certain suggested packages are missing
+
+# dataquieR 2.5.1.9013
+
+* bug fixes in rendering of metadata pages
+* improved test coverage
+* internal documentation reduced to reduce package size
+
+# dataquieR 2.5.1.9012
+
+* improved memory performance, many other features (CAVEAT: May
+  Imply Breaking Changes for You):
+  * `ggplot2` objects are now returned as a special promise to avoid to 
+    serialize huge `S7` classes, which was discouraged for the old `S3` classed
+    `ggplot2` objects already. This means, sometimes, you may need to 
+    materialize these promises before using them with the new function
+    `prep_realize_ggplot(p)`. This is because `S7` generics can dispatch also 
+    on other arguments but the first, and `dataquieR`'s `dq_lazy_ggplot` class
+    is a classic`S3` class. If you are unsure and you are processing plots
+    created by `dataquieR` further, simply apply `prep_realize_ggplot()` to any
+    of them, it won't hurt.
+  * If you still observer RAM shortages during the rendering process, you can
+    disable an `S7` compatibility layer (`S7` always uses more memory), so
+    will need `prep_realize_ggplot()` more frequently. This can be achieved by
+    setting the `options(dataquieR.lazy_plots_gg_compatibility = "FALSE")`.
+
+# dataquieR 2.5.1.9011
+
+* if you are using plots from `dataquieR` downstream, these are now not
+  `ggplot2` any more, they are rather `dq_lazy_ggplot`. to avoid huge RAM
+  consumption. Usually, this class should transparently be converted to
+  `ggplot2`, but they can, e.g., not be right operand of a `patchwork` operator,
+  if the left operand is not also of class `dq_lazy_ggplot`. 
+  Use `prep_realize_ggplot()` explicitly, instead.
+* only one theoretical "bug" fixed. almost identical to `2.5.1.9010`
+* if you have updated `ggplot2` / `patchwork` and saved report-objects
+  don't work any more. Use 
+  `remotes::install_version("patchwork", version = "1.3.0");` and
+  `remotes::install_version("ggplot2", version = "3.5.1")` to downgrade these
+  packages, if you need to use the old saved report objects. Otherwise,
+  compute them again with the new versions.
+* removed the indicator `PCT_acc_ud_loc` from `acc_margins()` and from the 
+  `grading_rulesets` file
+* added new complex limits implementation. The limits can be indicated in 
+  `cross-item_level` metadata under new columns: `HARD_LIMITS`, 
+  `SOFT_LIMITS`, and `DETECTION_LIMITS`. If both complex limits and limits from 
+  `item_level` metadata are available for a variables, only complex limits are 
+  used. 
+* added careless responding measures that are displayed in a new menu (`Scales`).
+  The implemented measures are: maximum long string, missing responses per 
+  participant, `intra-individual` response variability, total response time,
+  response time per item, relative completion speed, and `Mahalanobis` distance.
+  
+# dataquieR 2.5.1.9010
+
+* Breaking changes
+  * inside `SummaryTable` of `des_summary` the column "No. categories/Freq. table"
+    is now split in 2 columns: `"No. categories (incl.NAs)"`, "Level_freq".
+    The new column "Level_freq" contains the levels and their frequency and are
+    separated by a pipe symbol
+  * inside `SummaryTable` the column "Variables" has been renamed "Variable_names";
+    the content of "Variables" is not inside the "plain_label" attribute
+  * removed experimental function `prep_init_parallel_print()` -- not needed
+    any more.
+  * factors are not converted to integers any more, if they have a numerical
+    data type, they are converted to `character`, first. can be controlled using
+    the new `option()` `dataquieR.old_factor_handling`
+* parallel rendering works
+* reduced `RAM` demands
+* fixed and improved `JavaScript` functions for handling results
+* correlation plots now without `GGally`
+* improved `des_summary` functions, including: 
+  * cleaned, reorganized, and improve robustness of code
+  * modified content of column "Valid", now there is only a space between N and %
+* added new indicator `inadmissible data format`
+* now the function `con_inadmissible_categorical` applies to all 
+  variable roles(intro, primary, secondary, and process)
+* removed indicator metric `FLG_acc_ud_loc` from `acc_margins`
+* Proper, consistent date/time parsing
+* control visibility of unused levels in heatmaps
+* improved thumbnail handling
+* improved table variable-columns
+* more robust rendering
+* bug fixes
+* improved error detection for inadmissible values in group-vars, if these have
+  `VALUE_LABELS` but are not subject to full checks that would include
+  `con_inadmissible_categorical()`
+
 # dataquieR 2.5.1
 
 * News
