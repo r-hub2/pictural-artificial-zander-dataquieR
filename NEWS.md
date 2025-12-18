@@ -1,3 +1,10 @@
+# dataquieR 2.5.1.9015
+
+* removed plain copy of `jsPDF` HTML dependency form the package in favor of
+  adding the package `visNetwork` to the suggested packages. Unfortunately,
+  this copy of the `JS` library is a bit outdated, but we save 356K of 
+  installed package size, now.
+
 # dataquieR 2.5.1.9014
 
 * bug fixes with new `S7` rendering

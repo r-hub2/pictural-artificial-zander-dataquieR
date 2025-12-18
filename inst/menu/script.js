@@ -247,15 +247,26 @@ function PlotlyIconsprinter() {
 }
 
 downloadPlotlyAsPDF = function(gd, options = {}) {
-  const { jsPDF } = window.jspdf;
+  // jsPDF aus globalen Namespace holen (1.3.2 UND 2.x unterstützen)
+  const jsPDF = window.jsPDF || (window.jspdf && window.jspdf.jsPDF);
+  if (!jsPDF) {
+    console.error("jsPDF not found on window");
+    alert("PDF export is not available (jsPDF not loaded). dataquieR needs the package visNetwork for this feature.");
+    return;
+  }
 
   const orientation = options.orientation || "landscape";
   const dpi = options.dpi || 300;
+
   let nm = $("#nm");
-  if (nm.length == 1) {
-    nm = $("#nm").data("nm");
+  if (nm.length === 1) {
+    nm = nm.data("nm");
   } else {
-    nm = location.pathname.split('/').reverse()[0].replace(/^FIG_/, "").replace(/\.html$/, "")
+    nm = location.pathname
+      .split("/")
+      .reverse()[0]
+      .replace(/^FIG_/, "")
+      .replace(/\.html$/, "");
   }
 
   let filename = options.filename || nm || "plot.pdf";
@@ -263,10 +274,11 @@ downloadPlotlyAsPDF = function(gd, options = {}) {
     filename += ".pdf";
   }
 
+  // A4 in Inch
   const a4in = orientation === "landscape" ? [11.69, 8.27] : [8.27, 11.69];
-  const widthPx = Math.round(a4in[0] * dpi);
+  const widthPx  = Math.round(a4in[0] * dpi);
   const heightPx = Math.round(a4in[1] * dpi);
-  const widthPt = a4in[0] * 72;
+  const widthPt  = a4in[0] * 72;
   const heightPt = a4in[1] * 72;
 
   // Optional: upscale fonts just for export
@@ -289,20 +301,27 @@ downloadPlotlyAsPDF = function(gd, options = {}) {
       return;
     }
 
-    const pdf = new jsPDF({
-      orientation: orientation,
-      unit: "pt",
-      format: [widthPt, heightPt]
-    });
+    // jsPDF 1.3.2: typischer Aufruf ist (orientation, unit, format)
+    // orientation: 'p' oder 'l'
+    const pdfOrientation = orientation === "landscape" ? "l" : "p";
+    const pdf = new jsPDF(pdfOrientation, "pt", [widthPt, heightPt]);
 
     const margin = 20;
-    pdf.addImage(dataUrl, "PNG", margin, margin, widthPt - 2 * margin, heightPt - 2 * margin);
+    pdf.addImage(
+      dataUrl,
+      "PNG",
+      margin,
+      margin,
+      widthPt - 2 * margin,
+      heightPt - 2 * margin
+    );
     pdf.save(filename);
   }).catch(function(err) {
     console.error("Plotly.toImage failed:", err);
     alert("Could not export to PDF.");
   });
 };
+
 
 
 
