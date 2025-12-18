@@ -10,12 +10,12 @@
 util_detect_cores <- function() {
   if (requireNamespace("parallelly", quietly = TRUE)) {
     return(parallelly::availableCores())
-  } else if (requireNamespace("rJava", quietly = TRUE)) {
-    rJava::.jinit()
-    rt <- rJava::.jcall("java/lang/Runtime", "Ljava/lang/Runtime;",
-                        method = "getRuntime")
-    cpus <- rJava::.jcall(rt, "I", "availableProcessors")
-    return(cpus)
+  # } else if (requireNamespace("rJava", quietly = TRUE)) {
+  #   rJava::.jinit()
+  #   rt <- rJava::.jcall("java/lang/Runtime", "Ljava/lang/Runtime;",
+  #                       method = "getRuntime")
+  #   cpus <- rJava::.jcall(rt, "I", "availableProcessors")
+  #  return(cpus)
   } else if (requireNamespace("parallel", quietly = TRUE)) {
     r <- parallel::detectCores()
     if (length(r) != 1 || is.na(r) || !util_is_integer(r) || r < 1) {
