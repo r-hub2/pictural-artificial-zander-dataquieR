@@ -1,3 +1,11 @@
+# dataquieR 2.5.1.9017
+
+* Typos in docuemntation
+
+# dataquieR 2.5.1.9016
+
+* improved tests and documentation
+
 # dataquieR 2.5.1.9015
 
 * removed plain copy of `jsPDF` HTML dependency form the package in favor of

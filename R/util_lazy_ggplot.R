@@ -239,8 +239,8 @@ util_realize_if_lazy <- function(x) { # nolint
 #' }
 #'
 #' @seealso \code{\link[ggplot2]{ggplotGrob}},
-#'   \code{\link[plotly]{ggplotly}},
-#'   \code{\link[plotly]{plotly_build}}
+#'   \code{plotly::ggplotly}
+#'   \code{plotly::plotly_build}
 #'
 #' @name dq_lazy_ggplot_methods
 NULL

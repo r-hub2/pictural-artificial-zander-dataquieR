@@ -44,6 +44,6 @@ generic.
 }
 \seealso{
 \code{\link[ggplot2]{ggplotGrob}},
-\code{\link[plotly]{ggplotly}},
-\code{\link[plotly]{plotly_build}}
+\code{plotly::ggplotly}
+\code{plotly::plotly_build}
 }

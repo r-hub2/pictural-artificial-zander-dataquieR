@@ -3,6 +3,8 @@ test_that("util_parallel_futures works", {
   #                   message = "Crashes, if instrumented")
   skip_on_cran() # slow, parallel, ...
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
+  skip_if_not_installed("future")
+  skip_if_not_installed("stringdist")
   prep_load_workbook_like_file("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx")
 
   study_data <- head(prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE), 100)

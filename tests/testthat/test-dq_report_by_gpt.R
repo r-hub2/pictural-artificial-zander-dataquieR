@@ -1,4 +1,5 @@
 test_that("default behavior returns list of resultsets", {
+  skip_if_not_installed("stringdist")
   study_data <- data.frame(id = 1:4,
                            CENTER = c("A", "A", "B", "B"),
                            val1 = c(1, NA, 3, 4),
@@ -21,6 +22,7 @@ test_that("default behavior returns list of resultsets", {
 })
 
 test_that("segment_column = NULL returns flat structure", {
+  skip_if_not_installed("stringdist")
   study_data <- data.frame(id = 1:4,
                            CENTER = c("A", "A", "B", "B"),
                            val1 = c(1, NA, 3, 4),
@@ -100,6 +102,7 @@ test_that("also_print writes html files and returns a result list", {
 })
 
 test_that("missing label_col is handled gracefully", {
+  skip_if_not_installed("stringdist")
   study_data <- data.frame(id = 1:4,
                            CENTER = c("A", "A", "B", "B"),
                            val1 = c(1, NA, 3, 4),

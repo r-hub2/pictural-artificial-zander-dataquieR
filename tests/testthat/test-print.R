@@ -176,6 +176,7 @@ test_that("class ReportSummaryTable", {
   }
   expect_warning(fkt2(item_miss_emtpy$ReportSummaryTable,
        size_max = 42000, size_min = 0), regexp = "Empty result")
+  skip_if_not_installed("DT")
   fkt2(item_miss_combined, size_min = 50000,
        size_max = 80000)
   fkt2(item_missa$ReportSummaryTable, size_min = 40000,
@@ -250,6 +251,7 @@ test_that("print.ReportSummaryTable works when called within the pipeline with d
   skip_on_cran() # slow test
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
   skip_if_not_installed("stringdist")
+  skip_if_not_installed("DT")
   meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData")
   study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE)
   md0 <- meta_data
