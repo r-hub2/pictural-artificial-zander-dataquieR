@@ -1,6 +1,6 @@
 Package: dataquieR
 Title: Data Quality in Epidemiological Research
-Version: 2.5.1.9017
+Version: 2.8.1
 Authors@R: 
     c(person(given = "University Medicine Greifswald",
              role = "cph"),
@@ -84,7 +84,7 @@ Config/testthat/start-first: dq_report_by_sm, dq_report2,
         com_segment_missingness, util_correct_variable_use
 BuildManual: TRUE
 NeedsCompilation: no
-Packaged: 2025-12-19 10:44:19 UTC; struckmanns
+Packaged: 2025-12-22 14:51:43 UTC; struckmanns
 Author: University Medicine Greifswald [cph],
   Elisa Kasbohm [aut] (ORCID: <https://orcid.org/0000-0001-5261-538X>),
   Elena Salogni [aut] (ORCID: <https://orcid.org/0009-0007-3767-7145>),

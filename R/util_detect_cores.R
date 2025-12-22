@@ -28,8 +28,8 @@ util_detect_cores <- function() {
                    "using default of 1 core only."),
                  util_pretty_vector_string(c(
                    "parallel",
-                   "parallelly",
-                   "rJava")))
+                   "parallelly")))#,
+                   #"rJava")))
     return(1)
   }
 }

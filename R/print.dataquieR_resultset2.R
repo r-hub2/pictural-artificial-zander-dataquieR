@@ -61,6 +61,7 @@ print.dataquieR_resultset2 <- function(
           util_warning(
             "Internal problem: %s should be an integer below %s in the context of %s",
             sQuote("cores"), dQuote("3"), sQuote("testthat"))
+          cores <- 2
       }
     }
   }
