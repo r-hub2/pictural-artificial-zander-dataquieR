@@ -253,9 +253,9 @@ util_evaluate_calls <-
         parexp(".exp")
         par_eval_q(eval(.exp))
       } else {
-        if (!is.null(parallel::getDefaultCluster())) {
+        suppressWarnings(suppressMessages(try({
           parlib(utils::packageName())
-        }
+        }, silent = TRUE)))
       }
       parloadNS("hms")
 

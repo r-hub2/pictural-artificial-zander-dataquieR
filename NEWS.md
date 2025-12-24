@@ -1,3 +1,11 @@
+# dataquieR 2.8.3
+
+* Fixed a bug causing reports to be incomplete.
+
+# dataquieR 2.8.2
+
+* disabled slow tests
+
 # dataquieR 2.8.1
 
 * small fixes

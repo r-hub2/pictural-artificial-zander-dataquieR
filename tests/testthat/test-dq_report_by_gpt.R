@@ -1,4 +1,5 @@
 test_that("default behavior returns list of resultsets", {
+  skip_on_cran() # slow
   skip_if_not_installed("stringdist")
   study_data <- data.frame(id = 1:4,
                            CENTER = c("A", "A", "B", "B"),
@@ -22,6 +23,7 @@ test_that("default behavior returns list of resultsets", {
 })
 
 test_that("segment_column = NULL returns flat structure", {
+  skip_on_cran() # slow
   skip_if_not_installed("stringdist")
   study_data <- data.frame(id = 1:4,
                            CENTER = c("A", "A", "B", "B"),
@@ -42,6 +44,8 @@ test_that("segment_column = NULL returns flat structure", {
 })
 
 test_that("disable_plotly disables plotly in HTML output", {
+  skip_on_cran() # slow
+
   skip_if_not_installed("DT")
 
   study_data <- data.frame(id = 1:4,
@@ -77,6 +81,8 @@ test_that("disable_plotly disables plotly in HTML output", {
 })
 
 test_that("also_print writes html files and returns a result list", {
+  skip_on_cran() # slow
+
   skip_if_not_installed("DT")
   study_data <- data.frame(id = 1:4,
                            CENTER = c("A", "A", "B", "B"),
@@ -102,6 +108,8 @@ test_that("also_print writes html files and returns a result list", {
 })
 
 test_that("missing label_col is handled gracefully", {
+  skip_on_cran() # slow
+
   skip_if_not_installed("stringdist")
   study_data <- data.frame(id = 1:4,
                            CENTER = c("A", "A", "B", "B"),
