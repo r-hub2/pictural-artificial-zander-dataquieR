@@ -287,7 +287,7 @@ try({
     dev_package <- FALSE
   }
 
-  if (dev_package && !is.null(parallel::getDefaultCluster())) {
+  if (dev_package) {
     roxygenise_call <- 0
     called_from_rogygen <- FALSE
     while (!is.null(cl <- rlang::caller_call(roxygenise_call)) &&

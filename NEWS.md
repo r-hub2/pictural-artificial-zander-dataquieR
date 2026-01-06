@@ -1,3 +1,8 @@
+# dataquieR 2.8.5
+
+* Improved `css` in output
+* Smaller package
+
 # dataquieR 2.8.4
 
 * Added regression test based on the bug fixed in version `2.8.3`.
