@@ -1,3 +1,8 @@
+# dataquieR 2.8.6
+
+* Fixed race-condition with `JavaScript` and `css` in output
+* Fix in build-pipeline not affecting end-users
+
 # dataquieR 2.8.5
 
 * Improved `css` in output
