@@ -1,3 +1,10 @@
+# dataquieR 2.8.7
+
+* Fixed a bug in generated `JavaScript` containing variable labels with
+  quotes
+* Fixed a bug in rendering, if some of the variables from the study data
+  that are not covered in the metadata
+
 # dataquieR 2.8.6
 
 * Fixed race-condition with `JavaScript` and `css` in output
