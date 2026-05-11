@@ -1,3 +1,7 @@
+# dataquieR 2.8.9
+
+* Try to avoid spurious CRAN `winbuilder` fails.
+
 # dataquieR 2.8.8
 
 * Removed the dependency on the archived `MultinomialCI` package. Confidence
