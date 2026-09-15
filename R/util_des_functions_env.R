@@ -19,8 +19,7 @@ util_des_functions_env <- new.env(parent = emptyenv())
 util_des_functions_env$util_compute_median_cat <- function(x) {
   levs <- levels(x)
   m <- median(as.integer(x), na.rm = TRUE)
-  if(floor(m) != m)
-  {
+  if (floor(m) != m) {
     util_message("Median is between two values; using the first one")
     m <- floor(m)
   }
@@ -37,15 +36,17 @@ util_des_functions_env$util_compute_median_cat <- function(x) {
 #' @noRd
 util_des_functions_env$util_compute_mode_cat <- function(x) {
   x <- x[!is.na(x)]
-  mode_value <-  unique(x)[tabulate(match(x, unique(x))) ==
-                             max(tabulate(match(x, unique(x))))]
+  mode_value <- unique(x)[tabulate(match(x, unique(x))) ==
+      max(tabulate(match(x, unique(x))))]
   if (length(mode_value) > 3) {
     l1 <- length(mode_value) - 3
-    mode_value <- paste0(paste(c(head(mode_value, 3)), collapse = " "),
-                         " and other ",
-                         l1, " categories")
+    mode_value <- paste0(
+      paste(c(head(mode_value, 3)), collapse = " "),
+      " and other ",
+      l1, " categories"
+    )
   } else if (length(mode_value) > 1 && length(mode_value) < 4) {
-    mode_value <- paste(mode_value,collapse = " ")
+    mode_value <- paste(mode_value, collapse = " ")
   }
   mode_value <- format(mode_value)
   return(mode_value)
@@ -59,22 +60,24 @@ util_des_functions_env$util_compute_mode_cat <- function(x) {
 #'
 #' @return the mode
 #' @noRd
-util_des_functions_env$util_compute_mode_contin<- function(x) {
+util_des_functions_env$util_compute_mode_contin <- function(x) {
   x <- x[!is.na(x)]
-  mode_value <-  unique(x)[tabulate(match(x, unique(x))) ==
-                             max(tabulate(match(x, unique(x))))]
-  if(length(mode_value)==1) {
+  mode_value <- unique(x)[tabulate(match(x, unique(x))) ==
+      max(tabulate(match(x, unique(x))))]
+  if (length(mode_value) == 1) {
     r <- format(mode_value)
-  } else  if(length(mode_value)==2) {
-    mode_value <- paste(mode_value,collapse = " ")
+  } else if (length(mode_value) == 2) {
+    mode_value <- paste(mode_value, collapse = " ")
     r <- format(mode_value)
-  } else if (length(mode_value)>2) {
+  } else if (length(mode_value) > 2) {
     n_mode <- length(mode_value)
     mode_value <- mode_value[1:2]
     n_mode_removed <- n_mode - length(mode_value)
-    mode_value <- paste(mode_value,collapse = " ")
-    r <- paste0(format(mode_value), " and other ",
-                n_mode_removed ," values")
+    mode_value <- paste(mode_value, collapse = " ")
+    r <- paste0(
+      format(mode_value), " and other ",
+      n_mode_removed, " values"
+    )
   }
   return(r)
 }
@@ -89,22 +92,24 @@ util_des_functions_env$util_compute_mode_contin<- function(x) {
 #' @noRd
 util_des_functions_env$util_compute_mode_datetime <- function(x) {
   x <- x[!is.na(x)]
-  mode_value <-  unique(x)[tabulate(match(x, unique(x))) ==
-                             max(tabulate(match(x, unique(x))))]
-  if(length(mode_value)==1) {
+  mode_value <- unique(x)[tabulate(match(x, unique(x))) ==
+      max(tabulate(match(x, unique(x))))]
+  if (length(mode_value) == 1) {
     r <- format(mode_value, usetz = TRUE)
-  } else if(length(mode_value)==2) {
+  } else if (length(mode_value) == 2) {
     mode_value <- format(mode_value, usetz = TRUE)
-    mode_value <- paste(mode_value,collapse = " ")
+    mode_value <- paste(mode_value, collapse = " ")
     r <- format(mode_value, usetz = TRUE)
-  } else if (length(mode_value)>2) {
+  } else if (length(mode_value) > 2) {
     mode_value <- format(mode_value, usetz = TRUE)
     n_mode <- length(mode_value)
-    mode_value<- mode_value[1]
+    mode_value <- mode_value[1]
     n_mode_removed <- n_mode - length(mode_value)
-    mode_value <- paste(mode_value,collapse = " ")
-    r <- paste0(format(mode_value, usetz = TRUE), " and other ",
-                n_mode_removed ," dates")
+    mode_value <- paste(mode_value, collapse = " ")
+    r <- paste0(
+      format(mode_value, usetz = TRUE), " and other ",
+      n_mode_removed, " dates"
+    )
   }
   return(r)
 }
@@ -124,17 +129,21 @@ util_des_functions_env$util_compute_mode_datetime <- function(x) {
 #'  a list containing the  and a string containing Q1 and Q3
 #' @noRd
 util_des_functions_env$util_compute_IQR_ord <- function(x) {
-  #Only for ORDINAL vars
+  # Only for ORDINAL vars
   q <- quantile(x, na.rm = TRUE, names = TRUE, type = 1)
-  names(q) <- paste0("Q", seq_len(length(q)) - 1)
+  names(q) <- paste0("Q", seq_along(q) - 1)
   q <- q[c("Q1", "Q3")]
-  r <- prep_deparse_assignments(labels = as.character(q),
-                                codes = names(q),
-                                mode = "string_codes")
+  r <- prep_deparse_assignments(
+    labels = as.character(q),
+    codes = names(q),
+    mode = "string_codes"
+  )
   iqr <- IQR(na.rm = TRUE, x = x, type = 1)
   r <- paste0(format(iqr), " (", r, ")")
-  return(list("IQR" = iqr,
-              "IQR_q1_q3" = r))
+  return(list(
+    "IQR" = iqr,
+    "IQR_q1_q3" = r
+  ))
 }
 
 
@@ -148,19 +157,25 @@ util_des_functions_env$util_compute_IQR_ord <- function(x) {
 #'   - `IQR`: a numeric value indicating the interquartile range
 #'   - `IQR_q1_q3`: a string containing Q1 and Q3
 #' @noRd
-util_des_functions_env$util_compute_IQR_contin <- function (x) {
+util_des_functions_env$util_compute_IQR_contin <- function(x) {
   q <- quantile(x, na.rm = TRUE, names = FALSE)
-  names(q) <- paste0("Q", seq_len(length(q)) - 1)
+  names(q) <- paste0("Q", seq_along(q) - 1)
   q <- q[c("Q1", "Q3")]
-  r <- prep_deparse_assignments(labels = as.character(q),
-                                codes = names(q),
-                                mode = "string_codes")
+  r <- prep_deparse_assignments(
+    labels = as.character(q),
+    codes = names(q),
+    mode = "string_codes"
+  )
   iqr <- IQR(na.rm = TRUE, x = x, type = 7)
-  r<- paste0(format(iqr),
-             " (", r, ")")
+  r <- paste0(
+    format(iqr),
+    " (", r, ")"
+  )
   rm(q)
-  return(list("IQR" = iqr,
-              "IQR_q1_q3" = r))
+  return(list(
+    "IQR" = iqr,
+    "IQR_q1_q3" = r
+  ))
 }
 
 
@@ -176,30 +191,37 @@ util_des_functions_env$util_compute_IQR_contin <- function (x) {
 #' @noRd
 util_des_functions_env$util_compute_IQR_datetime <- function(x) {
   q <- quantile(x, na.rm = TRUE, names = FALSE)
-  names(q) <- paste0("Q", seq_len(length(q)) - 1)
+  names(q) <- paste0("Q", seq_along(q) - 1)
   q <- q[c("Q1", "Q3")]
-  r <- prep_deparse_assignments(labels = format(q, usetz = TRUE),
-                                codes = names(q),
-                                mode = "string_codes")
-  iqr <- IQR(na.rm = TRUE, x = x,
-             type = 7)
-  #iqr1 <- format(as.difftime(iqr, units = "secs"), usetz = TRUE)
+  r <- prep_deparse_assignments(
+    labels = format(q, usetz = TRUE),
+    codes = names(q),
+    mode = "string_codes"
+  )
+  iqr <- IQR(
+    na.rm = TRUE, x = x,
+    type = 7
+  )
+  # Historical formatted IQR duration variant removed here.
 
 
   iqr1 <- as.difftime(iqr, units = "secs")
 
-#total_seconds <- lubridate::as.duration(
-#  as.numeric(iqr1, units = "secs"))
-#iqr1 <- util_des_functions_env$util_format_duration_human(start = total_seconds)
+  # total_seconds <- lubridate::as.duration(
+  #  as.numeric(iqr1, units = "secs"))
+  # iqr1 <- util_des_functions_env$util_format_duration_human(start =
+  # total_seconds)
 
   iqr1 <-
     util_des_functions_env$util_compute_difftime_auto(iqr1)
   iqr1 <- format(iqr1, usetz = TRUE)
 
-  r<- paste0(iqr1, " (", r, ")")
+  r <- paste0(iqr1, " (", r, ")")
   rm(q)
-  return(list("IQR" = iqr1,
-              "IQR_q1_q3" = r))
+  return(list(
+    "IQR" = iqr1,
+    "IQR_q1_q3" = r
+  ))
 }
 
 
@@ -229,7 +251,7 @@ util_des_functions_env$util_compute_skewness <- function(x) {
 util_des_functions_env$util_compute_SE_skewness <- function(x) {
   n <- length(x)
   se_skewness <- sqrt((6 * n * (n - 1)) /
-                        ((n - 2) * (n + 1) * (n + 3)))
+      ((n - 2) * (n + 1) * (n + 3)))
   return(se_skewness)
 }
 
@@ -250,6 +272,7 @@ util_des_functions_env$util_compute_kurtosis <- function(x) {
 }
 
 
+# nolint start: line_length_linter.
 #' Compute the frequency of each category
 #'
 #' @name util_compute_frequency_table
@@ -257,23 +280,26 @@ util_des_functions_env$util_compute_kurtosis <- function(x) {
 #'
 #' @return a string of the categories and their frequency, separated by a pipe symbol
 #' @noRd
+# nolint end
 util_des_functions_env$util_compute_frequency_table <- function(x) {
   # create a dataframe from the vector calculating the frequency of each value
-  if(nrow(table(x)) > 1) {
+  if (nrow(table(x)) > 1) {
     cont_tab <- as.data.frame(sort(table(x),
-                                   decreasing = TRUE,
-                                   na.last = FALSE))
-
+        decreasing = TRUE,
+        na.last = FALSE
+      ))
   } else {
     cont_tab <- as.data.frame(table(x), na.last = FALSE)
   }
 
-  cont_tab[[1]] <- sQuote(cont_tab[[1]]) # to prevent values from being treated as numeric
+  cont_tab[[1]] <- sQuote(cont_tab[[1]]) # to prevent values from being treated as numeric # nolint: line_length_linter.
   # rename the table
   colnames(cont_tab) <- c("Value", "Freq")
-  r <- prep_deparse_assignments(labels = cont_tab$Value,
-                                cont_tab$Freq,
-                                mode = "string_codes")
+  r <- prep_deparse_assignments(
+    labels = cont_tab$Value,
+    cont_tab$Freq,
+    mode = "string_codes"
+  )
   r
 }
 
@@ -287,17 +313,22 @@ util_des_functions_env$util_compute_frequency_table <- function(x) {
 #' @noRd
 util_des_functions_env$util_compute_graph_cat <- function(x) {
   mrg <- 2
-  r <- htmltools::plotTag({
-    withr::local_par(list(
-      mar = rep(mrg, 4),
-      oma = rep(0, 4)
-    ))
-    barplot(table(x), main = NULL,
-            xlab = NULL,
-            ylab = NULL)},
+  r <- htmltools::plotTag(
+    {
+      withr::local_par(list(
+        mar = rep(mrg, 4),
+        oma = rep(0, 4)
+      ))
+      barplot(table(x),
+        main = NULL,
+        xlab = NULL,
+        ylab = NULL
+      )
+    },
     width = 250,
     height = 200,
-    alt = paste("Histogram"))
+    alt = paste("Histogram")
+  )
   r <- as.character(r)
   r <- paste0('<div style="min-width: 300px">', r, "</div>")
   r
@@ -325,33 +356,40 @@ util_des_functions_env$util_compute_graph_datetime <- function(x) {
     # ---- hms: in Sekunden seit Mitternacht, Achse selbst zeichnen ----
     sec <- as.numeric(x0) %% 86400
 
-    br_raw <- suppressMessages(util_optimize_histogram_bins(x = sec,
-                                                            nbins_max = 100))
+    br_raw <- suppressMessages(util_optimize_histogram_bins(
+      x = sec,
+      nbins_max = 100
+    ))
     br <- unique(sort(unlist(br_raw)))
     if (length(br) < 2L) br <- pretty(sec, n = 10)
 
     # hübsche Ticks (in Sekunden), später als hms formatieren
     at <- pretty(range(br, na.rm = TRUE))
 
-    r <- htmltools::plotTag({
-      withr::local_par(list(mar = rep(mrg, 4), oma = rep(0, 4)))
+    r <- htmltools::plotTag(
+      {
+        withr::local_par(list(mar = rep(mrg, 4), oma = rep(0, 4)))
 
-      hist(sec,
-           main = NULL, xlab = NULL, ylab = NULL,
-           breaks = br, freq = TRUE, xaxt = "n")
+        hist(sec,
+          main = NULL, xlab = NULL, ylab = NULL,
+          breaks = br, freq = TRUE, xaxt = "n"
+        )
 
-      axis(1, at = at, labels = format(hms::as_hms(at)))
-    },
-    width = 250, height = 200, alt = "Histogram")
+        axis(1, at = at, labels = format(hms::as_hms(at)))
+      },
+      width = 250,
+      height = 200,
+      alt = "Histogram"
+    )
 
     r <- as.character(r)
     paste0('<div style="min-width: 300px">', r, "</div>")
-
   } else {
     # ---- POSIXct: echte Zeitachse, axis.POSIXct nutzen ----
     if (!inherits(x0, "POSIXt")) {
       util_error(
-        "x must be POSIXct/POSIXlt or hms. Internal error, sorry, please report.")
+        "x must be POSIXct/POSIXlt or hms. Internal error, sorry, please report." # nolint: line_length_linter.
+      )
     }
 
     breaks <- unlist(suppressMessages(util_optimize_histogram_bins(
@@ -361,25 +399,29 @@ util_des_functions_env$util_compute_graph_datetime <- function(x) {
     breaks <- util_parse_date(breaks)
     breaks <- unique(sort(breaks))
     breaks <- scales::pretty_breaks()(breaks)
-    r <- htmltools::plotTag({
-      withr::local_par(list(
-        mar = rep(mrg, 4),
-        oma = rep(0, 4)
-      ))
+    r <- htmltools::plotTag(
+      {
+        withr::local_par(list(
+          mar = rep(mrg, 4),
+          oma = rep(0, 4)
+        ))
 
-      hist(x, main = NULL,
-           xlab = NULL,
-           ylab = NULL,
-           breaks = breaks,
-           freq = TRUE)},
+        hist(x,
+          main = NULL,
+          xlab = NULL,
+          ylab = NULL,
+          breaks = breaks,
+          freq = TRUE
+        )
+      },
       width = 250,
       height = 200,
-      alt = paste("Histogram")) #, labs[[rv]]))
+      alt = paste("Histogram")
+    ) # , labs[[rv]]))
     r <- as.character(r)
     paste0('<div style="min-width: 300px">', r, "</div>")
   }
 }
-
 
 
 #' Compute a distribution plot for continuous variables (excluding datetime)
@@ -391,21 +433,25 @@ util_des_functions_env$util_compute_graph_datetime <- function(x) {
 #' @noRd
 util_des_functions_env$util_compute_graph_cont <- function(x) {
   mrg <- 2
-  r <- htmltools::plotTag({
-    withr::local_par(list(
-      mar = rep(mrg, 4),
-      oma = rep(0, 4)
-    ))
-    hist(x, main = NULL,
-         xlab = NULL,
-         ylab = NULL)},
+  r <- htmltools::plotTag(
+    {
+      withr::local_par(list(
+        mar = rep(mrg, 4),
+        oma = rep(0, 4)
+      ))
+      hist(x,
+        main = NULL,
+        xlab = NULL,
+        ylab = NULL
+      )
+    },
     width = 250,
     height = 200,
-    alt = paste("Histogram")) # of", labs[[rv]]))
+    alt = paste("Histogram")
+  ) # of", labs[[rv]]))
   r <- as.character(r)
   r <- paste0('<div style="min-width: 300px">', r, "</div>")
   r
-
 }
 
 
@@ -417,7 +463,7 @@ util_des_functions_env$util_compute_graph_cont <- function(x) {
 #' @return [data.frame] with first row as column names
 #' @noRd
 util_des_functions_env$util_first_row_to_colnames <- function(dfr) {
-  colnames(dfr) <- dfr[1, , TRUE]
+  colnames(dfr) <- dfr[1, , drop = TRUE]
   dfr <- tail(dfr, -1)
   dfr
 }
@@ -432,11 +478,11 @@ util_des_functions_env$util_first_row_to_colnames <- function(dfr) {
 #' @noRd
 util_des_functions_env$util_compute_graph_frequency_table <- function(x) {
   # create a data frame from the vector calculating the frequency of each value
-  if(nrow(table(x)) > 1) {
+  if (nrow(table(x)) > 1) {
     cont_tab <- as.data.frame(sort(table(x),
-                                   decreasing = TRUE,
-                                   na.last = FALSE))
-
+        decreasing = TRUE,
+        na.last = FALSE
+      ))
   } else {
     cont_tab <- as.data.frame(table(x), na.last = FALSE)
   }
@@ -452,15 +498,19 @@ util_des_functions_env$util_compute_graph_frequency_table <- function(x) {
     cont_tab <- rbind(head(cont_tab, 5), foot)
   }
   # save the formatted table in r
-  r <- paste0(util_formattable(util_des_functions_env$util_first_row_to_colnames(
-    as.data.frame(t(cont_tab))),
+  r <- paste0(util_formattable(
+    util_des_functions_env$util_first_row_to_colnames(
+      as.data.frame(t(cont_tab))
+    ),
     min_color = c(235, 235, 235),
-    max_color = c(20, 20, 235)))
+    max_color = c(20, 20, 235)
+  ))
   rm(cont_tab)
   return(r)
 }
 
 
+# nolint start: line_length_linter.
 #' A function to reduce a vector to the only one value that is not NA
 #'
 #' @name util_combine_cols_content
@@ -469,19 +519,24 @@ util_des_functions_env$util_compute_graph_frequency_table <- function(x) {
 #'
 #' @return  a value
 #' @noRd
+# nolint end
 util_des_functions_env$util_combine_cols_content <- function(rw, subject) {
   to_keep <- !is.na(rw)
   if (sum(to_keep) > 1) {
-    util_warning(c("It should not be possible for",
-                   "%s to have more than one",
-                   "result per variable -- internal error, please report."),
-                 subject)
+    util_warning(
+      c(
+        "It should not be possible for",
+        "%s to have more than one",
+        "result per variable -- internal error, please report."
+      ),
+      subject
+    )
     NA
   } else {
     result <- rw[to_keep]
     names(result) <- NULL
-    if(length(result)==0) {
-      result <-  ""
+    if (length(result) == 0) {
+      result <- ""
     }
     result
   }
@@ -499,7 +554,8 @@ util_des_functions_env$util_compute_difftime_auto <- function(time_diff) {
   # check if it is an acceptable object
   if (!inherits(time_diff, "difftime")) {
     util_error(
-      "Internal error, sorry. Please report.Input must be a 'difftime' object.")
+      "Internal error, sorry. Please report.Input must be a 'difftime' object."
+    )
   }
   # Convert to seconds
   total_seconds <- as.numeric(time_diff, units = "secs")
@@ -522,11 +578,12 @@ util_des_functions_env$util_compute_difftime_auto <- function(time_diff) {
   } else if (abs(total_seconds) < seconds_in_day * 2) { # If less than 2 days
     hours <- as.numeric(time_diff, units = "hours")
     return(paste(round(hours, 2), "hours"))
-  } else if (abs(total_seconds) < seconds_in_month * 2) { # If less than 2 months
+  } else if (abs(total_seconds) < seconds_in_month * 2) { # If less than 2 months # nolint: line_length_linter.
     days <- as.numeric(time_diff, units = "days")
     return(paste(round(days, 2), "days"))
   } else if (abs(total_seconds) < seconds_in_year * 2) { # If less than 2 years
-    # For months, lubridate's period is better for accuracy if specific dates are involved.
+    # For months, lubridate's period is better for accuracy if specific dates
+    # are involved.
     # But for general display, we can approximate:
     months <- total_seconds / seconds_in_month
     return(paste(round(months, 2), "months"))
@@ -546,17 +603,16 @@ util_des_functions_env$util_compute_difftime_auto <- function(time_diff) {
 #' @noRd
 util_des_functions_env$util_format_duration_human <-
   function(start, end = NULL,
-           units = list(
-             year    = c("year", "years"),
-             month   = c("month", "months"),
-             week    = c("week", "weeks"),
-             day     = c("day", "days"),
-             hour    = c("hour", "hours"),
-             minute  = c("minute", "minutes"),
-             second  = c("second", "seconds"),
-             and     = "and"
-           )) {
-
+    units = list(
+      year    = c("year", "years"),
+      month   = c("month", "months"),
+      week    = c("week", "weeks"),
+      day     = c("day", "days"),
+      hour    = c("hour", "hours"),
+      minute  = c("minute", "minutes"),
+      second  = c("second", "seconds"),
+      and     = "and"
+    )) {
     # Eingabeinterpretation
     if (!is.null(end)) {
       if (inherits(start, "hms")) {
@@ -567,7 +623,7 @@ util_des_functions_env$util_format_duration_human <-
       p <- lubridate::as.period(intv)
     } else {
       if (inherits(start, "difftime")) {
-        p <- lubridate::as.period(as.duration(start))
+        p <- lubridate::as.period(lubridate::as.duration(start))
       } else if (inherits(start, "Duration")) {
         p <- lubridate::as.period(start)
       } else if (inherits(start, "Period")) {
@@ -575,48 +631,54 @@ util_des_functions_env$util_format_duration_human <-
       } else {
         util_error(c(
           "Internal error, sorry. Please report: Invalid input type. Provide",
-          "two time points or a difftime/duration/period object."))
+          "two time points or a difftime/duration/period object."
+        ))
       }
     }
 
     # Zerlegung
-    years   <- lubridate::year(p)
-    months  <- lubridate::month(p)
-    days    <- lubridate::day(p)
-    hours   <- lubridate::hour(p)
+    years <- lubridate::year(p)
+    months <- lubridate::month(p)
+    days <- lubridate::day(p)
+    hours <- lubridate::hour(p)
     minutes <- lubridate::minute(p)
     seconds <- lubridate::second(p)
-    #round seconds when there are more than 2 decimals
+    # round seconds when there are more than 2 decimals
     if (seconds != 0) {
-       seconds <- round(seconds, digits = 2)
+      seconds <- round(seconds, digits = 2)
     }
 
 
     # Wochen extrahieren
     weeks <- days %/% 7
-    days  <- days %% 7
+    days <- days %% 7
 
     # Pluralisierung
     pluralize <- function(value, labels) {
-      if (value == 1) paste(value, labels[1])
-      else if (value > 0) paste(value, labels[2])
-      else NULL
+      if (value == 1) {
+        paste(value, labels[1])
+      } else if (value > 0) {
+        paste(value, labels[2])
+      } else {
+        NULL
+      }
     }
 
     # Liste bauen
     parts <- c(
-      pluralize(years,   units$year),
-      pluralize(months,  units$month),
-      pluralize(weeks,   units$week),
-      pluralize(days,    units$day),
-      pluralize(hours,   units$hour),
+      pluralize(years, units$year),
+      pluralize(months, units$month),
+      pluralize(weeks, units$week),
+      pluralize(days, units$day),
+      pluralize(hours, units$hour),
       pluralize(minutes, units$minute),
       pluralize(seconds, units$second)
     )
 
     # Ausgabeformat
     if (length(parts) > 1) {
-#      paste(paste(parts[-length(parts)], collapse = ", "), units$and, parts[length(parts)])
+      # paste(paste(parts[-length(parts)], collapse = ", "), units$and,
+      # parts[length(parts)])
       paste(paste(parts, collapse = ", "))
     } else if (length(parts) == 1) {
       parts
@@ -624,5 +686,3 @@ util_des_functions_env$util_format_duration_human <-
       paste("0", units$second[2])
     }
   }
-
-

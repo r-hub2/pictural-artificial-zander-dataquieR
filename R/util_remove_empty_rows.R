@@ -10,10 +10,13 @@
 #' @noRd
 util_remove_empty_rows <- function(x, id_vars = character(0)) {
   util_expect_scalar(id_vars,
-                     allow_more_than_one = TRUE,
-                     allow_null = TRUE,
-                     check_type = is.character)
+    allow_more_than_one = TRUE,
+    allow_null = TRUE,
+    check_type = is.character
+  )
   util_expect_data_frame(x, id_vars)
-  x[rowSums(!util_empty(as.matrix(x[, setdiff(colnames(x), id_vars)]))) != 0, ,
-    FALSE]
+  x[
+    rowSums(!util_empty(as.matrix(x[, setdiff(colnames(x), id_vars), drop = FALSE]))) != 0, , # nolint: line_length_linter.
+    drop = FALSE
+  ]
 }

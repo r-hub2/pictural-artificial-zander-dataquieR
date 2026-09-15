@@ -15,7 +15,8 @@ con_inadmissible_vocabulary(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} the name of the measurement variables}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -85,23 +86,27 @@ of modified study data
 }
 \examples{
 \dontrun{
-sdt <- data.frame(DIAG = c("B050", "B051", "B052", "B999"),
-                  MED0 = c("S01XA28", "N07XX18", "ABC", NA), stringsAsFactors = FALSE)
+sdt <- data.frame(
+  DIAG = c("B050", "B051", "B052", "B999"),
+  MED0 = c("S01XA28", "N07XX18", "ABC", NA), stringsAsFactors = FALSE
+)
 mdt <- tibble::tribble(
-~ VAR_NAMES, ~ DATA_TYPE, ~ STANDARDIZED_VOCABULARY_TABLE, ~ SCALE_LEVEL, ~ LABEL,
-"DIAG", "string", "<ICD10>", "nominal", "Diagnosis",
-"MED0", "string", "<ATC>", "nominal", "Medication"
+  ~VAR_NAMES, ~DATA_TYPE, ~STANDARDIZED_VOCABULARY_TABLE, ~SCALE_LEVEL, ~LABEL,
+  "DIAG", "string", "<ICD10>", "nominal", "Diagnosis",
+  "MED0", "string", "<ATC>", "nominal", "Medication"
 )
 con_inadmissible_vocabulary(NULL, sdt, mdt, label_col = LABEL)
 prep_load_workbook_like_file("meta_data_v2")
 il <- prep_get_data_frame("item_level")
-il$STANDARDIZED_VOCABULARY_TABLE[[11]] <- "<ICD10GM>"
-il$DATA_TYPE[[11]] <- DATA_TYPES$INTEGER
-il$SCALE_LEVEL[[11]] <- SCALE_LEVELS$NOMINAL
+il[[STANDARDIZED_VOCABULARY_TABLE]][[11]] <- "<ICD10GM>"
+il[[DATA_TYPE]][[11]] <- DATA_TYPES$INTEGER
+il[[SCALE_LEVEL]][[11]] <- SCALE_LEVELS$NOMINAL
 prep_add_data_frames(item_level = il)
 r <- dq_report2("study_data", dimensions = "con")
-r <- dq_report2("study_data", dimensions = "con",
-     advanced_options = list(dataquieR.non_disclosure = TRUE))
+r <- dq_report2("study_data",
+  dimensions = "con",
+  advanced_options = list(dataquieR.non_disclosure = TRUE)
+)
 r
 }
 }

@@ -16,7 +16,9 @@ prep_study2meta(
 )
 }
 \arguments{
-\item{study_data}{\link{data.frame} the data frame that contains the measurements}
+\item{study_data}{\link{data.frame} study data inspected to derive metadata.
+Only data frames are supported, not URLs or
+file names.}
 
 \item{level}{\link{enum} levels to provide (see also \link{VARATT_REQUIRE_LEVELS})}
 

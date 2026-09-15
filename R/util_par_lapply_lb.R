@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Parallel or fallback to serial `lapply`
 #'
 #' Wraps `parallel::parLapplyLB`, but if no cluster is available,
@@ -14,8 +15,9 @@
 #'
 #' @return A list of results, like `lapply()` or `parLapplyLB()` would return.
 #' @noRd
+# nolint end
 util_par_lapply_lb <- function(cl = parallel::getDefaultCluster(),
-                               X, fun, ..., chunk.size = NULL) {
+  X, fun, ..., chunk.size = NULL) {
   if (is.null(cl)) {
     # No cluster: fallback to serial execution
     return(lapply(X, fun, ...))
@@ -24,8 +26,10 @@ util_par_lapply_lb <- function(cl = parallel::getDefaultCluster(),
     if (is.null(chunk.size)) {
       return(parallel::parLapplyLB(cl = cl, X = X, fun = fun, ...))
     } else {
-      return(parallel::parLapplyLB(cl = cl, X = X, fun = fun,
-                                   chunk.size = chunk.size, ...))
+      return(parallel::parLapplyLB(
+        cl = cl, X = X, fun = fun,
+        chunk.size = chunk.size, ...
+      ))
     }
   }
 }

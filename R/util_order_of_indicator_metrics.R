@@ -1,8 +1,10 @@
+#' Internal helper: order of indicator metrics
+#'
+#' @noRd
 util_order_of_indicator_metrics <- function(indicator_metrics) {
-
-  abbreviationMetrics <- util_get_concept_info("abbreviationMetrics")
-  abbreviationMetrics$order <-
-    rank(abbreviationMetrics$order)
+  abbreviation_metrics <- util_get_concept_info("abbreviationMetrics")
+  abbreviation_metrics$order <-
+    rank(abbreviation_metrics$order)
   dqi <- util_get_concept_info("dqi")
   dqi$order_nr <-
     rank(dqi$order_nr)
@@ -11,13 +13,17 @@ util_order_of_indicator_metrics <- function(indicator_metrics) {
       util_stop_if_not(length(x) == 1)
       nm <- strsplit(x, "_", fixed = TRUE)[[1]]
       if (length(nm) >= 2) {
-
-        m <- head(subset(abbreviationMetrics, get("Abbreviation") == nm[[1]],
-                         "order", drop = TRUE), 1)
+        m <- head(subset(abbreviation_metrics, get("Abbreviation") == nm[[1]],
+            "order",
+            drop = TRUE
+          ), 1)
 
         d <- head(subset(dqi, get("abbreviation") == paste(tail(nm, -1),
-                                                           collapse = "_"),
-                         "order_nr", drop = TRUE), 1)
+              collapse = "_"
+            ),
+            "order_nr",
+            drop = TRUE
+          ), 1)
 
         if (length(m) == length(d) && length(d) == 1 &&
             !util_empty(m) && !util_empty(d)) {
@@ -34,5 +40,4 @@ util_order_of_indicator_metrics <- function(indicator_metrics) {
     99999999
 
   rank(order_value)
-
 }

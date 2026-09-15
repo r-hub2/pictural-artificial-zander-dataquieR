@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Utility function for smoothed longitudinal trends from logistic regression models
 #'
 #' This function is under development. It computes a logistic regression for
@@ -17,18 +18,8 @@
 #'
 #' [Descriptor]
 #'
-#' @param resp_vars  [variable] the name of the (binary) measurement variable
-#' @param group_vars [variable] the name of the observer, device or
-#'                              reader variable
-#' @param co_vars [variable list] a vector of co-variables, e.g. age and sex for
-#'                              adjustment
-#' @param time_vars  [variable] the name of the variable giving the time
-#'                              of measurement
-#' @param study_data [data.frame] the data frame that contains the measurements
-#' @param meta_data [data.frame] the data frame that contains metadata
-#'                              attributes of study data
-#' @param label_col [variable attribute] the name of the column in the metadata
-#'                              with labels of variables
+#' @inheritParams .template_function_indicator
+#'
 #' @param min_obs_in_subgroup [integer] from=0. This optional argument specifies
 #'                       the minimum number of observations that is required to
 #'                       include a subgroup (level) of the `group_var` in the
@@ -62,68 +53,92 @@
 #' @importFrom ggplot2 ggplot aes scale_color_manual xlab ylab geom_line facet_wrap theme_minimal ggtitle theme element_blank expand_limits
 #' @importFrom stats as.formula lm loess predict na.omit glm binomial poisson sd cov var runif
 #' @noRd
+# nolint end
 util_acc_loess_bin <- function(
-    resp_vars,
-    label_col = NULL,
-    study_data,
-    item_level = "item_level",
-    group_vars = NULL,
-    time_vars,
-    co_vars = NULL,
-    min_obs_in_subgroup =
-      getOption("dataquieR.acc_loess.min_obs_in_subgroup",
-                dataquieR.acc_loess.min_obs_in_subgroup_default),
-    resolution = 80,
-    plot_format = getOption("dataquieR.acc_loess.plot_format",
-                            dataquieR.acc_loess.plot_format_default),
-    meta_data = item_level,
-    n_group_max = getOption("dataquieR.max_group_var_levels_in_plot",
-                            dataquieR.max_group_var_levels_in_plot_default),
-    enable_GAM = getOption("dataquieR.GAM_for_LOESS",
-                           dataquieR.GAM_for_LOESS_default),
-    exclude_constant_subgroups =
-      getOption("dataquieR.acc_loess.exclude_constant_subgroups",
-                dataquieR.acc_loess.exclude_constant_subgroups_default),
-    min_bandwidth = getOption("dataquieR.acc_loess.min_bw",
-                              dataquieR.acc_loess.min_bw_default),
-    min_proportion = getOption("dataquieR.acc_loess.min_proportion",
-                               dataquieR.acc_loess.min_proportion_default)) {
+  resp_vars,
+  label_col = NULL,
+  study_data,
+  item_level = "item_level",
+  group_vars = NULL,
+  time_vars,
+  co_vars = NULL,
+  min_obs_in_subgroup =
+    getOption(
+      "dataquieR.acc_loess.min_obs_in_subgroup",
+      dataquieR.acc_loess.min_obs_in_subgroup_default
+    ),
+  resolution = 80,
+  plot_format = getOption(
+    "dataquieR.acc_loess.plot_format",
+    dataquieR.acc_loess.plot_format_default
+  ),
+  meta_data = item_level,
+  n_group_max = getOption(
+    "dataquieR.max_group_var_levels_in_plot",
+    dataquieR.max_group_var_levels_in_plot_default
+  ),
+  enable_GAM = getOption(
+    "dataquieR.GAM_for_LOESS",
+    dataquieR.GAM_for_LOESS_default
+  ),
+  exclude_constant_subgroups =
+    getOption(
+      "dataquieR.acc_loess.exclude_constant_subgroups",
+      dataquieR.acc_loess.exclude_constant_subgroups_default
+    ),
+  min_bandwidth = getOption(
+    "dataquieR.acc_loess.min_bw",
+    dataquieR.acc_loess.min_bw_default
+  ),
+  min_proportion = getOption(
+    "dataquieR.acc_loess.min_proportion",
+    dataquieR.acc_loess.min_proportion_default
+  )
+) {
   # preps ----------------------------------------------------------------------
   # map metadata to study data
-  prep_prepare_dataframes(.replace_hard_limits = TRUE,
-                          .apply_factor_metadata = TRUE)
+  prep_prepare_dataframes(
+    .replace_hard_limits = TRUE,
+    .apply_factor_metadata = TRUE
+  )
 
   # correct variable use?
   # (checked before, but included here to catch implementation errors)
   util_correct_variable_use("resp_vars",
-                            need_scale = "!na",
-                            allow_all_obs_na = FALSE)
+    need_scale = "!na",
+    allow_all_obs_na = FALSE
+  )
   util_correct_variable_use("group_vars",
-                            need_scale = "nominal | ordinal",
-                            allow_all_obs_na = TRUE,
-                            allow_na = TRUE,
-                            allow_null = TRUE)
+    need_scale = "nominal | ordinal",
+    allow_all_obs_na = TRUE,
+    allow_na = TRUE,
+    allow_null = TRUE
+  )
   util_correct_variable_use("time_vars",
-                            need_type = DATA_TYPES$DATETIME,
-                            need_scale = "interval | ratio",
-                            allow_all_obs_na = FALSE,
-                            min_distinct_values = 3)
+    need_type = DATA_TYPES$DATETIME,
+    need_scale = "interval | ratio",
+    allow_all_obs_na = FALSE,
+    min_distinct_values = 3
+  )
   util_correct_variable_use("co_vars",
-                            overwrite = TRUE,
-                            remove_not_found = TRUE,
-                            allow_more_than_one = TRUE,
-                            allow_all_obs_na = FALSE,
-                            allow_na = TRUE,
-                            allow_null = TRUE)
+    overwrite = TRUE,
+    remove_not_found = TRUE,
+    allow_more_than_one = TRUE,
+    allow_all_obs_na = FALSE,
+    allow_na = TRUE,
+    allow_null = TRUE
+  )
 
   # support time course plots without (sub-)groups
-  if (is.null(group_vars) || all(util_empty(group_vars))) {
+  has_dummy_group <- is.null(group_vars) || all(util_empty(group_vars))
+  if (has_dummy_group) {
     # create a dummy grouping variable that is not yet contained in ds1
     group_vars <- "dummy_group"
     while (group_vars %in% colnames(ds1)) {
       group_vars <- paste0("dummy_group",
-                           ceiling(runif(n = 1, min = 1, max = ncol(ds1) * 2)),
-                           sep = "_")
+        ceiling(runif(n = 1, min = 1, max = ncol(ds1) * 2)),
+        sep = "_"
+      )
     }
     ds1[[group_vars]] <- 1
     plot_title <- paste("Time course plot for", resp_vars)
@@ -141,12 +156,14 @@ util_acc_loess_bin <- function(
 
   # omit missing values and unnecessary variables
   n_prior <- nrow(ds1)
-  ds1 <- ds1[, c(resp_vars, time_vars, group_vars, co_vars)]
+  ds1 <- ds1[, c(resp_vars, time_vars, group_vars, co_vars), drop = FALSE]
   if (grepl("dummy_group", group_vars)) {
     # Only mention the 'dummy_group' in the message if it contributes any
     # missing values, otherwise do not mention it.
-    if (any(is.na(ds1[complete.cases(ds1[, c(time_vars, co_vars)]),
-                      group_vars]))) {
+    if (any(is.na(ds1[
+      complete.cases(ds1[, c(time_vars, co_vars), drop = FALSE]),
+      group_vars
+      , drop = TRUE]))) {
       msg_part1 <- paste0(c(group_vars, co_vars), collapse = ", ")
     } else {
       msg_part1 <- paste0(co_vars, collapse = ", ")
@@ -154,7 +171,7 @@ util_acc_loess_bin <- function(
   } else {
     msg_part1 <- paste0(c(group_vars, co_vars), collapse = ", ")
   }
-  ds1 <- ds1[complete.cases(ds1[, c(time_vars, group_vars, co_vars)]), ]
+  ds1 <- ds1[complete.cases(ds1[, c(time_vars, group_vars, co_vars), drop = FALSE]), , drop = FALSE] # nolint: line_length_linter.
   n_post <- nrow(ds1)
   msg <- NULL
   if (n_post < n_prior) {
@@ -166,17 +183,20 @@ util_acc_loess_bin <- function(
     )
   }
   n_prior <- n_post
-  ds1 <- ds1[complete.cases(ds1), ]
+  ds1 <- ds1[complete.cases(ds1), , drop = FALSE]
   n_post <- nrow(ds1)
   if (n_post < n_prior) {
     msg <- paste0(
       msg, "Due to missing values in ", resp_vars, ", N = ",
       n_prior - n_post, " observations were excluded",
-      ifelse(nchar(msg) > 0, " additionally.", "."))
+      ifelse(nchar(msg) > 0, " additionally.", ".")
+    )
   }
   if (!is.null(msg) && nchar(msg) > 0) {
-    util_message(trimws(msg),
-                 applicability_problem = FALSE)
+    util_message("%s",
+      trimws(msg),
+      applicability_problem = FALSE
+    )
   }
 
   # dichotomize resp_vars
@@ -190,11 +210,12 @@ util_acc_loess_bin <- function(
 
   if (var_prop$NDistinct == 1) {
     util_error("The response variable is constant after data preparation.",
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   } else {
-    if (util_empty(meta_data[[RECODE_CASES]][meta_data[[label_col]] == resp_vars]) &
-        util_empty(meta_data[[RECODE_CONTROL]][meta_data[[label_col]] == resp_vars])) {
+    if (util_empty(meta_data[[RECODE_CASES]][meta_data[[label_col]] == resp_vars]) && # nolint: line_length_linter.
+        util_empty(meta_data[[RECODE_CONTROL]][meta_data[[label_col]] == resp_vars])) { # nolint: line_length_linter.
       # => the recoding is not defined in the metadata. dataquieR will try to
       # define a helpful categorization into two groups:
       if (meta_data[[SCALE_LEVEL]][meta_data[[label_col]] == resp_vars] ==
@@ -203,16 +224,16 @@ util_acc_loess_bin <- function(
 
         if (var_prop$NDistinct == 2) {
           # less frequent category as 'cases'
-          count_nom <- count_nom[which(count_nom[, 2] > 0), ]
-          count_nom <- count_nom[order(count_nom[, 2], decreasing = FALSE), ]
+          count_nom <- count_nom[which(count_nom[, 2, drop = TRUE] > 0), , drop = FALSE] # nolint: line_length_linter.
+          count_nom <- count_nom[order(count_nom[, 2, drop = TRUE], decreasing = FALSE), , drop = FALSE] # nolint: line_length_linter.
           meta_data[[RECODE_CASES]][meta_data[[label_col]] == resp_vars] <-
-            paste(count_nom[1, 1])
+            paste(count_nom[1, 1, drop = TRUE])
         } else {
           # more than two groups: dataquieR will use the most frequent category
           # as 'cases', the remaining categories as 'control'.
-          count_nom <- count_nom[order(count_nom[, 2], decreasing = TRUE), ]
+          count_nom <- count_nom[order(count_nom[, 2, drop = TRUE], decreasing = TRUE), , drop = FALSE] # nolint: line_length_linter.
           meta_data[[RECODE_CASES]][meta_data[[label_col]] == resp_vars] <-
-            paste(count_nom[1, 1])
+            paste(count_nom[1, 1, drop = TRUE])
         }
       } else {
         # Automatic recoding will be based on quartiles
@@ -221,13 +242,13 @@ util_acc_loess_bin <- function(
         if (length(unique(qu_rvs)) < 3) {
           # the value that occurs predominantly will become the 'control'
           tab_qu <- util_table_of_vct(qu_rvs)
-          tab_qu <- tab_qu[order(tab_qu[, 2], decreasing = TRUE), ]
+          tab_qu <- tab_qu[order(tab_qu[, 2, drop = TRUE], decreasing = TRUE), , drop = FALSE] # nolint: line_length_linter.
           if (val_lab_applied) {
             meta_data[[RECODE_CONTROL]][meta_data[[label_col]] == resp_vars] <-
-              as.character(tab_qu[1,1])
+              as.character(tab_qu[1, 1, drop = TRUE])
           } else {
             meta_data[[RECODE_CONTROL]][meta_data[[label_col]] == resp_vars] <-
-              paste0("[", tab_qu[1,1], ";", tab_qu[1,1], "]")
+              paste0("[", tab_qu[1, 1, drop = TRUE], ";", tab_qu[1, 1, drop = TRUE], "]") # nolint: line_length_linter.
           }
         } else if (var_prop$NDistinct < 10) {
           # If there are few values (more than two), consider the
@@ -235,7 +256,8 @@ util_acc_loess_bin <- function(
           if (val_lab_applied) {
             meta_data[[RECODE_CASES]][meta_data[[label_col]] == resp_vars] <-
               paste(levels(ds1[[resp_vars]])[qu_rvs[4]:qu_rvs[5]],
-                    collapse = " | ")
+                collapse = " | "
+              )
           } else {
             meta_data[[RECODE_CASES]][meta_data[[label_col]] == resp_vars] <-
               paste0("[", qu_rvs[4], ";", qu_rvs[5], "]")
@@ -246,7 +268,8 @@ util_acc_loess_bin <- function(
           if (val_lab_applied) {
             meta_data[[RECODE_CONTROL]][meta_data[[label_col]] == resp_vars] <-
               paste(levels(ds1[[resp_vars]])[qu_rvs[2]:qu_rvs[4]],
-                    collapse = " | ")
+                collapse = " | "
+              )
           } else {
             meta_data[[RECODE_CONTROL]][meta_data[[label_col]] == resp_vars] <-
               paste0("[", qu_rvs[2], ";", qu_rvs[4], "]")
@@ -259,41 +282,49 @@ util_acc_loess_bin <- function(
   rvs_bin <- util_dichotomize(
     study_data = ds1[, resp_vars, drop = FALSE],
     meta_data = meta_data,
-    label_col = label_col)
-  rvs_bin_note <- attr(rvs_bin, "Dichotomization")[[resp_vars]]
+    label_col = label_col
+  )
+  rvs_bin_note <- util_attr(rvs_bin, "Dichotomization", exact = TRUE)[[resp_vars]] # nolint: line_length_linter.
   ds1[[resp_vars]] <- unlist(rvs_bin)
-  ds1 <- ds1[complete.cases(ds1), ]
+  ds1 <- ds1[complete.cases(ds1), , drop = FALSE]
 
   # convert group_vars to factor (needed for example for the dummy group)
   if (!is.factor(ds1[[group_vars]])) {
     ds1[[group_vars]] <- factor(ds1[[group_vars]])
   }
 
-  # TODO: use util_check_group_levels
-  # too few observations per level?
-  # check which groups do not have enough observations or time points
   tab_groups <- table(ds1[[group_vars]])
   groups_below_min_obs <- names(tab_groups)[tab_groups < min_obs_in_subgroup]
-  tab_groups_tp <- vapply(levels(ds1[[group_vars]]), FUN.VALUE = numeric(1),
-                          FUN = function(gr) {
-                            length(unique(ds1[[time_vars]][
-                              ds1[[group_vars]] == gr]))
-                          })
+  tab_groups_tp <- vapply(levels(ds1[[group_vars]]),
+    FUN.VALUE = numeric(1),
+    FUN = function(gr) {
+      length(unique(ds1[[time_vars]][
+        ds1[[group_vars]] == gr
+      ]))
+    }
+  )
   groups_with_few_tp <- names(tab_groups_tp)[tab_groups_tp < 3]
-  if (length(groups_below_min_obs) > 0 | length(groups_with_few_tp) > 0) {
+  if (length(groups_below_min_obs) > 0 || length(groups_with_few_tp) > 0) {
     to_excl <- unique(c(groups_below_min_obs, groups_with_few_tp))
-    util_message(paste("Levels of the group_var with too few observations",
-                       "were discarded",
-                       paste0("(level",
-                              ifelse(length(to_excl) > 1, "s ", " "),
-                              paste(to_excl, collapse = ", "),
-                              ").")
-    ),
-    applicability_problem = FALSE)
+    util_message(
+      paste(
+        "Levels of the group_var with too few observations",
+        "were discarded",
+        paste0(
+          "(level",
+          ifelse(length(to_excl) > 1, "s ", " "),
+          paste(to_excl, collapse = ", "),
+          ")."
+        )
+      ),
+      applicability_problem = FALSE
+    )
     # exclude levels with few observations or time points
-    ds1 <- subset(ds1,
-                  ds1[[group_vars]] %in%
-                    setdiff(levels(ds1[[group_vars]]), to_excl))
+    ds1 <- subset(
+      ds1,
+      ds1[[group_vars]] %in%
+        setdiff(levels(ds1[[group_vars]]), to_excl)
+    )
     # drop unused levels
     if (!is.factor(ds1[[group_vars]])) {
       ds1[[group_vars]] <- factor(ds1[[group_vars]])
@@ -305,7 +336,8 @@ util_acc_loess_bin <- function(
 
   if (nrow(ds1) == 0) {
     util_error("No data left after data preparation.",
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
 
   if (exclude_constant_subgroups) {
@@ -320,17 +352,24 @@ util_acc_loess_bin <- function(
       })
     ]
     if (length(lvl_to_exclude) > 0) {
-      util_message(paste("Levels of the group_var with constant values",
-                         "were discarded",
-                         paste0("(level",
-                                ifelse(length(lvl_to_exclude) > 1, "s ", " "),
-                                paste(lvl_to_exclude, collapse = ", "),
-                                ").")
-      ),
-      applicability_problem = FALSE)
-      ds1 <- subset(ds1,
-                    ds1[[group_vars]] %in%
-                      setdiff(levels(ds1[[group_vars]]), lvl_to_exclude))
+      util_message(
+        paste(
+          "Levels of the group_var with constant values",
+          "were discarded",
+          paste0(
+            "(level",
+            ifelse(length(lvl_to_exclude) > 1, "s ", " "),
+            paste(lvl_to_exclude, collapse = ", "),
+            ")."
+          )
+        ),
+        applicability_problem = FALSE
+      )
+      ds1 <- subset(
+        ds1,
+        ds1[[group_vars]] %in%
+          setdiff(levels(ds1[[group_vars]]), lvl_to_exclude)
+      )
       # drop unused levels
       if (!is.factor(ds1[[group_vars]])) {
         ds1[[group_vars]] <- factor(ds1[[group_vars]])
@@ -343,7 +382,8 @@ util_acc_loess_bin <- function(
 
   if (nrow(ds1) == 0) {
     util_error("No data left after data preparation.",
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
 
   # collapse 'rare' groups to reduce the number of levels, if needed
@@ -353,14 +393,16 @@ util_acc_loess_bin <- function(
     tab_groups <- tab_groups[order(tab_groups, decreasing = TRUE)]
     keep_gr <- names(tab_groups)[1:n_group_max]
     levels(ds1[[group_vars]])[which(!levels(ds1[[group_vars]])
-                                    %in% keep_gr)] <- "other"
+        %in% keep_gr)] <- "other"
     tab_groups[["other"]] <- sum(ds1[[group_vars]] == "other")
     # new category 'other' should always be the last one
     have_other <- TRUE
     lvl_gr <-
-      c(levels(ds1[[group_vars]])[which(levels(ds1[[group_vars]])
-                                        %in% keep_gr)],
-        "other")
+      c(
+        levels(ds1[[group_vars]])[which(levels(ds1[[group_vars]])
+            %in% keep_gr)],
+        "other"
+      )
     ds1[[group_vars]] <- as.character(ds1[[group_vars]])
     ds1[[group_vars]] <- factor(ds1[[group_vars]], levels = lvl_gr)
   }
@@ -371,37 +413,43 @@ util_acc_loess_bin <- function(
 
   if (nrow(ds1) == 0) {
     util_error("No data left after data preparation.",
-               applicability_problem = FALSE)
+      applicability_problem = FALSE
+    )
   }
 
   var_prop <- util_dist_selection(ds1[, resp_vars, drop = FALSE])
   if (var_prop$NDistinct < 2) {
     util_error("The response variable is constant after data preparation.",
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
   if (var_prop$NDistinct > 2) {
     util_error("The response variable is not binary after data preparation.",
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
   if (var_prop$PropZeroes > 1 - min_proportion ||
       var_prop$PropZeroes < min_proportion) {
     util_error("The response variable contains too few cases/controls.",
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
 
   # order data by time and groups
   # (for plotting and for the moving window calculations)
-  ds1 <- ds1[order(ds1[[time_vars]], ds1[[group_vars]]), ]
+  ds1 <- ds1[order(ds1[[time_vars]], ds1[[group_vars]]), , drop = FALSE]
   # reduce time points according to the resolution, if needed
   tp_seq <- unique(ds1[[time_vars]])
   tp_round_seq <- util_optimize_sequence_across_time_var(
     time_var_data = tp_seq,
-    n_points = resolution)
+    n_points = resolution
+  )
   ds1[["ROUND_TIME"]] <- suppressWarnings(util_parse_date(
-    lubridate::round_date(ds1[[time_vars]], unit = tp_round_seq)))
+    lubridate::round_date(ds1[[time_vars]], unit = tp_round_seq)
+  ))
 
   # store a numeric version of the original time variable for later calculations
   ds1$time_vars_num <- suppressWarnings(as.numeric(ds1[[time_vars]]))
@@ -409,58 +457,66 @@ util_acc_loess_bin <- function(
   # Modelling group-wise trends ------------------------------------------------
   # adjust response for covariables (if any)
   if (length(co_vars) > 0) {
-    fmla <- as.formula(paste0(paste0(util_bQuote(resp_vars), "~"),
-                              paste0(
-                                paste0(util_bQuote(co_vars), collapse = " + "),
-                                " + ",
-                                util_bQuote(group_vars)
-                              )))
+    model_terms <- util_bQuote(co_vars)
+    if (!has_dummy_group) {
+      model_terms <- c(model_terms, util_bQuote(group_vars))
+    }
+    fmla <- as.formula(paste0(
+      util_bQuote(resp_vars), " ~ ",
+      paste0(model_terms, collapse = " + ")
+    ))
     suppressWarnings({
       logfit1 <- glm(fmla, data = ds1, family = binomial(link = "logit"))
     })
-    group_marg <- data.frame(
-      emmeans::emmeans(logfit1, group_vars, type = "response"),
-      check.names = FALSE)
     # store residuals
     # These values will be used for LOESS fits. In this way, we fit LOESS after
     # adjusting the response for the covariables.
-    ds1$Residuals <-
-      # estimated mean for each level of the grouping variable
-      group_marg$prob[match(ds1[[group_vars]], group_marg[, group_vars])] +
-      # residuals: original value of the response variable - fitted value
-      ds1[[resp_vars]] - logfit1$fitted.values
+    if (has_dummy_group) {
+      ds1$Residuals <-
+        mean(logfit1$fitted.values, na.rm = TRUE) +
+        ds1[[resp_vars]] - logfit1$fitted.values
+    } else {
+      group_marg <- data.frame(
+        emmeans::emmeans(logfit1, group_vars, type = "response"),
+        check.names = FALSE
+      )
+      ds1$Residuals <-
+        # estimated mean for each level of the grouping variable
+        group_marg$prob[match(ds1[[group_vars]], group_marg[, group_vars, drop = TRUE])] + # nolint: line_length_linter.
+        # residuals: original value of the response variable - fitted value
+        ds1[[resp_vars]] - logfit1$fitted.values
+    }
     rm(logfit1) # Memory consumption
   } else {
     ds1$Residuals <- ds1[[resp_vars]]
   }
 
   # calculate LOESS smoothing parameter based on the number of observations
-  bw_loess <- min(1, round(100/nrow(ds1), 2)) # upper limit: 1
+  bw_loess <- min(1, round(100 / nrow(ds1), 2)) # upper limit: 1
   bw_loess <- max(min_bandwidth, bw_loess) # lower limit as specified
 
   # fit LOESS/GAM for each group separately
   grouped_ds1 <- split(ds1, ds1[[group_vars]])
   processed_grouped_ds1 <- lapply(grouped_ds1, function(data_i) {
     if (var(data_i[["Residuals"]]) == 0) { # constant for this subgroup
-      df_i <- unique(data_i[, c("Residuals", "ROUND_TIME")])
+      df_i <- unique(data_i[, c("Residuals", "ROUND_TIME"), drop = FALSE])
       fit_vals <- df_i[["Residuals"]]
       data_i_seq <- df_i[["ROUND_TIME"]]
     } else if (max(tab_groups) > 1000 &&
-        util_ensure_suggested("mgcv",
-                              "use GAM from mgcv instead of loess for lower memory consumption",
-                              err = FALSE) &&
         enable_GAM) {
       # If there are too many observations, switch to GAM instead of LOESS
       # because of memory consumption (if available).
       fit_i <- mgcv::gam(Residuals ~ s(time_vars_num, bs = "cs"),
-                         method = "REML",
-                         data = data_i)
+        method = "REML",
+        data = data_i
+      )
       # To plot the trend line at the time points in `tp_round_seq`
       # (restricted to those values that lie within the observed time period
       # for this group), we need fitted values at these time points.
       data_i_seq <- tp_round_seq[
         (which(tp_round_seq == min(data_i[["ROUND_TIME"]]))):
-          (which(tp_round_seq == max(data_i[["ROUND_TIME"]])))]
+          (which(tp_round_seq == max(data_i[["ROUND_TIME"]])))
+      ]
       data_i_seq_num <- suppressWarnings(as.numeric(data_i_seq))
       data_i_seq_num <- as.data.frame(data_i_seq_num)
       colnames(data_i_seq_num) <- "time_vars_num"
@@ -469,10 +525,13 @@ util_acc_loess_bin <- function(
     } else { # LOWESS
       # fit LOWESS for data_i
       fit_i <- suppressWarnings(
-        lowess(x = data_i[["ROUND_TIME"]],
-               y = data_i[["Residuals"]],
-               f = bw_loess,
-               iter = 0)) # For binary variables, the `robustifying iterations`
+        lowess(
+          x = data_i[["ROUND_TIME"]],
+          y = data_i[["Residuals"]],
+          f = bw_loess,
+          iter = 0
+        )
+      ) # For binary variables, the `robustifying iterations`
       # can lead to an underestimation of the proportion of cases.
       fit_i_df <- unique(as.data.frame(fit_i))
       fit_vals <- fit_i_df$y
@@ -485,11 +544,15 @@ util_acc_loess_bin <- function(
       data_i_seq <- util_parse_date(fit_i_df$x)
     }
 
-    pred_df <- data.frame(TIME = data_i_seq,
-                          FITTED_VALUE = fit_vals,
-                          GROUP = rep(data_i[[group_vars]][1],
-                                      length(data_i_seq)))
-    return(res_round_tp = pred_df[which(!is.na(pred_df$FITTED_VALUE)), ])
+    pred_df <- data.frame(
+      TIME = data_i_seq,
+      FITTED_VALUE = fit_vals,
+      GROUP = rep(
+        data_i[[group_vars]][1],
+        length(data_i_seq)
+      )
+    )
+    return(res_round_tp = pred_df[which(!is.na(pred_df$FITTED_VALUE)), , drop = FALSE]) # nolint: line_length_linter.
   })
   # https://stackoverflow.com/a/39838759
   fit_groups <- dplyr::bind_rows(processed_grouped_ds1)
@@ -511,17 +574,22 @@ util_acc_loess_bin <- function(
     n_lev_gv_reduced <-
       length(unique(fit_groups$GROUP))
     if (n_lev_gv_reduced < n_lev_gv_total) {
-      appendix <- sprintf("%d of %d levels shown",
-                         n_lev_gv_reduced - have_other,
-                         n_lev_gv_total)
+      appendix <- sprintf(
+        "%d of %d levels shown",
+        n_lev_gv_reduced - have_other,
+        n_lev_gv_total
+      )
     } else {
-      appendix <- sprintf("all %d levels shown",
-                         n_lev_gv_reduced - have_other)
+      appendix <- sprintf(
+        "all %d levels shown",
+        n_lev_gv_reduced - have_other
+      )
     }
     if (nzchar(subtitle)) {
       subtitle <- paste(subtitle,
-                        appendix,
-                        sep = " - ")
+        appendix,
+        sep = " - "
+      )
     } else {
       subtitle <- appendix
     }
@@ -549,88 +617,109 @@ util_acc_loess_bin <- function(
   y_max <- min(1, mean(ds1$Residuals) + sd(ds1$Residuals))
 
   # Facet-Grids for categorical variable (observer/device)
-  p1 <- util_create_lean_ggplot(ggplot(fit_groups,
-                                       aes(x = .data$TIME,
-                                           y = .data$FITTED_VALUE,
-                                           color = .data$GROUP)) + {
-                                             if (!is.null(hex_code)) {
-                                               scale_color_manual(
-                                                 values = hex_code,
-                                                 breaks = levs,
-                                                 labels = g_labs
-                                               ) # https://chatgpt.com/c/69e0ecc5-10a8-8397-9f51-0d365cfa1876
-                                             } else {
-                                               ggplot2::scale_color_discrete(
-                                                 breaks = levs,
-                                                 labels = g_labs
-                                               )
-                                             }} +
-                                  xlab(rvs_bin_note) +
-                                  ylab("") +
-                                  geom_line() +
-                                  facet_wrap(~ .data$GROUP, ncol = 2) + #TODO: What about this ~?
-                                  expand_limits(y = c(y_min, y_max)) +
-                                  theme_minimal() +
-                                  ggtitle(plot_title, subtitle) +
-                                  theme(legend.title = element_blank()),
-                                fit_groups = fit_groups,
-                                hex_code = hex_code,
-                                levs = levs,
-                                g_labs = g_labs,
-                                rvs_bin_note = rvs_bin_note,
-                                y_max = y_max,
-                                y_min = y_min,
-                                plot_title = plot_title,
-                                subtitle = subtitle)
+  p1 <- util_create_lean_ggplot(
+    ggplot(
+      fit_groups,
+      aes(
+        x = .data$TIME,
+        y = .data$FITTED_VALUE,
+        color = .data$GROUP
+      )
+    ) +
+      {
+        if (!is.null(hex_code)) {
+          scale_color_manual(
+            values = hex_code,
+            breaks = levs,
+            labels = g_labs
+          ) # https://chatgpt.com/c/69e0ecc5-10a8-8397-9f51-0d365cfa1876
+        } else {
+          ggplot2::scale_color_discrete(
+            breaks = levs,
+            labels = g_labs
+          )
+        }
+      } +
+      xlab(rvs_bin_note) +
+      ylab("") +
+      geom_line() +
+      facet_wrap(~ .data$GROUP, ncol = 2) +
+      expand_limits(y = c(y_min, y_max)) +
+      theme_minimal() +
+      ggtitle(plot_title, subtitle) +
+      theme(legend.title = element_blank()),
+    fit_groups = fit_groups,
+    hex_code = hex_code,
+    levs = levs,
+    g_labs = g_labs,
+    rvs_bin_note = rvs_bin_note,
+    y_max = y_max,
+    y_min = y_min,
+    plot_title = plot_title,
+    subtitle = subtitle
+  )
 
 
   # combined plot
-  p2 <- util_create_lean_ggplot(ggplot(fit_groups,
-                                       aes(x = .data$TIME,
-                                           y = .data$FITTED_VALUE,
-                                           group = .data$GROUP,
-                                           color = .data$GROUP)) + {
-                                             if (!is.null(hex_code)) {
-                                               scale_color_manual(
-                                                 values = hex_code,
-                                                 breaks = levs,
-                                                 labels = g_labs
-                                               ) # https://chatgpt.com/c/69e0ecc5-10a8-8397-9f51-0d365cfa1876
-                                             } else {
-                                               ggplot2::scale_color_discrete(
-                                                 breaks = levs,
-                                                 labels = g_labs
-                                               )
-                                             }} +
-                                  xlab(rvs_bin_note) +
-                                  ylab("") +
-                                  geom_line() +
-                                  expand_limits(y = c(y_min, y_max)) +
-                                  theme_minimal() +
-                                  ggtitle(plot_title, subtitle),
-                                fit_groups = fit_groups,
-                                hex_code = hex_code,
-                                levs = levs,
-                                g_labs = g_labs,
-                                rvs_bin_note = rvs_bin_note,
-                                y_min = y_min,
-                                y_max = y_max,
-                                plot_title = plot_title,
-                                subtitle = subtitle)
+  p2 <- util_create_lean_ggplot(
+    ggplot(
+      fit_groups,
+      aes(
+        x = .data$TIME,
+        y = .data$FITTED_VALUE,
+        group = .data$GROUP,
+        color = .data$GROUP
+      )
+    ) +
+      {
+        if (!is.null(hex_code)) {
+          scale_color_manual(
+            values = hex_code,
+            breaks = levs,
+            labels = g_labs
+          ) # https://chatgpt.com/c/69e0ecc5-10a8-8397-9f51-0d365cfa1876
+        } else {
+          ggplot2::scale_color_discrete(
+            breaks = levs,
+            labels = g_labs
+          )
+        }
+      } +
+      xlab(rvs_bin_note) +
+      ylab("") +
+      geom_line() +
+      expand_limits(y = c(y_min, y_max)) +
+      theme_minimal() +
+      ggtitle(plot_title, subtitle),
+    fit_groups = fit_groups,
+    hex_code = hex_code,
+    levs = levs,
+    g_labs = g_labs,
+    rvs_bin_note = rvs_bin_note,
+    y_min = y_min,
+    y_max = y_max,
+    plot_title = plot_title,
+    subtitle = subtitle
+  )
 
   if (length(levels(ds1[[group_vars]])) > 1) {
-    p2 <- util_create_lean_ggplot(p2 +
-                                    theme(legend.title = element_blank()),
-                                  p2 = p2)
+    p2 <- util_create_lean_ggplot(
+      p2 +
+        theme(legend.title = element_blank()),
+      p2 = p2
+    )
   } else {
-    p2 <- util_create_lean_ggplot(p2 +
-                                    theme(legend.position = "none"),
-                                  p2 = p2)
+    p2 <- util_create_lean_ggplot(
+      p2 +
+        theme(legend.position = "none"),
+      p2 = p2
+    )
   }
 
   p1 <- util_set_size(p1,
-                      width_em = 45,
-                      height_em = length(levels(ds1[[group_vars]])) * 15 / 2)
+    width_em = 45,
+    height_em = length(levels(ds1[[group_vars]])) * 15 / 2
+  )
   p2 <- util_set_size(p2, 30, 15)
 
   pl <- list(
@@ -647,9 +736,10 @@ util_acc_loess_bin <- function(
     .plot1 <- pl[["Loess_fits_combined"]]
     obj1 <- util_create_lean_ggplot(
       ggplot2::ggplot_build(.plot1),
-      .plot1 = .plot1)
-    min_point_line <- min(util_rbind(data_frames_list = obj1$data)$y, na.rm = TRUE)
-    max_point_line <- max(util_rbind(data_frames_list = obj1$data)$y, na.rm = TRUE)
+      .plot1 = .plot1
+    )
+    min_point_line <- min(util_rbind(data_frames_list = obj1$data)$y, na.rm = TRUE) # nolint: line_length_linter.
+    max_point_line <- max(util_rbind(data_frames_list = obj1$data)$y, na.rm = TRUE) # nolint: line_length_linter.
     n_groups <- length(unique(util_rbind(data_frames_list = obj1$data)$group))
     min_time <- min(util_rbind(data_frames_list = obj1$data)$x, na.rm = TRUE)
     max_time <- max(util_rbind(data_frames_list = obj1$data)$x, na.rm = TRUE)
@@ -659,30 +749,32 @@ util_acc_loess_bin <- function(
   if (plot_format == "BOTH") {
     return(list(SummaryPlotList = pl))
   } else if (plot_format == "COMBINED") {
-
     return(util_attach_attr(
       list(SummaryPlotList = setNames(pl["Loess_fits_combined"],
-                                      nm = resp_vars)),
+          nm = resp_vars
+        )),
       sizing_hints = list(
         figure_type_id = "dot_loess",
         range = max_point_line - min_point_line,
-        no_char_y = max(nchar(c(round(max_point_line, digits = 2),
-                                round(min_point_line, digits = 2)))),
+        no_char_y = max(nchar(c(
+          round(max_point_line, digits = 2),
+          round(min_point_line, digits = 2)
+        ))),
         n_groups = n_groups
-      )))
+      )
+    ))
   } else if (plot_format == "FACETS") {
     return(list(SummaryPlotList = setNames(pl["Loess_fits_facets"],
-                                           nm = resp_vars)))
+          nm = resp_vars
+        )))
   } else if (plot_format != "AUTO") {
     util_message("Unknown %s: %s -- will switch to default value AUTO.",
-                 dQuote("plot_format"), dQuote(plot_format),
-                 applicability_problem = TRUE)
+      dQuote("plot_format"), dQuote(plot_format),
+      applicability_problem = TRUE
+    )
   }
-#  if (length(levels(ds1[[group_vars]])) < 15) {
-    selection <- "Loess_fits_combined"
-#  } else {
-#    selection <- "Loess_fits_facets"
-#  }
+  # Historical level-count based loess output selection removed here.
+  selection <- "Loess_fits_combined"
   pl <- pl[selection]
   names(pl) <- resp_vars
 
@@ -691,10 +783,11 @@ util_acc_loess_bin <- function(
     sizing_hints = list(
       figure_type_id = "dot_loess",
       range = max_point_line - min_point_line,
-      no_char_y = max(nchar(c(round(max_point_line, digits = 2),
-                              round(min_point_line, digits = 2)))),
+      no_char_y = max(nchar(c(
+        round(max_point_line, digits = 2),
+        round(min_point_line, digits = 2)
+      ))),
       n_groups = n_groups
-    )))
-  # TODO: This function can only be called with single resp_vars, not with a
-  # vector of resp_vars. Should the output be renamed to 'SummaryPlot'?
+    )
+  ))
 }

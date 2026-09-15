@@ -24,7 +24,8 @@ with labels of variables}
 \item{item_level}{\link{data.frame} the data frame that contains metadata
 attributes of study data}
 
-\item{meta_data_cross_item}{\link{meta_data_cross}}
+\item{meta_data_cross_item}{\link{data.frame} -- optional: Cross-item level
+metadata}
 
 \item{meta_data}{\link{data.frame} old name for \code{item_level}}
 
@@ -54,7 +55,7 @@ works on variable groups (\code{cross-item_level}), which are expected to show
 a Pearson correlation
 }
 \details{
-\link{Descriptor} # TODO: This can be an indicator
+\link{Descriptor}
 }
 \examples{
 \dontrun{

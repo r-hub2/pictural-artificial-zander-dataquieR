@@ -1,10 +1,63 @@
+function dqWhenJQueryReady(callback) {
+  if (window.jQuery) {
+    window.jQuery(callback);
+    return;
+  }
+  var tries = 0;
+  var timer = window.setInterval(function () {
+    if (window.jQuery) {
+      window.clearInterval(timer);
+      window.jQuery(callback);
+    } else if (++tries > 200) {
+      window.clearInterval(timer);
+      console.warn("dataquieR menu initialization skipped: jQuery is not available");
+    }
+  }, 25);
+}
 
-$(function () {
+function dqGetDataTableApi(rootEl) {
+  if (!rootEl || !window.jQuery) return null;
+  if (rootEl.table && typeof rootEl.table === "function") return rootEl;
+
+  var $ = window.jQuery;
+  if (rootEl.nTable && $.fn.dataTable) {
+    try { return new $.fn.dataTable.Api(rootEl); } catch (e0) { }
+  }
+
+  var candidates = [];
+  if (rootEl.nodeType === 1) {
+    if (rootEl.tagName && rootEl.tagName.toLowerCase() === "table") {
+      candidates.push(rootEl);
+    }
+    candidates = candidates.concat(
+      Array.prototype.slice.call(rootEl.querySelectorAll ? rootEl.querySelectorAll("table") : [])
+    );
+  }
+
+  for (var i = 0; i < candidates.length; i++) {
+    var node = candidates[i];
+    var $node = $(node);
+    if (node._dt2) return node._dt2;
+    var api = $node.data("dt-api") || $node.data("DataTable");
+    if (api && api.table) return api;
+    try {
+      if ($.fn.dataTable && $.fn.dataTable.isDataTable(node)) {
+        return $node.DataTable();
+      }
+    } catch (e1) { }
+  }
+
+  return null;
+}
+
+dqWhenJQueryReady(function () {
   initIframeMessageBridge();
 
   escCloseStack = new EscCloseStack();
 
   overrideLinkBehavior();
+
+  initOnlineReferenceLinks();
 
   init_dt_utils();
 
@@ -21,6 +74,11 @@ $(function () {
 })
 
 //#region general init functions
+
+function knowID(id) {
+  return(all_ids.all_ids.includes(id) ||
+         all_ids.all_ids.includes(decodeURI(id)))
+}
 
 function initDataTablesHeaderFilters() {
   // Keep this ColVis shim. DataTables renders the header filters in the
@@ -82,7 +140,8 @@ function initDataTablesHeaderFilters() {
   }
 
   $(document).on("init.dt", function (e, settings) {
-    var api = new $.fn.dataTable.Api(settings);
+    var api = dqGetDataTableApi(settings);
+    if (!api) return;
     setTimeout(function () {
       bindHeaderFilters(api);
     }, 0);
@@ -96,8 +155,9 @@ function initDataTablesHeaderFilters() {
       if (!id || !id.match(/_wrapper$/)) return;
 
       var tableSelector = "#" + id.replace(/_wrapper$/g, "");
-      if (!$.fn.dataTable.isDataTable(tableSelector)) return;
-      bindHeaderFilters($(tableSelector).DataTable());
+      var api = dqGetDataTableApi(document.querySelector(tableSelector));
+      if (!api) return;
+      bindHeaderFilters(api);
     });
   }, 1000);
 }
@@ -330,6 +390,9 @@ function overrideLinkBehavior() {
   document.addEventListener("click", function (e) {//
     const link = e.target.closest("a");
     if (!link || !link.href) return;
+    if (!guardOnlineReferenceLink(link, e)) {
+      return;
+    }
     if (link.getAttribute("href") == "#") return;
     if ($(link).data("no-existance-check")) {
       return;
@@ -343,14 +406,294 @@ function overrideLinkBehavior() {
   });
 }
 
+function guardOnlineReferenceLink(link, event) {
+  if (!link.classList || !link.classList.contains("dq-online-ref")) {
+    return true;
+  }
+
+  const state = link.getAttribute("data-dq-online-ref-state") || "unchecked";
+  if (state === "unchecked" || state === "checking") {
+    event.preventDefault();
+    setOnlineReferenceState(
+      link,
+      "checking",
+      "Checking whether the online reference can be reached..."
+    );
+    checkOnlineReferenceLink(link).then(function (result) {
+      if (result.available) {
+        setOnlineReferenceState(link, "available", "", result.href);
+        window.open(result.href, "_blank", "noopener");
+      } else {
+        setOnlineReferenceState(
+          link,
+          "unavailable",
+          "The online reference cannot be reached from this browser right now."
+        );
+        showOnlineReferenceMessage(
+          link,
+          "The online reference cannot be reached from this browser right now."
+        );
+      }
+    });
+    return false;
+  }
+
+  if (state !== "available") {
+    event.preventDefault();
+    showOnlineReferenceMessage(
+      link,
+      link.getAttribute("data-dq-online-ref-message") ||
+        "The online reference cannot be opened from this browser right now."
+    );
+    return false;
+  }
+
+  const href = link.getAttribute("href");
+  if (!href || href === "#") {
+    event.preventDefault();
+    showOnlineReferenceMessage(
+      link,
+      "The online reference for this result is not available in this report."
+    );
+    return false;
+  }
+
+  if (window.navigator && window.navigator.onLine === false) {
+    event.preventDefault();
+    setOnlineReferenceState(
+      link,
+      "unavailable",
+      "The online reference cannot be opened while the browser is offline."
+    );
+    showOnlineReferenceMessage(
+      link,
+      "The online reference cannot be opened while the browser is offline."
+    );
+    return false;
+  }
+
+  return true;
+}
+
+function initOnlineReferenceLinks() {
+  const links = Array.prototype.slice.call(
+    document.querySelectorAll("a.dq-online-ref")
+  );
+  if (!links.length) return;
+
+  links.forEach(function (link) {
+    const href = link.getAttribute("data-dq-online-ref-href") ||
+      link.getAttribute("href");
+    const fallbackHref = link.getAttribute("data-dq-online-ref-fallback-href");
+    const originalTitle = link.getAttribute("title") || "";
+    if (href) {
+      link.setAttribute("data-dq-online-ref-href", href);
+    }
+    if (fallbackHref) {
+      link.setAttribute("data-dq-online-ref-fallback-href", fallbackHref);
+    }
+    link.setAttribute("data-dq-online-ref-title", originalTitle);
+    setOnlineReferenceState(link, "unchecked", "");
+  });
+
+  window.addEventListener("online", function () {
+    links.forEach(function (link) {
+      setOnlineReferenceState(link, "unchecked", "");
+    });
+  });
+  window.addEventListener("offline", function () {
+    links.forEach(function (link) {
+      setOnlineReferenceState(
+        link,
+        "unavailable",
+        "The online reference cannot be opened while the browser is offline."
+      );
+    });
+  });
+}
+
+function updateOnlineReferenceLinks(links) {
+  if (window.navigator && window.navigator.onLine === false) {
+    links.forEach(function (link) {
+      setOnlineReferenceState(
+        link,
+        "unavailable",
+        "The online reference cannot be opened while the browser is offline."
+      );
+    });
+    return;
+  }
+
+  const linksWithHref = links.filter(function (link) {
+    return Boolean(link.getAttribute("data-dq-online-ref-href"));
+  });
+
+  if (!linksWithHref.length) {
+    links.forEach(function(link) {
+      setOnlineReferenceState(
+        link,
+        "unavailable",
+        "The online reference for this result is not available in this report."
+      );
+    });
+    return;
+  }
+
+  const probeCache = {};
+  function probeCached(href) {
+    if (!href) return Promise.resolve(false);
+    if (!probeCache[href]) {
+      probeCache[href] = probeOnlineReference(href);
+    }
+    return probeCache[href];
+  }
+
+  links.forEach(function (link) {
+    setOnlineReferenceState(
+      link,
+      "checking",
+      "Checking whether the online reference can be reached..."
+    );
+  });
+
+  Promise.all(linksWithHref.map(function (link) {
+    const href = link.getAttribute("data-dq-online-ref-href");
+    const fallbackHref = link.getAttribute("data-dq-online-ref-fallback-href");
+    return probeCached(href).then(function (available) {
+      if (available) {
+        return { link: link, href: href, available: true };
+      }
+      if (fallbackHref && fallbackHref !== href) {
+        return probeCached(fallbackHref).then(function (fallbackAvailable) {
+          return {
+            link: link,
+            href: fallbackAvailable ? fallbackHref : "",
+            available: fallbackAvailable
+          };
+        });
+      }
+      return { link: link, href: "", available: false };
+    });
+  })).then(function (results) {
+    results.forEach(function (result) {
+      if (result.available) {
+        setOnlineReferenceState(result.link, "available", "", result.href);
+      } else {
+        setOnlineReferenceState(
+          result.link,
+          "unavailable",
+          "The online reference cannot be reached from this browser right now."
+        );
+      }
+    });
+  });
+}
+
+function checkOnlineReferenceLink(link) {
+  const href = link.getAttribute("data-dq-online-ref-href");
+  const fallbackHref = link.getAttribute("data-dq-online-ref-fallback-href");
+
+  return probeOnlineReference(href).then(function (available) {
+    if (available) {
+      return { href: href, available: true };
+    }
+    if (fallbackHref && fallbackHref !== href) {
+      return probeOnlineReference(fallbackHref).then(function (fallbackAvailable) {
+        return {
+          href: fallbackAvailable ? fallbackHref : "",
+          available: fallbackAvailable
+        };
+      });
+    }
+    return { href: "", available: false };
+  });
+}
+
+function probeOnlineReference(href) {
+  if (!href) {
+    return Promise.resolve(false);
+  }
+  if (!window.fetch) {
+    return Promise.resolve(!(window.navigator && window.navigator.onLine === false));
+  }
+
+  const controller = window.AbortController ? new AbortController() : null;
+  const timer = controller ? window.setTimeout(function () {
+    controller.abort();
+  }, 5000) : null;
+
+  return fetch(href, {
+    method: "HEAD",
+    mode: "cors",
+    credentials: "omit",
+    cache: "no-store",
+    signal: controller ? controller.signal : undefined
+  }).then(function (response) {
+    if (timer) window.clearTimeout(timer);
+    return response.ok;
+  }).catch(function () {
+    if (timer) window.clearTimeout(timer);
+    return false;
+  });
+}
+
+function setOnlineReferenceState(link, state, message, activeHref) {
+  const href = activeHref || link.getAttribute("data-dq-online-ref-href");
+  const originalTitle = link.getAttribute("data-dq-online-ref-title") || "";
+
+  link.setAttribute("data-dq-online-ref-state", state);
+  link.setAttribute("data-dq-online-ref-message", message || "");
+
+  if ((state === "available" || state === "unchecked") && href) {
+    link.setAttribute("href", href);
+    link.setAttribute("target", "_blank");
+    if (state === "available") {
+      link.setAttribute("data-dq-online-ref-active-href", href);
+    } else {
+      link.removeAttribute("data-dq-online-ref-active-href");
+    }
+    link.classList.remove("dq-online-ref-unavailable");
+    if (originalTitle) {
+      link.setAttribute("title", originalTitle);
+    } else {
+      link.removeAttribute("title");
+    }
+  } else {
+    link.setAttribute("href", "#");
+    link.removeAttribute("target");
+    link.removeAttribute("data-dq-online-ref-active-href");
+    link.classList.add("dq-online-ref-unavailable");
+    if (message) {
+      link.setAttribute("title", message);
+    }
+  }
+}
+
+function showOnlineReferenceMessage(link, message) {
+  if (typeof tippy === "function") {
+    const instance = link._tippy || tippy(link, {
+      content: message,
+      trigger: "manual",
+      hideOnClick: true,
+      allowHTML: false
+    });
+    instance.setContent(message);
+    instance.show();
+    window.setTimeout(() => {
+      instance.hide();
+    }, 5000);
+    return;
+  }
+  alert(message);
+}
+
 /**
  * Starts an auto-reload watcher for a rendered report.
  *
  * Polls `renderinfo.js` every 5s and reloads the page if:
- * - the reportId changes, or
- * - the render info script fails to load.
+ * - the reportId changes for the same report directory.
  *
- * Uses sessionStorage to track the last known reportId.
+ * Uses report-specific sessionStorage to track the last known reportId.
  * Skips execution in viewer panes, iframes, or single-result mode.
  *
  */
@@ -363,7 +706,6 @@ function initAutoReload() {
   if (inViewer) return; // no auto-reload in RStudio's viewer panel
   const CHECK_MS = 5000;
   let INFO_SRC = "renderinfo.js";
-  const KEY = "renderingData";
   let loading = false;
   let RELOAD_URL = "../index.html";
 
@@ -374,6 +716,13 @@ function initAutoReload() {
     RELOAD_URL = "index.html";
     INFO_SRC = ".report/renderinfo.js";
   }
+
+  // file:// pages share one sessionStorage origin. Scope the marker to the
+  // resolved report root so opening another report cannot trigger a redirect.
+  let infoUrl = INFO_SRC;
+  try { infoUrl = new URL(INFO_SRC, window.location.href).pathname; }
+  catch (e) { }
+  const KEY = "renderingData:" + infoUrl;
 
   // nur Top-Level-Seite auto-reloaden (keine iframes/dialogs)
   if (window.top && window.top !== window.self) return;
@@ -421,9 +770,10 @@ function initAutoReload() {
 
   function tick() {
     loadRenderInfo(function (err, data) {
-      // Datei fehlt → Render offenbar noch nicht fertig
+      // A completed report page may briefly fail to load the marker (especially
+      // via file://). Its index page has its own render-progress polling; keep
+      // the current content page stable and try again on the next interval.
       if (err) {
-        location.replace(RELOAD_URL + "?_=" + Date.now());
         return;
       }
 
@@ -695,6 +1045,21 @@ function util_checked_navigate(target, opts) {
       baseName = targetUrl.pathname.split("/").pop() + targetUrl.hash;
     }
 
+    if (targetUrl.hash) {
+      try {
+        var currentPath = currentUrl.pathname.replace(/\/[^\/]*$/, "/");
+        var targetPath = targetUrl.pathname.replace(/\/[^\/]*$/, "/");
+        var samePage = targetUrl.origin === currentUrl.origin &&
+          targetPath === currentPath &&
+          targetUrl.pathname.split("/").pop() === currentUrl.pathname.split("/").pop();
+        var anchorId = decodeURIComponent(targetUrl.hash.slice(1));
+        if (samePage && anchorId && document.getElementById(anchorId)) {
+          return true;
+        }
+      } catch (e) {
+        // Fall back to anchor_list based validation below.
+      }
+    }
 
     if (!all_ids.all_ids.includes(baseName) &&
       !all_ids.all_ids.includes(decodeURI(baseName))) {
@@ -1671,7 +2036,8 @@ function init_dt_utils() {
   function util_dt_has_hscroll(api) {
     try {
       const $wrap = $(api.table().container());
-      const sb = $wrap.find("div.dataTables_scrollBody").get(0);
+      const sb = $wrap.find("div.dataTables_scrollBody, div.dt-scroll-body")
+        .get(0);
       if (!sb) return false;
       return (sb.scrollWidth - sb.clientWidth) > 0;
     } catch (e) {
@@ -1731,6 +2097,23 @@ function init_dt_utils() {
     if (!api) return;
 
     function run() {
+      try {
+        const $wrap = $(api.table().container());
+        // Keep the outer scroll wrapper's CSS max-width from dt-cols-*.
+        $wrap.find(".dataTables_scroll, .dt-scroll")
+          .css({ width: "100%", maxWidth: "" });
+        $wrap.find(
+          ".dataTables_scrollHead, .dataTables_scrollBody, " +
+          ".dt-scroll-head, .dt-scroll-body"
+        )
+          .css({ width: "100%", maxWidth: "100%" });
+        $wrap.find(
+          ".dataTables_scrollHeadInner, .dataTables_scrollHead table.dataTable, " +
+          ".dataTables_scrollBody table.dataTable, .dt-scroll-headInner, " +
+          ".dt-scroll-head table.dataTable, .dt-scroll-body table.dataTable"
+        )
+          .css("width", "");
+      } catch (e0) { }
       try { api.columns.adjust(); } catch (e) { }
       try {
         if (api.fixedColumns && typeof api.fixedColumns().relayout === "function") {
@@ -1766,7 +2149,8 @@ function init_dt_utils() {
    */
   function util_dt_apply_all(settings) {
     let api;
-    try { api = new $.fn.dataTable.Api(settings); } catch (e) { return; }
+    try { api = dqGetDataTableApi(settings); } catch (e) { return; }
+    if (!api) return;
 
     // Prevent feedback loops: columns.adjust()/FixedHeader can trigger draw/column-sizing events again.
     if (settings && settings.__dq_dt_apply_busy) return;
@@ -1807,6 +2191,18 @@ function init_dt_utils() {
     }
   }
 
+  window.dataquieRApplyDtResponsiveCaps = function (table) {
+    let api;
+    try {
+      api = table && table.table ? table : dqGetDataTableApi(table);
+    } catch (e) {
+      return;
+    }
+    if (!api) return;
+    util_dt_apply_responsive_caps(api);
+    util_dt_adjust(api);
+  };
+
   $(document).on("init.dt", function (e, settings) {
     util_dt_apply_all(settings);
   });
@@ -1822,8 +2218,8 @@ function init_dt_utils() {
     if (util_dt_resize_t) window.clearTimeout(util_dt_resize_t);
     util_dt_resize_t = window.setTimeout(function () {
       $(document).find("table.dataTable").each(function () {
-        if (!$.fn.dataTable || !$.fn.dataTable.isDataTable(this)) return;
-        const api = $(this).DataTable();
+        const api = dqGetDataTableApi(this);
+        if (!api) return;
         util_dt_adjust(api);
         util_dt_apply_responsive_caps(api);
       });
@@ -1845,11 +2241,11 @@ function init_dt_utils() {
 function dqUpdateHorizontalOverflowIndicator(api) {
 
   const $wrap = $(api.table().container());
-  const $scrollBody = $wrap.find('.dataTables_scrollBody');
+  const $scrollBody = $wrap.find('.dataTables_scrollBody, .dt-scroll-body');
   if (!$scrollBody.length) return;
 
   // Put the shadow overlay on the scroll container so it doesn't move with scrollLeft.
-  const $scroll = $wrap.find('.dataTables_scroll').first();
+  let $scroll = $wrap.find('.dataTables_scroll, .dt-scroll').first();
   if (!$scroll.length) $scroll = $scrollBody.parent();
 
   // Ensure the overlay elements exist (one per scroll container)
@@ -1924,7 +2320,8 @@ function dqUpdateHorizontalOverflowIndicator(api) {
  */
 function addDqUpdateHorizontalOverflowIndicatorEventListener() {
   $(document).on('init.dt', function (e, settings) {
-    const api = new $.fn.dataTable.Api(settings);
+    const api = dqGetDataTableApi(settings);
+    if (!api) return;
     setTimeout(function () {
       dqUpdateHorizontalOverflowIndicator(api);
     }, 0);

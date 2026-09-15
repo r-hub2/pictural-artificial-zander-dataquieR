@@ -6,8 +6,7 @@
 #'
 #' @param sdf the [data.frame] of study data
 #' @param mdf the [data.frame] of associated static metadata
-#' @param label_col [variable attribute] the name of the column in the metadata
-#'                                       with labels of variables
+#' @inheritParams .template_function_developer
 #' @param check_convertible [logical] also try, if a conversion to the
 #'                                    declared data type would work.
 #' @param check_conversion_stable [logical] do not distinguish convertible
@@ -40,84 +39,103 @@
 #' @noRd
 #'
 util_compare_meta_with_study <- function(sdf, mdf, label_col,
-                                         check_convertible = FALSE,
-                                         threshold_value = 0,
-                                         return_percentages = FALSE,
-                                         check_conversion_stable = FALSE
-                                         ) {
+  check_convertible = FALSE,
+  threshold_value = 0,
+  return_percentages = FALSE,
+  check_conversion_stable = FALSE) {
   if (any(trimws(colnames(sdf)) == "")) {
-    sdf[, trimws(colnames(sdf)) == ""] <- paste0("v",
-                                                 seq_len(
-                                                   sum(trimws(colnames(sdf)) ==
-                                                         "")))
+    colnames(sdf)[trimws(colnames(sdf)) == ""] <- paste0(
+      "v",
+      seq_len(
+        sum(trimws(colnames(sdf)) ==
+            "")
+      )
+    )
     util_warning("Found columns w/o names in %s, using dummy names",
-               dQuote(label_col),
-               applicability_problem = TRUE)
+      dQuote(label_col),
+      applicability_problem = TRUE
+    )
   }
   if (any(trimws(mdf[[label_col]]) == "")) {
     mdf[trimws(mdf[[label_col]]) == "", label_col] <-
       paste0("v", seq_len(sum(trimws(mdf[[label_col]]) == "")))
     util_warning("Found empty labels in %s, using dummy labels",
-               sQuote("study_data"), applicability_problem = TRUE)
+      sQuote("study_data"),
+      applicability_problem = TRUE
+    )
   }
   missing_in_study_data <- !(mdf[[label_col]] %in% colnames(sdf))
   sdf <- sdf[, as.character(mdf[[label_col]][!missing_in_study_data]),
-             drop = FALSE]
+    drop = FALSE
+  ]
   if (return_percentages) {
     if (!check_conversion_stable) {
-      util_error("%s = %s is only allowed, if %s = %s",
-                  sQuote("check_conversion_stable"),
-                  sQuote("FALSE"),
-                  sQuote("return_percentages"),
-                  sQuote("FALSE")
-                 )
+      util_error(
+        "%s = %s is only allowed, if %s = %s",
+        sQuote("check_conversion_stable"),
+        sQuote("FALSE"),
+        sQuote("return_percentages"),
+        sQuote("FALSE")
+      )
     }
-    if (check_convertible)
+    if (check_convertible) {
       res_template <- numeric(4)
-    else
+    } else {
       res_template <- numeric(1)
+    }
   } else {
     res_template <- integer(1)
   }
-  sdf[util_empty(sdf)] <- NA # enable robust_na = FALSE option to accelerate -- util_empty keeps structure, important for nrow or ncol < 2
+  sdf[util_empty(sdf)] <- NA # enable robust_na = FALSE option to accelerate -- util_empty keeps structure, important for nrow or ncol < 2 # nolint: line_length_linter.
   is_data_type <- lapply(setNames(nm = colnames(sdf)),
-                         function(x, check_convertible, threshold_value,
-                                  return_percentages, check_conversion_stable) {
-    ..vct <- sdf[, x, drop = TRUE]
-    attr(..vct, "..cn") <- x
-    res <- util_check_data_type(..vct,
-                                mdf$DATA_TYPE[mdf[[label_col]] == x],
-                                check_convertible = check_convertible,
-                                robust_na = FALSE,
-                                threshold_value = threshold_value,
-                                return_percentages = return_percentages,
-                                check_conversion_stable =
-                                  check_conversion_stable,
-                                vname = x)
-    bitsToInt<-function(x) { # https://stackoverflow.com/a/25411493
-      packBits(rev(c(rep(FALSE, 32-length(x)%%32), as.logical(x))), "integer")
-    }
-    which_vec <- NULL
-    try({
-      which_vec <- # loosing this on vapply. also: this is too slow.
-        apply(as.matrix(do.call(cbind.data.frame, attr(res, "which"))) * 1, 1,
-              bitsToInt)
-    }, silent = TRUE)
+    function(x, check_convertible, threshold_value,
+      return_percentages, check_conversion_stable) {
+      ..vct <- sdf[, x, drop = TRUE]
+      attr(..vct, "..cn") <- x
+      res <- util_check_data_type(..vct,
+        mdf[[DATA_TYPE]][mdf[[label_col]] == x],
+        check_convertible = check_convertible,
+        robust_na = FALSE,
+        threshold_value = threshold_value,
+        return_percentages = return_percentages,
+        check_conversion_stable =
+          check_conversion_stable,
+        vname = x
+      )
+      bitsToInt <- function(x) { # https://stackoverflow.com/a/25411493
+        packBits(rev(c(rep(FALSE, 32 - length(x) %% 32), as.logical(x))), "integer") # nolint: line_length_linter.
+      }
+      which_vec <- NULL
+      try(
+        {
+          which_vec <- # loosing this on vapply. also: this is too slow.
+            apply(
+              as.matrix(do.call(
+                cbind.data.frame,
+                util_attr(res, "which", exact = TRUE)
+              )) * 1, 1,
+              bitsToInt
+            )
+        },
+        silent = TRUE
+      )
 
-    if (return_percentages) {
-      util_attach_attr(setNames(as.numeric(res), nm = names(res)),
-                       which_vec = which_vec)
-    } else {
-      util_attach_attr(as.integer(res), which_vec = which_vec)
-    }
-  },
-  check_convertible = check_convertible,
-  threshold_value = threshold_value,
-  return_percentages = return_percentages,
-  check_conversion_stable = check_conversion_stable)
+      if (return_percentages) {
+        util_attach_attr(setNames(as.numeric(res), nm = names(res)),
+          which_vec = which_vec
+        )
+      } else {
+        util_attach_attr(as.integer(res), which_vec = which_vec)
+      }
+    },
+    check_convertible = check_convertible,
+    threshold_value = threshold_value,
+    return_percentages = return_percentages,
+    check_conversion_stable = check_conversion_stable
+  )
   which_vec <- NULL
   if (length(res_template) > 1) {
-    which_vec <- lapply(is_data_type, attr, "which_vec")
+    which_vec <- lapply(is_data_type, util_attr, "which_vec")
   }
   is_data_type <- vapply(is_data_type, identity, FUN.VALUE = res_template)
   if (length(res_template) > 1) {

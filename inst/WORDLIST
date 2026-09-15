@@ -2,10 +2,12 @@ ApplicabilityPlot
 ApplicabilityPlotList
 Aurèle
 Cmd
+ColumnControl
 DFG
 DIAST
 DM
 DQ
+DT
 DataTable
 Devlin
 Diaconis
@@ -22,9 +24,11 @@ Loess
 ModifiedStudyData
 NCategory
 QI
+QIF
 RMarkdown
 RStudio
 SBP
+SearchBuilder
 ShinyApp
 SigmaGap
 SixSigma
@@ -42,6 +46,7 @@ SummaryTable
 SummaryTables
 icc
 TMF
+TJM
 USR
 VARATT
 YAML
@@ -216,3 +221,11 @@ casted
 analytics
 counterintuitive
 de
+backend
+backends
+multicore
+multisession
+lifecycle
+Musholt
+embeddable
+UI

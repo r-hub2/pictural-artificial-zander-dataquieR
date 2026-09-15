@@ -12,9 +12,10 @@
 #' @noRd
 util_table_of_vct <- function(Var1) {
   util_expect_scalar(Var1,
-                     allow_more_than_one = TRUE,
-                     allow_na = TRUE,
-                     allow_null = TRUE)
+    allow_more_than_one = TRUE,
+    allow_na = TRUE,
+    allow_null = TRUE
+  )
   r <- as.data.frame(table(Var1))
   if (!identical(colnames(r), c("Var1", "Freq"))) {
     r <- data.frame(Var1 = integer(0), Freq = integer(0))

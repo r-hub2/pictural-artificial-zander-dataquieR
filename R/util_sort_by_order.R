@@ -52,7 +52,7 @@ util_sub_string_left_from_. <- function(x) {
   pos <- regexpr(".", x, fixed = TRUE)
 
   util_stop_if_not(
-    "there must be at least one dot to separate the col. name from the row name (wolog this is the first dot)" =
+    "there must be at least one dot to separate the col. name from the row name (wolog this is the first dot)" = # nolint: line_length_linter.
       all(pos > 0)
   )
 
@@ -78,7 +78,7 @@ util_sub_string_right_from_. <- function(x) {
   pos <- regexpr(".", x, fixed = TRUE)
 
   util_stop_if_not(
-    "there must be at least one dot to separate the col. name from the row name (wolog this is the first dot)" =
+    "there must be at least one dot to separate the col. name from the row name (wolog this is the first dot)" = # nolint: line_length_linter.
       all(pos > 0)
   )
 

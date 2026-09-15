@@ -6,6 +6,9 @@
 \usage{
 .template_function_indicator(
   resp_vars,
+  group_vars,
+  co_vars,
+  time_vars,
   study_data,
   label_col,
   item_level,
@@ -13,13 +16,23 @@
   meta_data_v2,
   meta_data_dataframe,
   meta_data_segment,
+  meta_data_cross_item,
   dataframe_level,
-  segment_level
+  segment_level,
+  cross_item_level,
+  `cross-item_level`
 )
 }
 \arguments{
 \item{resp_vars}{\link{variable} the names of the measurement variables, if
 missing or \code{NULL}, all variables will be checked}
+
+\item{group_vars}{\link{variable list} the names of the grouping variables}
+
+\item{co_vars}{\link{variable list} the names of covariables for adjustment}
+
+\item{time_vars}{\link{variable} the name of the variable giving the time of
+measurement}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -42,9 +55,16 @@ metadata for the data frame level}
 
 \item{meta_data_segment}{\link{data.frame} -- optional: Segment level metadata}
 
+\item{meta_data_cross_item}{\link{data.frame} -- optional: Cross-item level
+metadata}
+
 \item{dataframe_level}{\link{data.frame} alias for \code{meta_data_dataframe}}
 
 \item{segment_level}{\link{data.frame} alias for \code{meta_data_segment}}
+
+\item{cross_item_level}{\link{data.frame} alias for \code{meta_data_cross_item}}
+
+\item{`cross-item_level`}{\link{data.frame} alias for \code{meta_data_cross_item}}
 }
 \value{
 \code{invisible(NULL)}

@@ -13,7 +13,9 @@
 dataquieR_resultset <- function(...) {
   this <- list(...)
   dataquieR_resultset_verify(this)
+  # nocov start
   class(this) <- dataquieR_resultset_class
   this
+  # nocov end
 }
 dataquieR_resultset_class <- "dataquieR_resultset"

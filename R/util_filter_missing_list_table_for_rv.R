@@ -29,10 +29,14 @@ util_filter_missing_list_table_for_rv <- function(table, rv, rv2 = rv) {
   if (!("resp_vars" %in% colnames(table))) { # no filter column, all rows match
     return(table)
   }
-  unspecific <- table[util_empty(table[["resp_vars"]]), ,
-                      FALSE] # rows w/o resp_vars restriction
-  specific <- table[!util_empty(table[["resp_vars"]]) &
-                      trimws(table[["resp_vars"]]) %in% c(rv, rv2), ,
-                    FALSE]  # rows restricted by resp_vars on rv
+  unspecific <- table[
+    util_empty(table[["resp_vars"]]), ,
+    drop = FALSE
+  ] # rows w/o resp_vars restriction
+  specific <- table[
+    !util_empty(table[["resp_vars"]]) &
+      trimws(table[["resp_vars"]]) %in% c(rv, rv2), ,
+    drop = FALSE
+  ] # rows restricted by resp_vars on rv
   rbind(specific, unspecific) # combine both
 }

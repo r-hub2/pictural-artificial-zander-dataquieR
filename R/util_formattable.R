@@ -36,19 +36,21 @@
 #'
 #' @noRd
 util_formattable <- function(tb,
-                             min_val = min(tb, na.rm = TRUE),
-                             max_val = max(tb, na.rm = TRUE),
-                             min_color = c(0, 0, 255),
-                             max_color = c(255, 0, 0),
-                             soften =
-                               function(x) stats::plogis(x,
-                                                  location = 0.5,
-                                                  scale = 0.1),
-                             style_header = "font-weight: bold;",
-                             text_color_mode = c("bw", "gs"),
-                             hover_texts = NULL,
-                             escape_all_content = TRUE) {
-  util_ensure_suggested("htmltools", "create colored tables")
+  min_val = min(tb, na.rm = TRUE),
+  max_val = max(tb, na.rm = TRUE),
+  min_color = c(0, 0, 255),
+  max_color = c(255, 0, 0),
+  soften =
+    function(x) {
+      stats::plogis(x,
+        location = 0.5,
+        scale = 0.1
+      )
+    },
+  style_header = "font-weight: bold;",
+  text_color_mode = c("bw", "gs"),
+  hover_texts = NULL,
+  escape_all_content = TRUE) {
   text_color_mode <- match.arg(text_color_mode)
   tb_val <- as.matrix(as.data.frame(suppressWarnings(lapply(tb, as.numeric))))
   if (missing(min_val)) {
@@ -59,11 +61,15 @@ util_formattable <- function(tb,
   }
   rel_points <- ((tb_val - min_val) / abs(max_val - min_val))
   colors <- apply(soften(rel_points),
-                  1:2,
-                  function(x)
-                    setNames((min_color + x * (max_color - min_color)) / 255,
-                             c("red", "green", "blue")),
-                  simplify = FALSE)
+    1:2,
+    function(x) {
+      setNames(
+        (min_color + x * (max_color - min_color)) / 255,
+        c("red", "green", "blue")
+      )
+    },
+    simplify = FALSE
+  )
   htmltools::withTags(table(
     if (length(style_header) == ncol(tb)) {
       # style defined for each entry
@@ -79,68 +85,82 @@ util_formattable <- function(tb,
         th(style = style_header, header)
       }))
     },
-    lapply(1:nrow(tb),
-           function(rw)
-             tr(
-               lapply(1:ncol(tb),
-                      function(cl) {
-                        color <- try(do.call(rgb, as.list(colors[rw, cl][[1]])),
-                                     silent = TRUE)
-                        if (inherits(color, "try-error")) {
-                          color <- "white"#"#bbbbbb"
-                        }
-                        if (text_color_mode == "gs") {
-                          # invert
-                          txtcolor <- 1 - colors[rw, cl][[1]]
-                          if (suppressWarnings(max(abs(0.5 - txtcolor),
-                                                   na.rm = TRUE) < 0.1)) {
-                            txtcolor <- c(0, 0, 0)
-                          }
-                          #greyscale, https://www.baeldung.com/cs/convert-rgb-to-grayscale#3-luminosity-method
-                          gs <-
-                            0.3 * txtcolor[[1]] +
-                            0.59 * txtcolor[[2]] +
-                            0.11 * txtcolor[[3]]
-                          txtcolor <- rep(gs, 3)
-                        } else {
-                          # text in black or white, depending on the brightness of the background, https://stackoverflow.com/questions/11867545/change-text-color-based-on-brightness-of-the-covered-background-area, https://www.w3.org/TR/AERT/#color-contrast
-                          if (any(is.na(colors[rw, cl][[1]]))) {
-                            txtcolor <- c(0, 0, 0)
-                          } else {
-                            brightness <- (299 * 255 * colors[rw, cl][[1]][1] +
-                                             587 * 255 * colors[rw, cl][[1]][2] + 114 * 255 * colors[rw, cl][[1]][3]) / 1000
-                            if (brightness > 125) {
-                              txtcolor <- c(0, 0, 0)
-                            } else {
-                              txtcolor <- c(1, 1, 1)
-                            }
-                          }
-                        }
-                        txtcolor <- try(do.call(rgb, as.list(txtcolor)),
-                          silent = TRUE)
-                        if (inherits(txtcolor, "try-error")) {
-                          txtcolor <- "#222222"
-                        }
-                        if (!is.null(hover_texts)) {
-                          hover_text <- hover_texts[rw, cl]
-                          if (escape_all_content) {
-                            hover_text <- htmltools::htmlEscape(hover_text)
-                          }
-                        } else {
-                          hover_text <- NULL
-                        }
-                        val <- tb[rw, cl]
-                        if (!escape_all_content) {
-                          val <- htmltools::HTML(val)
-                        }
-                        td(
-                          style =
-                            sprintf("background-color: %s; color: %s; text-align: right;",
-                                    color, txtcolor),
-                          title = hover_text,
-                          val
-                        )
-                      })
-             )
-  )))
+    lapply(
+      seq_len(nrow(tb)),
+      function(rw) {
+        tr(
+          lapply(
+            seq_len(ncol(tb)),
+            function(cl) {
+              color <- try(do.call(rgb, as.list(colors[rw, cl, drop = TRUE][[1]])), # nolint: line_length_linter.
+                silent = TRUE
+              )
+              if (inherits(color, "try-error")) {
+                color <- "white" # "#bbbbbb"
+              }
+              if (text_color_mode == "gs") {
+                # invert
+                txtcolor <- 1 - colors[rw, cl, drop = TRUE][[1]]
+                if (suppressWarnings(max(abs(0.5 - txtcolor),
+                      na.rm = TRUE
+                    ) < 0.1)) {
+                  txtcolor <- c(0, 0, 0)
+                }
+                # greyscale,
+                # https://www.baeldung.com/cs/convert-rgb-to-grayscale#3-luminosity-method # nolint: line_length_linter.
+                gs <-
+                  0.3 * txtcolor[[1]] +
+                  0.59 * txtcolor[[2]] +
+                  0.11 * txtcolor[[3]]
+                txtcolor <- rep(gs, 3)
+              } else {
+                # text in black or white, depending on the brightness of the
+                # background,
+                # https://stackoverflow.com/questions/11867545/change-text-color-based-on-brightness-of-the-covered-background-area, # nolint: line_length_linter.
+                # https://www.w3.org/TR/AERT/#color-contrast
+                if (any(is.na(colors[rw, cl, drop = TRUE][[1]]))) {
+                  txtcolor <- c(0, 0, 0)
+                } else {
+                  brightness <- (299 * 255 * colors[rw, cl, drop = TRUE][[1]][1] + # nolint: line_length_linter.
+                      587 * 255 * colors[rw, cl, drop = TRUE][[1]][2] + 114 * 255 * colors[rw, cl, drop = TRUE][[1]][3]) / 1000 # nolint: line_length_linter.
+                  if (brightness > 125) {
+                    txtcolor <- c(0, 0, 0)
+                  } else {
+                    txtcolor <- c(1, 1, 1)
+                  }
+                }
+              }
+              txtcolor <- try(do.call(rgb, as.list(txtcolor)),
+                silent = TRUE
+              )
+              if (inherits(txtcolor, "try-error")) {
+                txtcolor <- "#222222"
+              }
+              if (!is.null(hover_texts)) {
+                hover_text <- hover_texts[rw, cl, drop = TRUE]
+                if (escape_all_content) {
+                  hover_text <- htmltools::htmlEscape(hover_text)
+                }
+              } else {
+                hover_text <- NULL
+              }
+              val <- tb[rw, cl, drop = TRUE]
+              if (!escape_all_content) {
+                val <- htmltools::HTML(val)
+              }
+              td(
+                style =
+                  sprintf(
+                    "background-color: %s; color: %s; text-align: right;",
+                    color, txtcolor
+                  ),
+                title = hover_text,
+                val
+              )
+            }
+          )
+        )
+      }
+    )
+  ))
 }

@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Wrapper function to check for studies data structure
 #'
 #' @description
@@ -24,9 +25,9 @@
 #' )
 #' md0 <- prep_get_data_frame("ship_meta")
 #' md0
-#' md0$VAR_NAMES
-#' md0$VAR_NAMES[[1]] <- "Id" # is this missmatch reported -- is the data frame
-#'                            # also reported, if nothing is wrong with it
+#' md0[[VAR_NAMES]]
+#' md0[[VAR_NAMES]][[1]] <- "Id" # is this missmatch reported -- is the data frame
+#' # also reported, if nothing is wrong with it
 #' out_dataframe <- int_all_datastructure_dataframe(
 #'   meta_data_dataframe = "meta_data_dataframe",
 #'   meta_data = md0
@@ -36,41 +37,47 @@
 #' # but outside this function  checktype is exact by default
 #' options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "subset_u")
 #' lapply(setNames(nm = prep_get_data_frame("meta_data_dataframe")$DF_NAME),
-#'   int_sts_element_dataframe, meta_data = md0)
-#' md0$VAR_NAMES[[1]] <-
+#'   int_sts_element_dataframe,
+#'   meta_data = md0
+#' )
+#' md0[[VAR_NAMES]][[1]] <-
 #'   "id" # is this missmatch reported -- is the data frame also reported,
-#'        # if nothing is wrong with it
+#' # if nothing is wrong with it
 #' lapply(setNames(nm = prep_get_data_frame("meta_data_dataframe")$DF_NAME),
-#'   int_sts_element_dataframe, meta_data = md0)
+#'   int_sts_element_dataframe,
+#'   meta_data = md0
+#' )
 #' options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "exact")
 #' }
 #'
+# nolint end
 int_all_datastructure_dataframe <- function(meta_data_dataframe =
-                                              "dataframe_level",
-                                            item_level = "item_level",
-                                            meta_data = item_level,
-                                            meta_data_v2,
-                                            dataframe_level) {
-
-  # Preps and checks ----
-
+    "dataframe_level",
+  item_level = "item_level",
+  meta_data = item_level,
+  meta_data_v2,
+  dataframe_level) {
   util_maybe_load_meta_data_v2()
 
   util_ck_arg_aliases()
 
   meta_data_dataframe <- prep_check_meta_data_dataframe(meta_data_dataframe)
   util_expect_data_frame(meta_data)
-  prep_check_meta_names(meta_data = meta_data,
-                        level = REQUIRED)
+  prep_check_meta_names(
+    meta_data = meta_data,
+    level = REQUIRED
+  )
 
   study_data_list <- lapply(
     setNames(nm = meta_data_dataframe[[DF_NAME]]),
     function(dfn) {
       r <- NULL
-      try(r <- prep_get_data_frame(dfn), silent = TRUE)
+      try(r <- prep_get_data_frame(dfn, keep_types = TRUE), silent = TRUE)
       if (!is.data.frame(r)) {
-        util_warning("Could not load/find data frame %s. Trying it without.",
-                     dQuote(dfn))
+        util_warning(
+          "Could not load/find data frame %s. Trying it without.",
+          dQuote(dfn)
+        )
       }
       r
     }
@@ -78,257 +85,318 @@ int_all_datastructure_dataframe <- function(meta_data_dataframe =
 
   study_data_list <-
     study_data_list[!vapply(
-      study_data_list, is.null, FUN.VALUE = logical(1))]
+      study_data_list, is.null,
+      FUN.VALUE = logical(1)
+    )]
 
   df_name_ok <- meta_data_dataframe[[DF_NAME]] %in% names(study_data_list)
 
   if (!all(df_name_ok)) {
-    util_warning("Losing %d data frame(s), because they could not be loaded",
-                 sum(!df_name_ok)
+    util_warning(
+      "Losing %d data frame(s), because they could not be loaded",
+      sum(!df_name_ok)
     )
   }
 
-  meta_data_dataframe <- meta_data_dataframe[df_name_ok, , FALSE]
+  meta_data_dataframe <- meta_data_dataframe[df_name_ok, , drop = FALSE]
 
-  id_vars_list <- lapply(setNames(meta_data_dataframe[[DF_ID_VARS]],
-                                  nm = meta_data_dataframe[[DF_NAME]]),
-                         util_parse_assignments,
-                         multi_variate_text = TRUE )
-
-  id_vars_list_vector <- lapply(id_vars_list, unlist, recursive = TRUE)
-
-
-  # 1. Unexpected data element count ----
-
-  # subset metadata with entries
   meta_data_element_count_1 <-
     meta_data_dataframe[
       !util_empty(meta_data_dataframe[[DF_ELEMENT_COUNT]]), ,
       drop = FALSE
     ]
 
-  unexp_element_count_out <- NULL # TODO: capture errors form the next all and put them to the matrices
-  try(silent = TRUE, {
-    unexp_element_count_out <- withr::with_options(list(
-      dataquieR.testdebug = TRUE),
+  unexp_element_count_out <- util_int_datastructure_run_subcheck({
+    unexp_element_count_out <- withr::with_options(
+      list(
+        dataquieR.testdebug = TRUE
+      ),
       int_unexp_elements(
         identifier_name_list = meta_data_element_count_1[[DF_NAME]],
         data_element_count = meta_data_element_count_1[[DF_ELEMENT_COUNT]]
+      )
+    )
+  }, "dataframe element count",
+  util_int_datastructure_empty_dataframe_result(
+    "NUM_int_sts_countel",
+    "PCT_int_sts_countel"
+  ))
+
+  unexp_element_set_out <- util_int_datastructure_run_subcheck({
+    meta_data_element_set <- meta_data
+    meta_data_element_set[[STUDY_SEGMENT]] <- NULL
+    meta_data_dataframe_element_set <- meta_data_dataframe
+    if (!DATAFRAMES %in% colnames(meta_data_element_set) &&
+        nrow(meta_data_dataframe_element_set) == 1) {
+      unexp_element_set_out <-
+        util_int_datastructure_df_element_set_single(
+          meta_data = meta_data_element_set,
+          meta_data_dataframe = meta_data_dataframe_element_set,
+          study_data_list = study_data_list
+        )
+    } else {
+      if (!DF_CODE %in% colnames(meta_data_dataframe_element_set)) {
+        meta_data_dataframe_element_set[[DF_CODE]] <-
+          meta_data_dataframe_element_set[[DF_NAME]]
+      }
+      unexp_element_set_out <- withr::with_options(list(
+        dataquieR.testdebug = TRUE
+      ), int_sts_element_dataframe(
+        item_level = meta_data_element_set,
+        meta_data_dataframe =
+          meta_data_dataframe_element_set
       ))
-  })
+    }
 
-  # 2. Unexpected data element set ----
+    unexp_element_set_out$DataframeTable$GRADING <-
+      ifelse(
+        unexp_element_set_out$DataframeTable$NUM_int_sts_element == 0,
+        0,
+        1
+      )
+    unexp_element_set_out
+  }, "dataframe element set",
+  list(
+    DataframeTable = util_int_datastructure_empty_dataframe_element(),
+    DataframeData = data.frame()
+  ))
 
-  unexp_element_set_out <- NULL # TODO: capture errors form the next all and put them to the matrices
-  try(silent = TRUE, {
-    # subset_m cases are not reported here, since they are not usually a problem, if variable-level metadata is a large file for many data frames with diverse variable sets in, each.
-
-    meta_data[[STUDY_SEGMENT]] <- NULL
-    unexp_element_set_out <-withr::with_options(list(
-      dataquieR.testdebug = TRUE), int_sts_element_dataframe(item_level = meta_data,
-                                                             meta_data_dataframe =
-                                                               meta_data_dataframe
-      )$DataframeTable)
-
-    unexp_element_set_out$GRADING <-
-      ifelse(unexp_element_set_out$NUM_int_sts_element == 0, 0, 1)
-  })
-
-  # 3. Unexpected data record count ----
-
-  # subset metadata with entries
   meta_data_record_count_1 <-
     meta_data_dataframe[
       !util_empty(meta_data_dataframe[[DF_RECORD_COUNT]]), ,
       drop = FALSE
     ]
 
-  unexp_records_out <- NULL # TODO: capture errors form the next all and put them to the matrices
-  try(silent = TRUE, {
+  unexp_records_out <- util_int_datastructure_run_subcheck({
     unexp_records_out <- withr::with_options(list(
-      dataquieR.testdebug = TRUE), int_unexp_records_dataframe(
-        identifier_name_list = meta_data_record_count_1[[DF_NAME]],
-        data_record_count = meta_data_record_count_1[[DF_RECORD_COUNT]]
-      ))
-  })
+      dataquieR.testdebug = TRUE
+    ), int_unexp_records_dataframe(
+      identifier_name_list = meta_data_record_count_1[[DF_NAME]],
+      data_record_count = meta_data_record_count_1[[DF_RECORD_COUNT]]
+    ))
+  }, "dataframe record count",
+  util_int_datastructure_empty_dataframe_result(
+    "NUM_int_sts_countre",
+    "PCT_int_sts_countre"
+  ))
 
-  # 4. Unexpected data record set ----
-
-  # subset metadata with entries
-  meta_data_record_set_1 <-
-    meta_data_dataframe[
-      !util_empty(meta_data_dataframe[[DF_RECORD_CHECK]]), ,
-      drop = FALSE
-    ]
-
-  #  meta_data_record_set_1
-
-  unexp_records_id_out <- NULL # TODO: capture errors form the next all and put them to the matrices
-  try(silent = TRUE, {
-    unexp_records_id_out <- util_int_unexp_records_set_dataframe(
-      id_vars_list = id_vars_list_vector[meta_data_record_set_1[[DF_NAME]]],
-      identifier_name_list = meta_data_record_set_1[[DF_NAME]],
-      valid_id_table_list = meta_data_record_set_1[[DF_ID_REF_TABLE]],
-      meta_data_record_check_list = meta_data_record_set_1[[DF_RECORD_CHECK]]
+  unexp_records_id_out <- util_int_datastructure_run_subcheck({
+    unexp_records_id_out <- util_int_datastructure_df_record_set(
+      meta_data_dataframe,
+      study_data_list
     )
-  })
+  }, "dataframe record set",
+  util_int_datastructure_empty_dataframe_result(
+    "NUM_int_sts_setrc",
+    "PCT_int_sts_setrc"
+  ))
 
 
-  # 5. Duplicates: ids ----
+  duplicate_ids_out <- util_int_datastructure_run_subcheck({
+    duplicate_ids_out <- util_int_datastructure_df_duplicate_ids(
+      meta_data_dataframe,
+      study_data_list
+    )
+  }, "dataframe duplicate IDs",
+  util_int_datastructure_empty_dataframe_result(
+    "NUM_int_sts_dupl_ids",
+    "PCT_int_sts_dupl_ids"
+  ))
 
-  meta_data_dup_ids_1 <-
-    meta_data_dataframe[
-      !util_empty(meta_data_dataframe[[DF_UNIQUE_ID]]) &
-        !util_empty(meta_data_dataframe[[DF_ID_VARS]]), ,
-      drop = FALSE
-    ]
+  duplicates_rows_out <- util_int_datastructure_run_subcheck({
+    meta_data_dup_rows <- util_int_datastructure_unique_rows_metadata(
+      meta_data_dataframe,
+      DF_UNIQUE_ROWS,
+      filter_metadata = TRUE
+    )
+    df_names <- meta_data_dup_rows[[DF_NAME]]
+    id_vars_list <- util_int_datastructure_id_vars(
+      meta_data_dup_rows,
+      DF_NAME,
+      DF_ID_VARS
+    )[df_names]
+    unique_rows <- setNames(
+      tolower(trimws(meta_data_dup_rows[[DF_UNIQUE_ROWS]])),
+      df_names
+    )
+    unique_rows[util_empty(unique_rows)] <- "false"
 
-  duplicate_ids_out <- NULL # TODO: capture errors form the next all and put them to the matrices
-  try(silent = TRUE, {
-    duplicate_ids_out <- withr::with_options(list(
-      dataquieR.testdebug = TRUE), int_duplicate_ids(
-        level = "dataframe",
-        identifier_name_list = meta_data_dup_ids_1[[DF_NAME]],
-        id_vars_list = id_vars_list_vector[meta_data_dup_ids_1[[DF_NAME]]],
-        repetitions = meta_data_dup_ids_1[[DF_UNIQUE_ID]]))
-  })
-
-  # 6. Duplicates: content ----
-
-  meta_data_dup_rows_1 <-
-    meta_data_dataframe[
-      !util_empty(meta_data_dataframe[[DF_UNIQUE_ROWS]]), ,
-      drop = FALSE
-    ]
-
-  meta_data_dup_rows_1 <-
-    meta_data_dup_rows_1[
-      trimws(tolower(meta_data_dup_rows_1[[DF_UNIQUE_ROWS]])) ==
-        "no_id" |
-        !util_is_na_0_empty_or_false(meta_data_dup_rows_1[[DF_UNIQUE_ROWS]]), ]
-
-  duplicates_rows_out <- NULL # TODO: capture errors form the next all and put them to the matrices
-  try(silent = TRUE, {
-    duplicates_rows_out <- withr::with_options(list(
-      dataquieR.testdebug = TRUE), int_duplicate_content(
-        level = "dataframe",
-        identifier_name_list = meta_data_dup_rows_1[[DF_NAME]],
-        id_vars_list = id_vars_list_vector[meta_data_dup_rows_1[[DF_NAME]]],
-        unique_rows = setNames(meta_data_dup_rows_1[[DF_UNIQUE_ROWS]],
-                               nm = meta_data_dup_rows_1[[DF_NAME]])
-      ))
-  })
-
-  # Output ----
+    duplicate_data_frames <- lapply(
+      setNames(nm = df_names),
+      function(current_df) {
+        data_current_df <- study_data_list[[current_df]]
+        if (unique_rows[[current_df]] == "no_id") {
+          data_current_df <- data_current_df[
+            ,
+            setdiff(colnames(data_current_df), id_vars_list[[current_df]]),
+            drop = FALSE
+          ]
+        }
+        data_current_df
+      }
+    )
+    duplicates_rows <- util_int_datastructure_duplicate_content_result(
+      duplicate_data_frames,
+      level_col = "Data frame",
+      check = "Duplicates",
+      num_col = "NUM_int_sts_dupl_content",
+      pct_col = "PCT_int_sts_dupl_content",
+      table_level = "Dataframe",
+      table_level_col = DF_NAME,
+      source_col = "Data frame"
+    )
+    if (length(duplicate_data_frames) > 0) {
+      duplicates_rows_out <- list(
+        DataframeData = duplicates_rows$data,
+        DataframeTable = duplicates_rows$table
+      )
+    } else {
+      util_int_datastructure_empty_dataframe_result(
+        "NUM_int_sts_dupl_content",
+        "PCT_int_sts_dupl_content"
+      )
+    }
+  }, "dataframe duplicate rows",
+  util_int_datastructure_empty_dataframe_result(
+    "NUM_int_sts_dupl_content",
+    "PCT_int_sts_dupl_content"
+  ))
 
   result <- list(
     int_sts_countel = unexp_element_count_out$DataframeTable,
-    int_sts_element = unexp_element_set_out,
+    int_sts_element = unexp_element_set_out$DataframeTable,
     int_sts_countre = unexp_records_out$DataframeTable,
     int_sts_setrc = unexp_records_id_out$DataframeTable,
     int_sts_dupl_ids = duplicate_ids_out$DataframeTable,
     int_sts_dupl_row = duplicates_rows_out$DataframeTable
   )
 
-  unexp_element_set_outData <- unexp_element_set_out
-  unexp_element_set_outData$`Data frame` <-
-    unexp_element_set_outData[[DF_NAME]]
-  unexp_element_set_outData[[DF_NAME]] <- NULL
+  unexp_element_set_out_data <- unexp_element_set_out$DataframeData
 
-  # Translate indicator metric columns via helper (leave unknowns untouched)
-  cn <- colnames(unexp_element_set_outData)
+  cn <- colnames(unexp_element_set_out_data)
   if (length(cn) > 0) {
-    colnames(unexp_element_set_outData) <- util_translate_indicator_metrics(
+    colnames(unexp_element_set_out_data) <- util_translate_indicator_metrics(
       cn,
       short = FALSE,
-      long  = TRUE,
+      long = TRUE,
       ignore_unknown = TRUE
     )
   }
 
-  resultData <- list(
+  result_data <- list(
     int_sts_countel = unexp_element_count_out$DataframeData,
-    int_sts_element = unexp_element_set_outData,
+    int_sts_element = unexp_element_set_out_data,
     int_sts_countre = unexp_records_out$DataframeData,
     int_sts_setrc = unexp_records_id_out$DataframeData,
     int_sts_dupl_ids = duplicate_ids_out$DataframeData,
     int_sts_dupl_row = duplicates_rows_out$DataframeData
   )
 
-  for (n in names(resultData)) {
-    rownames(resultData[[n]]) <- NULL
+  for (n in names(result_data)) {
+    rownames(result_data[[n]]) <- NULL
   }
 
   dqi <- util_get_concept_info("dqi")
-  dqi <- dqi[!util_empty(dqi$abbreviation) & !util_empty(dqi$Name), , FALSE]
+  dqi <- dqi[!util_empty(dqi$abbreviation) & !util_empty(dqi$Name), , drop = FALSE] # nolint: line_length_linter.
 
-  names(resultData) <-
+  names(result_data) <-
     util_recode(
-      names(resultData),
+      names(result_data),
       dqi,
       "abbreviation",
       "Name",
-      names(resultData)
+      names(result_data)
     )
+  if (is.data.frame(unexp_records_id_out$Other) &&
+      nrow(unexp_records_id_out$Other) > 0) {
+    result_data[["Unexpected data record set IDs"]] <-
+      unexp_records_id_out$Other
+  }
 
   DataframeTable <- util_merge_data_frame_list(result, "DF_NAME")
   cn <- colnames(DataframeTable)
   if (length(cn) > 0) {
-    cn[startsWith(cn, "GRADING.")] <- gsub("^GRADING\\.", "GRADING_",
-                                           cn[startsWith(cn, "GRADING.")])
+    cn[startsWith(cn, "GRADING.")] <- gsub(
+      "^GRADING\\.", "GRADING_",
+      cn[startsWith(cn, "GRADING.")]
+    )
     colnames(DataframeTable) <- cn
   }
-  # DataframeData <- util_merge_data_frame_list(resultData, "Data frame")
-
-  DataframeData_1 <- util_make_data_slot_from_table_slot(DataframeTable)
+  dataframe_data_1 <- util_make_data_slot_from_table_slot(DataframeTable)
   if ("resp_vars" %in% colnames(DataframeTable)) {
-    DataframeData_1$`Unexp. Variables` <- DataframeTable$resp_vars
+    dataframe_data_1$`Unexp. Variables` <- DataframeTable$resp_vars
   }
 
   DataframeData <- data.frame(Dataframe = DataframeTable[[DF_NAME]])
-  # Replace separate columns with just one column containing N and %
-  # Only if content is present, merge columns
-  if(!is.null(DataframeData_1$`Unexpected data element count (Number)`)){
-    DataframeData$`Unexpected data element count N (%)` <- util_paste0_with_na(DataframeData_1$`Unexpected data element count (Number)`, " (",
-                                                                               DataframeData_1$`Unexpected data element count (Percentage (0 to 100))`, ")")
-    DataframeData$`Unexpected data element count (Grading)`<- DataframeData_1$`Unexpected data element count (Grading)`
+  DataframeData <- util_int_datastructure_add_summary_columns(
+    DataframeData,
+    dataframe_data_1,
+    "Unexpected data element count"
+  )
+
+  if (!is.null(dataframe_data_1$`Unexp. Variables`)) {
+    DataframeData$`Unexp. Variables` <- dataframe_data_1$`Unexp. Variables`
   }
 
-  if(!is.null(DataframeData_1$`Unexp. Variables`)){
-    DataframeData$`Unexp. Variables`<- DataframeData_1$`Unexp. Variables`
+  for (label in c(
+    "Unexpected data element set",
+    "Unexpected data record count",
+    "Unexpected data record set",
+    "Duplicates"
+  )) {
+    DataframeData <- util_int_datastructure_add_summary_columns(
+      DataframeData,
+      dataframe_data_1,
+      label
+    )
   }
 
-  if(!is.null(DataframeData_1$`Unexpected data element set (Number)`)){
-    DataframeData$`Unexpected data element set N (%)` <- util_paste0_with_na(DataframeData_1$`Unexpected data element set (Number)`, " (",
-                                                                             DataframeData_1$`Unexpected data element set (Percentage (0 to 100))`, ")")
-    DataframeData$`Unexpected data element set (Grading)`<- DataframeData_1$`Unexpected data element set (Grading)`
+  rm(dataframe_data_1)
+
+  strings_col <- c(
+    "Dataframe",
+    "Unexpected data element count N (%)",
+    "Unexpected data element set N (%)",
+    "Unexpected data record count N (%)",
+    "Unexpected data record set N (%)",
+    "Duplicates N (%)",
+    "Unexp. Variables"
+  )
+  strings_col <- intersect(strings_col, colnames(DataframeData))
+
+  integers_col <- c(
+    "Unexpected data element count (Grading)",
+    "Unexpected data element set (Grading)",
+    "Unexpected data record count (Grading)",
+    "Unexpected data record set (Grading)",
+    "Duplicates (Grading)"
+  )
+  integers_col <- intersect(integers_col, colnames(DataframeData))
+
+  if (length(strings_col) > 0) {
+    DataframeData[strings_col] <- lapply(
+      DataframeData[strings_col],
+      function(x) {
+        attr(x, DATA_TYPE) <-
+          DATA_TYPES$STRING
+        x
+      }
+    )
   }
-
-  if(!is.null(DataframeData_1$`Unexpected data record count (Number)`)){
-    DataframeData$`Unexpected data record count N (%)` <- util_paste0_with_na(DataframeData_1$`Unexpected data record count (Number)`, " (",
-                                                                              DataframeData_1$`Unexpected data record count (Percentage (0 to 100))`, ")")
-    DataframeData$`Unexpected data record count (Grading)`<- DataframeData_1$`Unexpected data record count (Grading)`
+  if (length(integers_col) > 0) {
+    DataframeData[integers_col] <- lapply(
+      DataframeData[integers_col],
+      function(x) {
+        attr(x, DATA_TYPE) <-
+          DATA_TYPES$INTEGER
+        x
+      }
+    )
   }
-
-  if(!is.null(DataframeData_1$`Unexpected data record set (Number)`)){
-    DataframeData$`Unexpected data record set N (%)` <- util_paste0_with_na(DataframeData_1$`Unexpected data record set (Number)`, " (",
-                                                                            DataframeData_1$`Unexpected data record set (Percentage (0 to 100))`, ")")
-    DataframeData$`Unexpected data record set (Grading)`<- DataframeData_1$`Unexpected data record set (Grading)`
-  }
-
-  if(!is.null(DataframeData_1$`Duplicates (Number)`)){
-    DataframeData$`Duplicates N (%)`<- util_paste0_with_na(DataframeData_1$`Duplicates (Number)`," (",
-                                                           DataframeData_1$`Duplicates (Percentage (0 to 100))`, ")")
-    DataframeData$`Duplicates (Grading)`<- DataframeData_1$`Duplicates (Grading)`
-  }
-
-  rm(DataframeData_1)
-
 
   return(list(
     DataframeTable = DataframeTable,
     DataframeData = DataframeData,
-    DataframeDataList = resultData
+    DataframeDataList = result_data
   ))
 }
-# FIXME: In INT, we see errors for partiaql reports, because study_data was split by segments, so variables are missing -- maybe meta_data was split but not study  data?

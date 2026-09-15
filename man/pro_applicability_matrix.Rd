@@ -35,8 +35,8 @@ per single plot.}
 
 \item{meta_data_segment}{\link{data.frame} -- optional: Segment level metadata}
 
-\item{meta_data_dataframe}{\link{data.frame} -- optional: Data frame level
-metadata}
+\item{meta_data_dataframe}{\link{data.frame} the data frame that contains the
+metadata for the data frame level}
 
 \item{flip_mode}{\link{enum} default | flip | noflip | auto. Should the plot be
 in default orientation, flipped, not flipped or

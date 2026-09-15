@@ -12,8 +12,8 @@
 util_variable_references <- function(meta_data = "item_level") {
   util_expect_data_frame(meta_data)
   colnames(meta_data)[startsWith(colnames(meta_data), "KEY_") |
-                      startsWith(colnames(meta_data), "GROUP_VAR_") |
-                      colnames(meta_data) == "TIME_VAR" |
-                      colnames(meta_data) == "PART_VAR" |
-                      colnames(meta_data) == "CO_VARS"]
+      startsWith(colnames(meta_data), "GROUP_VAR_") |
+      colnames(meta_data) == "TIME_VAR" |
+      colnames(meta_data) == "PART_VAR" |
+      colnames(meta_data) == "CO_VARS"]
 }

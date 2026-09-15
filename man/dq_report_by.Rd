@@ -25,6 +25,8 @@ dq_report_by(
   resp_vars = character(0),
   id_vars = NULL,
   advanced_options = list(),
+  html_table_backend = getOption("dataquieR.html_table_backend",
+    dataquieR.html_table_backend_default),
   storr_factory = NULL,
   amend = FALSE,
   checkpoint_resumed = getOption("dataquieR.resume_checkpoint",
@@ -43,36 +45,22 @@ dq_report_by(
   dataframe_level,
   item_computation_level,
   author = prep_get_user_name(),
-  title = ifelse(is.null(output_dir), "Data quality report Bundle",
-    paste0(basename(output_dir))),
+  title = "Data quality report Bundle",
   subtitle = as.character(Sys.Date()),
-  user_info = NULL
+  user_info = NULL,
+  dir = NULL
 )
 }
 \arguments{
-\item{study_data}{\link{data.frame} the data frame that contains the measurements:
-it can be an R object (e.g., \code{bia}), a
-data frame (e.g., \code{"C:/Users/data/bia.dta"}),
-a vector containing data frames files (e.g.,
-c(\code{"C:/Users/data/bia.dta"},
-\verb{C:/Users/data/biames.dta"})), or it can be
-left empty and the data frames are provided
-in the data frame level metadata. If only the
-file name without path is provided
-(e.g., \code{"bia.dta"}), the file
-name needs the extension and the path must be
-provided in the argument \code{input_dir}. It can
-also contain only the file name in case of
-example data from the package \code{dataquieR}
-(e.g., \code{"study_data"} or \code{"ship"})}
+\item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
 \item{item_level}{\link{data.frame} the data frame that contains metadata
 attributes of study data}
 
 \item{meta_data_segment}{\link{data.frame} -- optional: Segment level metadata}
 
-\item{meta_data_dataframe}{\link{data.frame} -- optional if \code{study_data} is
-present: Data frame level metadata}
+\item{meta_data_dataframe}{\link{data.frame} the data frame that contains the
+metadata for the data frame level}
 
 \item{meta_data_cross_item}{\link{data.frame} -- optional: Cross-item level
 metadata}
@@ -83,18 +71,32 @@ metadata}
 \item{missing_tables}{\link{character} the name of the data frame containing the
 missing codes, it can be a vector if more
 than one table is provided. Example:
-\code{c("missing_table1", "missing_table2")}}
+\code{c("missing_table1", "missing_table2")}.
+Use this when \code{item_level} metadata are
+provided separately from the workbook that
+contains the referenced code or missing
+list sheets. If a complete \code{meta_data_v2}
+workbook is loaded, item-level references
+in columns such as \code{CODE_LIST_TABLE} or
+\code{MISSING_LIST_TABLE} may use the sheet name
+only, e.g., \code{"tab1"}. If only the
+item-level metadata are supplied, the
+referenced table must already be present in
+the data-frame cache under the exact name
+used in the metadata. For tables loaded
+from a workbook, this can be the fully
+qualified workbook/sheet name, e.g.,
+\code{"meta_data_v2.xlsx|tab1"}, and that same
+name should be listed in \code{missing_tables}.}
 
-\item{label_col}{\link{variable attribute} the name of the column in the
-metadata containing the labels of
-the variables}
+\item{label_col}{\link{variable attribute} the name of the column in the metadata
+with labels of variables}
 
-\item{meta_data_v2}{\link{character} path or file name of the workbook like
-metadata file, see
+\item{meta_data_v2}{\link{character} path to workbook like metadata file, see
 \code{\link{prep_load_workbook_like_file}} for details.
 \strong{ALL LOADED DATAFRAMES WILL BE PURGED},
 using \code{\link{prep_purge_data_frame_cache}},
-if you specify \code{meta_data_v2}}
+if you specify \code{meta_data_v2}.}
 
 \item{segment_column}{\link{variable attribute} name of a metadata attribute
 usable to split the report in
@@ -178,7 +180,7 @@ to be written as \code{REDCap} rules.
 Only VAR_NAMES are accepted in the rules.}
 
 \item{resp_vars}{\link{variable} the names of the measurement variables, if
-missing or \code{NULL}, all variables will be included}
+missing or \code{NULL}, all variables will be checked}
 
 \item{id_vars}{\link{variable} a vector containing the name/s of the variables
 containing ids, to
@@ -187,6 +189,10 @@ in \code{study_data} and to be add to referred vars}
 
 \item{advanced_options}{\link{list} options to set during report computation,
 see \code{\link[=options]{options()}}}
+
+\item{html_table_backend}{\link{character} HTML table backend to use when
+\code{also_print} is \code{TRUE}. One of \code{"auto"}, \code{"DT2"},
+or \code{"DT"}.}
 
 \item{storr_factory}{\link{function} \code{NULL}, or
 a function returning a \code{storr} object as
@@ -206,10 +212,22 @@ end there is already filled, and if
 compute all missing result and add them
 to the back-end.}
 
-\item{...}{arguments to be passed through to \link{dq_report} or \link{dq_report2}}
+\item{...}{arguments to be passed through to \link{dq_report} or \link{dq_report2},
+including \code{cores}. In RStudio, avoid passing a caller-created
+cluster such as \code{cores = cl}; this can hang during HTML report
+finalization while thumbnail and embedded HTML files are written. Prefer
+passing a number, e.g., \code{cores = 4}, or a backend list, e.g.,
+\code{cores = list(mode = "socket", cpus = 4)}, so \code{dataquieR} can
+create and stop the cluster itself. Alternatively run the same
+command outside RStudio (on Windows start R from the Start menu,
+on macOS open Terminal and run R, on Linux run R in a terminal).
+To force a caller-owned cluster
+in RStudio, set
+\code{options(dataquieR.force_rstudio_user_cluster = TRUE)} or pass
+\code{advanced_options = list(dataquieR.force_rstudio_user_cluster = TRUE)}.}
 
-\item{output_dir}{\link{character} if given, the output is not returned but saved
-in this directory}
+\item{output_dir}{\link{character} if given, the report objects are written to
+this directory and are not retained in RAM.}
 
 \item{input_dir}{\link{character} if given, the study data files that have
 no path and that are not URL are searched in
@@ -251,21 +269,41 @@ the data quality report bundle}
 
 \item{user_info}{\link{list} additional info stored with the report bundle,
 e.g., comments, title, ...}
+
+\item{dir}{\link{character} alias for \code{output_dir}.}
 }
 \value{
-A named \link{list} of named \link{list}s of \link{dq_report2} reports, returned
-invisibly unless \code{view = TRUE}. If \code{output_dir} is given, the result
-is still returned (invisibly), and optionally opened in a browser
-(\code{view = TRUE}, \code{also_print = TRUE}).
+A printable \code{dataquieR_report_by} named list. Without an output
+directory its leaves are \link{dq_report2} reports. With an output
+directory its leaves are lightweight placeholders and the report
+data remain in the referenced \code{.dq2} files. The result is returned
+invisibly unless \code{view = TRUE}.
 }
 \description{
 Generate a stratified full DQ report
 }
+\details{
+\code{dq_report_by()} accepts the canonical study data and metadata arguments used
+by the indicator functions. In addition, report inputs can be given as file
+paths, vectors of file paths, cached example-data names, or via the data-frame
+level metadata. File names without a path are resolved relative to
+\code{input_dir}, if provided.
+
+The returned \code{dataquieR_report_by} bundle is printable. Without an output
+directory it contains the computed reports in memory. With \code{output_dir} or
+\code{dir}, reports are flushed to \code{.dq2} files and removed from the returned
+object. Such a disk-backed bundle remains printable only while that directory
+and its files are readable. Use \code{print(result)} to render its collection
+overview, or provide \code{also_print = TRUE} during computation.
+}
 \examples{
-\dontrun{ # really long-running example.
+\dontrun{
+# really long-running example.
 prep_load_workbook_like_file("meta_data_v2")
-rep <- dq_report_by("study_data", label_col =
-  LABEL, strata_column = "CENTER_0")
+rep <- dq_report_by("study_data",
+  label_col =
+    LABEL, strata_column = "CENTER_0"
+)
 rep <- dq_report_by("study_data",
   label_col = LABEL, strata_column = "CENTER_0",
   segment_column = NULL
@@ -289,14 +327,20 @@ dq_report_by("study_data",
   segment_column = STUDY_SEGMENT, output_dir = "/tmp/testRep",
   also_print = TRUE
 )
-dq_report_by(study_data = "study_data", meta_data_v2 = "meta_data_v2",
-  advanced_options = list(dataquieR.study_data_cache_max = 0,
-  dataquieR.study_data_cache_metrics = TRUE,
-  dataquieR.study_data_cache_metrics_env = environment()),
-  cores = NULL, dimensions = "int")
-dq_report_by(study_data = "study_data", meta_data_v2 = "meta_data_v2",
+dq_report_by(
+  study_data = "study_data", meta_data_v2 = "meta_data_v2",
+  advanced_options = list(
+    dataquieR.study_data_cache_max = 0,
+    dataquieR.study_data_cache_metrics = TRUE,
+    dataquieR.study_data_cache_metrics_env = environment()
+  ),
+  cores = NULL, dimensions = "int"
+)
+dq_report_by(
+  study_data = "study_data", meta_data_v2 = "meta_data_v2",
   advanced_options = list(dataquieR.study_data_cache_max = 0),
-  cores = NULL, dimensions = "int")
+  cores = NULL, dimensions = "int"
+)
 }
 }
 \seealso{

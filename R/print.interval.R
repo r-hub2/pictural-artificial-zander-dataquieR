@@ -12,7 +12,11 @@
 #' @export
 print.interval <- function(x, ...) {
   util_stop_if_not(inherits(x, "interval"))
-  if (x$inc_l) { cat("[") } else { cat("(") }
+  if (x$inc_l) {
+    cat("[")
+  } else {
+    cat("(")
+  }
   if (inherits(x$low, "POSIXct")) {
     cat(as.character(x$low, usetz = FALSE))
   } else {
@@ -24,7 +28,11 @@ print.interval <- function(x, ...) {
   } else {
     cat(as.character(x$upp))
   }
-  if (x$inc_u) { cat("]") } else { cat(")") }
+  if (x$inc_u) {
+    cat("]")
+  } else {
+    cat(")")
+  }
   invisible(x)
 }
 

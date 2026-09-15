@@ -26,10 +26,10 @@
 #' @concept data_management
 #' @noRd
 util_is_numeric_in <- function(min = -Inf,
-                               max = +Inf,
-                               whole_num = FALSE,
-                               finite = FALSE,
-                               set = NULL) {
+  max = +Inf,
+  whole_num = FALSE,
+  finite = FALSE,
+  set = NULL) {
   error_msg <- "be numeric"
   if (finite) {
     error_msg <- paste(error_msg, "and finite")
@@ -38,16 +38,22 @@ util_is_numeric_in <- function(min = -Inf,
     error_msg <- paste(error_msg, "and a whole number")
   }
   if (length(set)) {
-    error_msg <- paste(error_msg, sprintf("and in %s",
-                                         util_pretty_vector_string(set)))
+    error_msg <- paste(error_msg, sprintf(
+      "and in %s",
+      util_pretty_vector_string(set)
+    ))
   }
   if (is.finite(min)) {
-    error_msg <- paste(error_msg, sprintf("and larger/equal than %s",
-                                         sQuote(min)))
+    error_msg <- paste(error_msg, sprintf(
+      "and larger/equal than %s",
+      sQuote(min)
+    ))
   }
   if (is.finite(max)) {
-    error_msg <- paste(error_msg, sprintf("and smaller/equal than %s",
-                                         sQuote(max)))
+    error_msg <- paste(error_msg, sprintf(
+      "and smaller/equal than %s",
+      sQuote(max)
+    ))
   }
   util_attach_attr(function(x) {
     if (!is.numeric(x)) {

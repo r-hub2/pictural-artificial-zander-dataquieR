@@ -47,13 +47,16 @@ This package features the following \code{options()}:
 \item \link{dataquieR.droplevels_ReportSummaryTable}
 \item \link{dataquieR.dt_adjust}
 \item \link{dataquieR.fix_column_type_on_read}
+\item \link{dataquieR.fix_var_name_prefixes_label}
 \item \link{dataquieR.flip_mode}
 \item \link{dataquieR.force_item_specific_missing_codes}
 \item \link{dataquieR.force_label_col}
+\item \link{dataquieR.force_rstudio_user_cluster}
 \item \link{dataquieR.grading_formats}
 \item \link{dataquieR.grading_rulesets}
 \item \link{dataquieR.guess_character}
 \item \link{dataquieR.guess_missing_codes}
+\item \link{dataquieR.html_table_backend}
 \item \link{dataquieR.ignore_empty_vars}
 \item \link{dataquieR.lang}
 \item \link{dataquieR.lazy_plots}
@@ -63,6 +66,7 @@ This package features the following \code{options()}:
 \item \link{dataquieR.max_cat_resp_var_levels_in_plot}
 \item \link{dataquieR.max_group_var_levels_in_plot}
 \item \link{dataquieR.max_group_var_levels_with_violins}
+\item \link{dataquieR.min_group_var_levels}
 \item \link{dataquieR.min_obs_per_group_var_in_plot}
 \item \link{dataquieR.min_time_points_for_cat_resp_var}
 \item \link{dataquieR.no_geom_count_in_bin}
@@ -70,8 +74,10 @@ This package features the following \code{options()}:
 \item \link{dataquieR.non_disclosure}
 \item \link{dataquieR.old_factor_handling}
 \item \link{dataquieR.old_type_adjust}
+\item \link{dataquieR.parallel.load.balancing}
+\item \link{dataquieR.parallel.show.info}
 \item \link{dataquieR.precomputeStudyData}
-\item \link{dataquieR.print_block_load_factor}
+\item \link{dataquieR.psychometric_cor_pairs}
 \item \link{dataquieR.resume_checkpoint}
 \item \link{dataquieR.resume_print}
 \item \link{dataquieR.scale_level_heuristics_control_binaryrecodelimit}
@@ -98,7 +104,7 @@ This package features the following \code{options()}:
 Useful links:
 \itemize{
   \item \url{https://dataquality.qihs.uni-greifswald.de/}
-  \item Report bugs at \url{https://gitlab.com/libreumg/dataquier/-/work_items/issues}
+  \item Report bugs at \url{https://gitlab.com/libreumg/dataquier/-/work_items}
 }
 
 
@@ -136,13 +142,16 @@ Other options:
 \code{\link{dataquieR.droplevels_ReportSummaryTable}},
 \code{\link{dataquieR.dt_adjust}},
 \code{\link{dataquieR.fix_column_type_on_read}},
+\code{\link{dataquieR.fix_var_name_prefixes_label}},
 \code{\link{dataquieR.flip_mode}},
 \code{\link{dataquieR.force_item_specific_missing_codes}},
 \code{\link{dataquieR.force_label_col}},
+\code{\link{dataquieR.force_rstudio_user_cluster}},
 \code{\link{dataquieR.grading_formats}},
 \code{\link{dataquieR.grading_rulesets}},
 \code{\link{dataquieR.guess_character}},
 \code{\link{dataquieR.guess_missing_codes}},
+\code{\link{dataquieR.html_table_backend}},
 \code{\link{dataquieR.ignore_empty_vars}},
 \code{\link{dataquieR.lang}},
 \code{\link{dataquieR.lazy_plots}},
@@ -152,6 +161,7 @@ Other options:
 \code{\link{dataquieR.max_cat_resp_var_levels_in_plot}},
 \code{\link{dataquieR.max_group_var_levels_in_plot}},
 \code{\link{dataquieR.max_group_var_levels_with_violins}},
+\code{\link{dataquieR.min_group_var_levels}},
 \code{\link{dataquieR.min_obs_per_group_var_in_plot}},
 \code{\link{dataquieR.min_time_points_for_cat_resp_var}},
 \code{\link{dataquieR.no_geom_count_in_bin}},
@@ -159,10 +169,15 @@ Other options:
 \code{\link{dataquieR.non_disclosure}},
 \code{\link{dataquieR.old_factor_handling}},
 \code{\link{dataquieR.old_type_adjust}},
+\code{\link{dataquieR.parallel.cpus}},
+\code{\link{dataquieR.parallel.load.balancing}},
+\code{\link{dataquieR.parallel.mode}},
+\code{\link{dataquieR.parallel.show.info}},
 \code{\link{dataquieR.precomputeStudyData}},
 \code{\link{dataquieR.print_block_load_factor}},
 \code{\link{dataquieR.progress_fkt_default}},
 \code{\link{dataquieR.progress_msg_fkt_default}},
+\code{\link{dataquieR.psychometric_cor_pairs}},
 \code{\link{dataquieR.resume_checkpoint}},
 \code{\link{dataquieR.resume_print}},
 \code{\link{dataquieR.scale_level_heuristics_control_binaryrecodelimit}},

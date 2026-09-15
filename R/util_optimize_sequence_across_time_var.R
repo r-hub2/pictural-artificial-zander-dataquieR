@@ -12,14 +12,25 @@
 #' @return a sequence of points in datetime format
 #' @noRd
 util_optimize_sequence_across_time_var <- function(time_var_data,
-                                                   n_points,
-                                                   prop_grid = 0.5) { # TODO EK: Please adjust for time-only
+  n_points,
+  prop_grid = 0.5) {
   util_expect_scalar(n_points,
-                     check_type = util_is_numeric_in(min = 3,
-                                                     whole_num = TRUE,
-                                                     finite = TRUE))
+    check_type = util_is_numeric_in(
+      min = 3,
+      whole_num = TRUE,
+      finite = TRUE
+    )
+  )
   util_expect_scalar(prop_grid,
-                     check_type = util_is_numeric_in(min = 0.1, max = 1))
+    check_type = util_is_numeric_in(min = 0.1, max = 1)
+  )
+
+  parse_generated_time_points <- function(x) {
+    if (inherits(x, "POSIXt")) {
+      return(x)
+    }
+    suppressWarnings(util_parse_date(x))
+  }
 
   time_var_data <- na.omit(time_var_data)
   tp_seq <- unique(time_var_data)
@@ -43,10 +54,13 @@ util_optimize_sequence_across_time_var <- function(time_var_data,
     # the earliest observed time point to the last one.
     # This sequence is stored in `tp_round_seq`. The number of time points
     # equals the number given in `n_equ_spaced`.
-    tp_round_seq <- suppressWarnings(util_parse_date(
-      seq(from = min(tp_seq),
-          to = max(tp_seq),
-          by = secs)))
+    tp_round_seq <- parse_generated_time_points(
+      seq(
+        from = min(tp_seq),
+        to = max(tp_seq),
+        by = secs
+      )
+    )
     tp_round_seq[length(tp_round_seq)] <- max(tp_seq) # can otherwise deviate
     # due to rounding/numerical errors
     # distribute remaining points (if any) according to the distribution of
@@ -54,22 +68,29 @@ util_optimize_sequence_across_time_var <- function(time_var_data,
     if (n_points - n_grid > 0) {
       tp_tab <- util_table_of_vct(
         cut(time_var_data,
-            breaks = c(tp_round_seq[1:(length(tp_round_seq) - 1)],
-                       tp_round_seq[length(tp_round_seq)] + 1)))
-      tp_tab$weight <- tp_tab$Freq/sum(tp_tab$Freq)
+          breaks = c(
+            tp_round_seq[1:(length(tp_round_seq) - 1)],
+            tp_round_seq[length(tp_round_seq)] + 1
+          )
+        )
+      )
+      tp_tab$weight <- tp_tab$Freq / sum(tp_tab$Freq)
       tp_tab$n_add <- floor(tp_tab$weight * (n_points - n_grid))
-      tp_round_seq <- c(do.call(c,
+      tp_round_seq <- c(do.call(
+        c,
         lapply(seq_along(tp_round_seq[-1]), function(tp_i) {
           if (tp_tab$n_add[tp_i] > 0) {
             period <- (tp_round_seq[tp_i + 1] - tp_round_seq[tp_i]) /
               (tp_tab$n_add[tp_i] + 1)
             secs <- suppressWarnings(as.integer(
-              as.double(period, units = "secs")))
+              as.double(period, units = "secs")
+            ))
             if (secs <= 0) {
               secs <- 1
             }
-            suppressWarnings(util_parse_date(
-              tp_round_seq[tp_i] + c(0, seq_len(tp_tab$n_add[tp_i])) * secs))
+            parse_generated_time_points(
+              tp_round_seq[tp_i] + c(0, seq_len(tp_tab$n_add[tp_i])) * secs
+            )
           } else {
             tp_round_seq[tp_i]
           }

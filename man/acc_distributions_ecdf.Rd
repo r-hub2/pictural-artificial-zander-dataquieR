@@ -19,10 +19,10 @@ acc_distributions_ecdf(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} the names of the measurement variables}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
-\item{group_vars}{\link{variable list} the name of the observer, device or
-reader variable}
+\item{group_vars}{\link{variable list} the names of the grouping variables}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -59,6 +59,15 @@ proportion" if a grouping variable is included: Plots of
 empirical cumulative distributions for the subgroups.
 
 \link{Descriptor}
+}
+\details{
+If \code{resp_vars} is missing or empty, all interval or ratio scaled variables
+are selected. Selected response variables may include multiple variables, but
+each selected variable must be interval or ratio scaled, must have at least
+ten distinct non-missing values, and must not contain only missing values.
+
+\code{group_vars} must identify one nominal or ordinal grouping variable that is
+not a float variable and has at least two distinct non-missing values.
 }
 \seealso{
 \href{https://dataquality.qihs.uni-greifswald.de/VIN_acc_impl_distributions.html}{Online Documentation}

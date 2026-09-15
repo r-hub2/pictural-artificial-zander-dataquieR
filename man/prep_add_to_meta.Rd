@@ -26,7 +26,8 @@ prep_add_to_meta(
 as usually pipe separated and assigned with
 \code{=}: \code{1 = male | 2 = female}}
 
-\item{item_level}{\link{data.frame} the metadata to extend}
+\item{item_level}{\link{data.frame} the data frame that contains metadata
+attributes of study data}
 
 \item{meta_data}{\link{data.frame} old name for \code{item_level}}
 

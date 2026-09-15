@@ -1,8 +1,11 @@
 #' Check data for observer levels
 #'
-#' @param study_data [data.frame] the data frame that contains the measurements
-#' @param group_vars [variable] the name of the observer, device or reader
-#'                              variable
+#' @inheritParams .template_function_developer
+#'
+#' @details
+#' `group_vars` identifies the observer, device, reader, or other subgrouping
+#' variable whose levels are checked against the observation-count constraints.
+#'
 #' @param min_obs_in_subgroup [integer] from=0. optional argument if
 #'                                  `group_vars` are used. This argument
 #'                                  specifies the minimum number of observations
@@ -40,25 +43,25 @@
 #' dim(util_check_group_levels(ds1, "USR_BP_0", min_obs_in_subgroup = 400))
 #' }
 #'
-#'
 #' @seealso [prep_min_obs_level]
 #' @family data_management
 #' @concept robustness
 #' @noRd
 util_check_group_levels <- function(study_data,
-                                    group_vars,
-                                    min_obs_in_subgroup = -Inf,
-                                    max_obs_in_subgroup = +Inf,
-                                    min_subgroups = -Inf,
-                                    max_subgroups = +Inf) {
-  # util_correct_variable_use(group_vars) cannot work, here, should be called in the calling function, anyway
+  group_vars,
+  min_obs_in_subgroup = -Inf,
+  max_obs_in_subgroup = +Inf,
+  min_subgroups = -Inf,
+  max_subgroups = +Inf) {
+  # util_correct_variable_use(group_vars) cannot work, here, should be called
+  # in the calling function, anyway
   util_expect_scalar(min_obs_in_subgroup, check_type = is.numeric)
   util_expect_scalar(max_obs_in_subgroup, check_type = is.numeric)
   util_expect_scalar(min_subgroups, check_type = is.numeric)
   util_expect_scalar(max_subgroups, check_type = is.numeric)
   util_stop_if_not(max_obs_in_subgroup >= min_obs_in_subgroup)
   util_stop_if_not(max_subgroups >= min_subgroups)
-  l <- split(study_data, as.factor(study_data[, group_vars]))
+  l <- split(study_data, as.factor(study_data[, group_vars, drop = TRUE]))
   obs_per_subgroup <- vapply(l, nrow, FUN.VALUE = integer(1))
   n_subgroups <- length(l)
   if (is.finite(min_obs_in_subgroup)) {
@@ -80,9 +83,11 @@ util_check_group_levels <- function(study_data,
   modified_study_data <- do.call(rbind.data.frame, l[which_valid])
   if (length(which_valid) < length(l)) {
     util_message(
-      c("Discarding %d observations (%d from %d levels of %s)",
+      c(
+        "Discarding %d observations (%d from %d levels of %s)",
         "because of too few/many observations",
-        "per group"),
+        "per group"
+      ),
       nrow(study_data) - nrow(modified_study_data),
       length(l) - length(which_valid),
       length(l),
@@ -94,10 +99,10 @@ util_check_group_levels <- function(study_data,
     util_error("Too few subgroups (%d < %d)", n_subgroups, min_subgroups)
   }
   if (is.finite(max_subgroups) && n_subgroups > max_subgroups) {
-    attr(modified_study_data, "TOO_MANY") <-  TRUE
-    return(modified_study_data) # TODO: SPLIT artificially
+    attr(modified_study_data, "TOO_MANY") <- TRUE
+    return(modified_study_data)
   }
-  attr(modified_study_data, "TOO_MANY") <-  FALSE
+  attr(modified_study_data, "TOO_MANY") <- FALSE
   attributes(modified_study_data)[.ds1_attribute_names] <-
     attributes(study_data)[.ds1_attribute_names]
   modified_study_data

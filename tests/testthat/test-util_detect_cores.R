@@ -2,12 +2,42 @@ test_that("util_detect_cores works", {
   skip_on_cran() # not really useful, yet
   skip_if_not_installed("parallelly")
   expect_equal(util_detect_cores(), parallelly::availableCores())
-  expect_warning(expect_equal(with_mocked_bindings(
+  expect_warning(
+    expect_equal(with_mocked_bindings(
+      .package = "base",
+      requireNamespace = function(...) {
+        return(FALSE)
+      },
+      util_detect_cores()
+    ), 1),
+    regexp = "None of the suggested packages.*are found"
+  )
+})
+
+test_that("util_detect_cores falls back to parallel safely", {
+  skip_on_cran()
+
+  only_parallel <- function(pkg, quietly = FALSE, ...) {
+    identical(pkg, "parallel")
+  }
+
+  expect_equal(with_mocked_bindings(
     .package = "base",
-    requireNamespace = function(...) {
-    return(FALSE)
-  },
-  util_detect_cores()
-  ), 1),
-  regexp = "None of the suggested packages.*are found")
+    requireNamespace = only_parallel,
+    with_mocked_bindings(
+      .package = "parallel",
+      detectCores = function(...) 3L,
+      util_detect_cores()
+    )
+  ), 3L)
+
+  expect_equal(with_mocked_bindings(
+    .package = "base",
+    requireNamespace = only_parallel,
+    with_mocked_bindings(
+      .package = "parallel",
+      detectCores = function(...) NA_integer_,
+      util_detect_cores()
+    )
+  ), 1L)
 })

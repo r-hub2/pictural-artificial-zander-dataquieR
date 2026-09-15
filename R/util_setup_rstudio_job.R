@@ -16,35 +16,37 @@
 #'
 #' @examples
 #' \dontrun{
-#'   test <- function() {
-#'     util_setup_rstudio_job("xx")
-#'     Sys.sleep(5)
-#'     progress(50)
-#'     progress_msg("halfway through")
-#'     Sys.sleep(5)
-#'     progress(100)
-#'     Sys.sleep(1)
-#'   }
-#'   test()
+#' test <- function() {
+#'   util_setup_rstudio_job("xx")
+#'   Sys.sleep(5)
+#'   progress(50)
+#'   progress_msg("halfway through")
+#'   Sys.sleep(5)
+#'   progress(100)
+#'   Sys.sleep(1)
+#' }
+#' test()
 #' }
 #'
 #' @family process_functions
 #' @concept reporting
 #' @noRd
 util_setup_rstudio_job <- function(job_name = "Job", n) {
-
   if (missing(n)) {
     util_error(
-      c("Internal error, sorry, please report: arguemnt %s is mandatory",
-        "for %s"),
+      c(
+        "Internal error, sorry, please report: arguemnt %s is mandatory",
+        "for %s"
+      ),
       sQuote("n"),
-      sQuote("util_setup_rstudio_job"))
+      sQuote("util_setup_rstudio_job")
+    )
   }
 
   # Find context ----
 
   progress_init_fkt <-
-    getOption("dataquieR.progress_init_fkt", dataquieR.progress_init_fkt_default)
+    getOption("dataquieR.progress_init_fkt", dataquieR.progress_init_fkt_default) # nolint: line_length_linter.
 
   progress_fkt <-
     getOption("dataquieR.progress_fkt", dataquieR.progress_fkt_default)
@@ -55,12 +57,7 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
   is_shiny <- suppressWarnings(util_ensure_suggested("shiny", err = FALSE)) &&
     (!is.null(shiny::getDefaultReactiveDomain()))
 
-  is_rstudio <-
-    !is_shiny &&
-    suppressWarnings(util_ensure_suggested("rstudioapi", err = FALSE)) &&
-    rstudioapi::isAvailable()
-
-  is_rstudio <- is_rstudio && util_really_rstudio()
+  is_rstudio <- !is_shiny && util_rstudio_job_api_available()
 
   is_rstudio <- is_rstudio && !is.function(progress_msg_fkt)
   is_rstudio <- is_rstudio && !is.function(progress_fkt)
@@ -75,13 +72,6 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
 
   p <- parent.frame()
 
-  # RStudio: remove existing job, if a function calls us repeatedly ----
-  if (is_rstudio && exists("rstudiojob", envir = p) &&
-      !is.null(get("rstudiojob", envir = p))) {
-    try(rstudioapi::jobRemove(get("rstudiojob", envir = p)), silent = TRUE)
-    rstudiojob <- NULL
-    assign("rstudiojob", rstudiojob, envir = p)
-  }
   rstudiojob <- NULL
 
   # RStudio: Create new Job ----
@@ -89,11 +79,13 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
       !is.function(progress_fkt) &&
       !is.function(progress_msg_fkt) &&
       !is.function(progress_init_fkt)
-      ) {
-    try({
-      rstudiojob <- rstudioapi::jobAdd(job_name,
-                                      progressUnits = 100L)
-    }, silent = TRUE)
+  ) {
+    try(
+      {
+        rstudiojob <- util_rstudio_job_add(job_name)
+      },
+      silent = TRUE
+    )
   }
   assign("rstudiojob", rstudiojob, envir = p) # always
 
@@ -104,26 +96,30 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
     cli::cli_progress_bar("Task...", total = 100, .envir = p)
   }
 
-  # RStudio: Hook to remove job, if our caller is left ----
-  do.call("on.exit", # TODO: see and maybe use withr::defer_parent?
-          list(quote({
-            Sys.sleep(1) # some strange concurrency problem with RStudio
-            if (exists(".is_testing", inherits = FALSE)) {
-              rm(".is_testing", inherits = FALSE)
-            }
-            if (!is.null(rstudiojob)) { # nocov start
-              try({
-                rstudioapi::jobRemove(rstudiojob)
-                rstudiojob <- NULL
-              }, silent = TRUE)
-            } # nocov end
-          }), add = TRUE),
-          envir = p)
+  # RStudio: Hook to mark the job as finished, if our caller is left ----
+  do.call("on.exit",
+    list(quote({
+      if (exists(".is_testing", inherits = FALSE)) {
+        rm(".is_testing", inherits = FALSE)
+      }
+      if (!is.null(rstudiojob)) { # nocov start
+        try(
+          {
+            util_rstudio_job_set_state(rstudiojob, "succeeded")
+            rstudiojob <- NULL
+          },
+          silent = TRUE
+        )
+      } # nocov end
+    }), add = TRUE),
+    envir = p
+  )
 
   assign(".is_testing",
     suppressWarnings(util_ensure_suggested("testthat", err = FALSE)) &&
-    testthat::is_testing(),
-    envir = p)
+      testthat::is_testing(),
+    envir = p
+  )
 
   # Define default progress functions ----
   progress <- function(percent, is_rstudio, is_shiny, is_cli, e) {
@@ -131,20 +127,28 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
     if (isTRUE(e$.is_testing)) {
       return()
     }
-    if (length(percent) != 1)
+    if (length(percent) != 1) {
       return()
-    if (is.na(percent))
+    }
+    if (is.na(percent)) {
       return()
-    if (!is.numeric(percent))
+    }
+    if (!is.numeric(percent)) {
       return()
-    if (percent < 0)
+    }
+    if (percent < 0) {
       return()
-    if (percent > 100)
+    }
+    if (percent > 100) {
       return()
+    }
     if (is_rstudio && !is.null(rstudiojob)) { # nocov start
-      try({
-        rstudioapi::jobSetProgress(rstudiojob, percent)
-      }, silent = TRUE)
+      try(
+        {
+          util_rstudio_job_set_progress(rstudiojob, percent)
+        },
+        silent = TRUE
+      )
     } else if (is_shiny) {
       shiny::setProgress(value = percent / 100)
     } else if (is_cli) { # nocov end
@@ -153,18 +157,26 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
       util_message("|%s>", paste(rep("#", percent), collapse = ""))
     } # nocov end
   }
-  if (is.function(progress_fkt)) if
-      (length(intersect(names(formals(progress_fkt)),
-                names(formals(progress)))) ==
-      length(union(names(formals(progress_fkt)),
-                       names(formals(progress))))) {
-    progress <- progress_fkt
-  } else if (is.function(progress_fkt)) {
-    util_error(
-      c("option %s must refer to a compatible function",
-        "in doubt, unset this option()"),
-       dQuote("dataquieR.progress_fkt")
-    )
+  if (is.function(progress_fkt)) {
+    if
+    (length(intersect(
+      names(formals(progress_fkt)),
+      names(formals(progress))
+    )) ==
+      length(union(
+        names(formals(progress_fkt)),
+        names(formals(progress))
+      ))) {
+      progress <- progress_fkt
+    } else if (is.function(progress_fkt)) {
+      util_error(
+        c(
+          "option %s must refer to a compatible function",
+          "in doubt, unset this option()"
+        ),
+        dQuote("dataquieR.progress_fkt")
+      )
+    }
   }
   formals(progress)$is_rstudio <- force(is_rstudio)
   formals(progress)$is_shiny <- force(is_shiny)
@@ -182,11 +194,28 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
       msg <- status
       status <- ""
     }
+    if (!isTRUE(grepl(
+      paste0(
+        "^(",
+        "[0-9]{2}:[0-9]{2}(:[0-9]{2})? ",
+        "|\\[(",
+        "[0-9]{2}:[0-9]{2}:[0-9]{2}|",
+        "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+-][0-9]{4}",
+        ")\\]",
+        ")"
+      ),
+      msg
+    ))) {
+      msg <- sprintf("%s %s", util_progress_timestamp(), msg)
+    }
     if (is_rstudio && !is.null(rstudiojob)) { # nocov start
-      try({
-        rstudioapi::jobSetStatus(rstudiojob, status)
-        rstudioapi::jobAddOutput(rstudiojob, paste0(msg, "\n"))
-      }, silent = TRUE)
+      try(
+        {
+          util_rstudio_job_set_status(rstudiojob, status)
+          util_rstudio_job_add_output(rstudiojob, paste0(msg, "\n"))
+        },
+        silent = TRUE
+      )
     } else if (is_shiny) {
       shiny::setProgress(message = msg)
     } else if (is_cli) { # nocov end
@@ -195,31 +224,42 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
       util_message("|%s ###", msg)
     } # nocov end
   }
-  if (is.function(progress_msg_fkt)) if
-      (length(intersect(names(formals(progress_msg_fkt)),
-                       names(formals(progress_msg)))) ==
-      length(union(names(formals(progress_msg_fkt)),
-                   names(formals(progress_msg))))) {
-    progress_msg <- progress_msg_fkt
-  } else if (is.function(progress_msg_fkt)) {
-    util_error(
-      c("option %s must refer to a compatible function",
-        "in doubt, unset this option()"),
-      dQuote("dataquieR.progress_msg_fkt")
-    )
+  if (is.function(progress_msg_fkt)) {
+    if
+    (length(intersect(
+      names(formals(progress_msg_fkt)),
+      names(formals(progress_msg))
+    )) ==
+      length(union(
+        names(formals(progress_msg_fkt)),
+        names(formals(progress_msg))
+      ))) {
+      progress_msg <- progress_msg_fkt
+    } else if (is.function(progress_msg_fkt)) {
+      util_error(
+        c(
+          "option %s must refer to a compatible function",
+          "in doubt, unset this option()"
+        ),
+        dQuote("dataquieR.progress_msg_fkt")
+      )
+    }
   }
   formals(progress_msg)$is_rstudio <- force(is_rstudio)
   formals(progress_msg)$is_shiny <- force(is_shiny)
   formals(progress_msg)$is_cli <- force(is_cli)
   formals(progress_msg)$e <- p
-  if (rlang::is_missing(formals(progress_msg)$msg))
+  if (rlang::is_missing(formals(progress_msg)$msg)) {
     formals(progress_msg)$msg <- ""
+  }
 
   if (is.function(progress_init_fkt)) {
     if (!identical(names(formals(progress_init_fkt)), "n")) {
       util_error(
-        c("option %s must refer to a compatible function",
-          "in doubt, unset this option()"),
+        c(
+          "option %s must refer to a compatible function",
+          "in doubt, unset this option()"
+        ),
         dQuote("dataquieR.progress_init_fkt")
       )
     }
@@ -232,8 +272,58 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
 
   progress_msg(job_name)
 
-  invisible(list(progress = progress,
-                 progress_msg = progress_msg))
+  invisible(list(
+    progress = progress,
+    progress_msg = progress_msg
+  ))
+}
+
+#' Internal helper: rstudio job api available
+#'
+#' @noRd
+util_rstudio_job_api_available <- function() {
+  suppressWarnings(util_ensure_suggested("rstudioapi", err = FALSE)) &&
+    rstudioapi::isAvailable() &&
+    util_really_rstudio()
+}
+
+#' Internal helper: rstudio job add
+#'
+#' @noRd
+util_rstudio_job_add <- function(job_name) {
+  rstudioapi::jobAdd(job_name,
+    progressUnits = 100L,
+    running = TRUE,
+    autoRemove = FALSE
+  )
+}
+
+#' Internal helper: rstudio job set state
+#'
+#' @noRd
+util_rstudio_job_set_state <- function(job, state) {
+  rstudioapi::jobSetState(job, state)
+}
+
+#' Internal helper: rstudio job set progress
+#'
+#' @noRd
+util_rstudio_job_set_progress <- function(job, percent) {
+  rstudioapi::jobSetProgress(job, percent)
+}
+
+#' Internal helper: rstudio job set status
+#'
+#' @noRd
+util_rstudio_job_set_status <- function(job, status) {
+  rstudioapi::jobSetStatus(job, status)
+}
+
+#' Internal helper: rstudio job add output
+#'
+#' @noRd
+util_rstudio_job_add_output <- function(job, output) {
+  rstudioapi::jobAddOutput(job, output)
 }
 
 .progress_hooks <- new.env(parent = emptyenv())
@@ -248,25 +338,36 @@ util_setup_rstudio_job <- function(job_name = "Job", n) {
 #' @returns [character] a handle for de-registering, `invisible`
 #' @export
 prep_register_progress_hook <- function(type = c("progress", "init", "msg"),
-                                        hook) {
+  hook) {
   type <- util_match_arg(type)
   util_expect_scalar(hook,
-                     check_type = is.function,
-                     allow_na = TRUE,
-                     error_message = sprintf("%s must be a function",
-                                             sQuote("hook")))
+    check_type = is.function,
+    allow_na = TRUE,
+    error_message = sprintf(
+      "%s must be a function",
+      sQuote("hook")
+    )
+  )
   if (type == "init" && !"n" %in% names(formals(hook))) {
-    util_error("A progress hook of type %s must feature a formal argument %s",
-               sQuote(hook), sQuote("n"))
+    util_error(
+      "A progress hook of type %s must feature a formal argument %s",
+      sQuote("hook"), sQuote("n")
+    )
   }
   if (type == "progress" && !"percent" %in% names(formals(hook))) {
-    util_error("A progress hook of type %s must feature a formal argument %s",
-               sQuote(hook), sQuote("percent"))
+    util_error(
+      "A progress hook of type %s must feature a formal argument %s",
+      sQuote("hook"), sQuote("percent")
+    )
   }
   if (type == "msg" && !all(c("status", "msg") %in% names(formals(hook)))) {
-    util_error(c("A progress hook of type %s must feature formal arguments %s",
-                 "and %s"),
-               sQuote(hook), sQuote("percent"), sQuote("msg"))
+    util_error(
+      c(
+        "A progress hook of type %s must feature formal arguments %s",
+        "and %s"
+      ),
+      sQuote("hook"), sQuote("status"), sQuote("msg")
+    )
   }
   handle <- rlang::hash(list(type, hook))
   if (!exists(type, .progress_hooks, mode = "list")) {
@@ -289,16 +390,23 @@ prep_register_progress_hook <- function(type = c("progress", "init", "msg"),
 #' @export
 prep_deregister_progress_hook <- function(handle, verbose = TRUE) {
   util_expect_scalar(verbose,
-                     check_type = is.logical,
-                     error_message = sprintf("%s must be a logical",
-                                             sQuote("verbose")))
+    check_type = is.logical,
+    error_message = sprintf(
+      "%s must be a logical",
+      sQuote("verbose")
+    )
+  )
   util_expect_scalar(handle,
-                     check_type = is.character,
-                     error_message = sprintf("%s must be a character",
-                                             sQuote("handle")))
+    check_type = is.character,
+    error_message = sprintf(
+      "%s must be a character",
+      sQuote("handle")
+    )
+  )
   found <- FALSE
   for (type in eval(formals(prep_register_progress_hook)[["type"]],
-                    envir = baseenv())) {
+      envir = baseenv()
+    )) {
     if (!exists(type, .progress_hooks, mode = "list")) {
       .progress_hooks[[type]] <- list()
     }
@@ -308,12 +416,17 @@ prep_deregister_progress_hook <- function(handle, verbose = TRUE) {
     }
   }
   if (!found && verbose) {
-    util_message(c("This hook has not been registered or already",
-                   "de-registered, cannot de-register"))
+    util_message(c(
+      "This hook has not been registered or already",
+      "de-registered, cannot de-register"
+    ))
   }
   return(invisible(found))
 }
 
+#' Internal helper: call progress hooks
+#'
+#' @noRd
 util_call_progress_hooks <- function(type = c("progress", "init", "msg"), ...) {
   type <- util_match_arg(type)
   if (!exists(type, .progress_hooks, mode = "list")) {
@@ -324,19 +437,34 @@ util_call_progress_hooks <- function(type = c("progress", "init", "msg"), ...) {
       worked <-
         try(
           util_call_with_only_existing_formals(
-            .progress_hooks[[type]][[handle]], ...),
-          silent = TRUE)
+            .progress_hooks[[type]][[handle]], ...
+          ),
+          silent = TRUE
+        )
       if (util_is_try_error(worked)) {
-        util_message("Could not call a hook function: %s\n%s",
-                     head(.progress_hooks[[type]][[handle]]),
-                     conditionMessage(attr(worked, "condition")))
+        util_message(
+          "Could not call a hook function: %s\n%s",
+          head(.progress_hooks[[type]][[handle]]),
+          conditionMessage(util_attr(worked, "condition",
+              exact = TRUE
+            ))
+        )
       }
     } else {
       util_message(
-        c("Could not call a hook function, which should never",
-          "have been registered: %s. Internal error, sorry. Please report."),
+        c(
+          "Could not call a hook function, which should never",
+          "have been registered: %s. Internal error, sorry. Please report."
+        ),
         dQuote(util_deparse1(.progress_hooks[[type]][[handle]]))
       )
     }
   }
+}
+
+#' Internal helper: progress timestamp
+#'
+#' @noRd
+util_progress_timestamp <- function(time = Sys.time()) {
+  format(time, "%H:%M")
 }

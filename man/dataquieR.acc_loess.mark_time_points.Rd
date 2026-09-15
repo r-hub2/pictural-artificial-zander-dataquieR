@@ -5,7 +5,7 @@
 \alias{dataquieR.acc_loess.mark_time_points}
 \title{Display time-points in LOESS plots}
 \description{
-TODO
+This package option controls the behavior described in its title.
 }
 \seealso{
 Other options:
@@ -42,13 +42,16 @@ Other options:
 \code{\link{dataquieR.droplevels_ReportSummaryTable}},
 \code{\link{dataquieR.dt_adjust}},
 \code{\link{dataquieR.fix_column_type_on_read}},
+\code{\link{dataquieR.fix_var_name_prefixes_label}},
 \code{\link{dataquieR.flip_mode}},
 \code{\link{dataquieR.force_item_specific_missing_codes}},
 \code{\link{dataquieR.force_label_col}},
+\code{\link{dataquieR.force_rstudio_user_cluster}},
 \code{\link{dataquieR.grading_formats}},
 \code{\link{dataquieR.grading_rulesets}},
 \code{\link{dataquieR.guess_character}},
 \code{\link{dataquieR.guess_missing_codes}},
+\code{\link{dataquieR.html_table_backend}},
 \code{\link{dataquieR.ignore_empty_vars}},
 \code{\link{dataquieR.lang}},
 \code{\link{dataquieR.lazy_plots}},
@@ -58,6 +61,7 @@ Other options:
 \code{\link{dataquieR.max_cat_resp_var_levels_in_plot}},
 \code{\link{dataquieR.max_group_var_levels_in_plot}},
 \code{\link{dataquieR.max_group_var_levels_with_violins}},
+\code{\link{dataquieR.min_group_var_levels}},
 \code{\link{dataquieR.min_obs_per_group_var_in_plot}},
 \code{\link{dataquieR.min_time_points_for_cat_resp_var}},
 \code{\link{dataquieR.no_geom_count_in_bin}},
@@ -65,10 +69,15 @@ Other options:
 \code{\link{dataquieR.non_disclosure}},
 \code{\link{dataquieR.old_factor_handling}},
 \code{\link{dataquieR.old_type_adjust}},
+\code{\link{dataquieR.parallel.cpus}},
+\code{\link{dataquieR.parallel.load.balancing}},
+\code{\link{dataquieR.parallel.mode}},
+\code{\link{dataquieR.parallel.show.info}},
 \code{\link{dataquieR.precomputeStudyData}},
 \code{\link{dataquieR.print_block_load_factor}},
 \code{\link{dataquieR.progress_fkt_default}},
 \code{\link{dataquieR.progress_msg_fkt_default}},
+\code{\link{dataquieR.psychometric_cor_pairs}},
 \code{\link{dataquieR.resume_checkpoint}},
 \code{\link{dataquieR.resume_print}},
 \code{\link{dataquieR.scale_level_heuristics_control_binaryrecodelimit}},

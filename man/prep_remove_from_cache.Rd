@@ -19,17 +19,17 @@ Remove a specified element from the data frame cache
 }
 \examples{
 \dontrun{
-prep_load_workbook_like_file("meta_data_v2") #load metadata in the cache
-ls(.dataframe_environment()) #get the list of dataframes in the cache
+prep_load_workbook_like_file("meta_data_v2") # load metadata in the cache
+ls(.dataframe_environment()) # get the list of dataframes in the cache
 
-#remove cross-item_level from the cache
+# remove cross-item_level from the cache
 prep_remove_from_cache("cross-item_level")
 
-#remove dataframe_level and expected_id from the cache
+# remove dataframe_level and expected_id from the cache
 prep_remove_from_cache(c("dataframe_level", "expected_id"))
 
-#remove missing_table and segment_level from the cache
-x<- c("missing_table", "segment_level")
+# remove missing_table and segment_level from the cache
+x <- c("missing_table", "segment_level")
 prep_remove_from_cache(x)
 }
 

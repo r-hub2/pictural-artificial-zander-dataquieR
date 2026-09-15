@@ -14,8 +14,8 @@ prep_scalelevel_from_data_and_metadata(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} deprecated, the function always addresses
-all variables.}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -39,9 +39,13 @@ if you specify \code{meta_data_v2}.}
 \description{
 ...if missing
 }
+\details{
+\code{resp_vars} is deprecated for this function. The function always addresses
+all variables.
+}
 \examples{
 \dontrun{
-  prep_load_workbook_like_file("meta_data_v2")
-  prep_scalelevel_from_data_and_metadata(study_data = "study_data")
+prep_load_workbook_like_file("meta_data_v2")
+prep_scalelevel_from_data_and_metadata(study_data = "study_data")
 }
 }

@@ -79,28 +79,35 @@
 #' util_unit2baseunit("nt")
 #' }
 util_unit2baseunit <- function(unit,
-                               warn_ambiguities = !exists("warn_ambiguities",
-                                                         .unit2baseunitenv),
-                               unique = TRUE) {
+  warn_ambiguities = !exists(
+    "warn_ambiguities",
+    .unit2baseunitenv
+  ),
+  unique = TRUE) {
   if (warn_ambiguities) {
     assign("warn_ambiguities", FALSE, .unit2baseunitenv)
-    problems <- vapply(lapply(setNames(nm = UNITS), util_unit2baseunit,
-                              warn_ambiguities = FALSE, unique = FALSE),
-           length, FUN.VALUE = integer(1)) != 1
+    problems <- vapply(
+      lapply(setNames(nm = UNITS), util_unit2baseunit,
+        warn_ambiguities = FALSE, unique = FALSE
+      ),
+      length,
+      FUN.VALUE = integer(1)
+    ) != 1
     if (any(problems)) {
       util_message(
         "Found ambiguous units (could also be prefix + some other unit): %s",
-        paste0(dQuote(names(problems[problems])), collapse = ", "))
+        paste0(dQuote(names(problems[problems])), collapse = ", ")
+      )
     }
   }
-  # all_units <-
-  #   apply(expand.grid(UNIT_PREFIXES, UNITS), 1, paste0, collapse = "")
-  myUNIT_PREFIXES <- c(UNIT_PREFIXES, "")
+  # all_units can be rebuilt from every UNIT_PREFIXES and UNITS combination.
+  my_unit_prefixes <- c(UNIT_PREFIXES, "")
   mp <- lapply(setNames(nm = UNITS),
-         FUN = function(suf, pre) {
-             paste0(pre, suf)
-         },
-         myUNIT_PREFIXES)
+    FUN = function(suf, pre) {
+      paste0(pre, suf)
+    },
+    my_unit_prefixes
+  )
   base_unit <- vapply(mp, function(block) {
     any(block == unit)
   }, FUN.VALUE = logical(1))

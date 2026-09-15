@@ -1,10 +1,7 @@
+# nolint start: line_length_linter.
 #' Insert missing codes for `NA`s based on rules
 #'
-#' @param study_data [data.frame] the data frame that contains the measurements
-#' @param meta_data [data.frame] the data frame that contains metadata
-#'                               attributes of study data
-#' @param label_col [variable attribute] the name of the column in the metadata
-#'                                       with labels of variables
+#' @inheritParams .template_function_indicator
 #' @param rules [data.frame] with the columns:
 #'   - `VAR_NAMES`: [VAR_NAMES] of the variable to compute
 #'   - `COMPUTATION_RULE`: A rule in `REDcap` style (see, e.g.,
@@ -27,58 +24,82 @@
 #' prep_load_workbook_like_file("ship_meta_v2")
 #' meta_data <- prep_get_data_frame("item_level")
 #' rules <- tibble::tribble(
-#'   ~VAR_NAMES,  ~COMPUTATION_RULE,
-#'   "BMI", '[BODY_WEIGHT_0]/(([BODY_HEIGHT_0]/100)^2)',
-#'   "R", '[WAIST_CIRC_0]/2/[pi]', # in m^3
-#'   "VOL_EST", '[pi]*([WAIST_CIRC_0]/2/[pi])^2*[BODY_HEIGHT_0] / 1000', # in l
-#'  )
-#'  r <- prep_add_computed_variables(study_data, meta_data,
-#'    label_col = "LABEL", rules, use_value_labels = FALSE)
+#'   ~VAR_NAMES, ~COMPUTATION_RULE,
+#'   "BMI", "[BODY_WEIGHT_0]/(([BODY_HEIGHT_0]/100)^2)",
+#'   "R", "[WAIST_CIRC_0]/2/[pi]", # in m^3
+#'   "VOL_EST", "[pi]*([WAIST_CIRC_0]/2/[pi])^2*[BODY_HEIGHT_0] / 1000", # in l
+#' )
+#' r <- prep_add_computed_variables(study_data, meta_data,
+#'   label_col = "LABEL", rules, use_value_labels = FALSE
+#' )
 #' }
-prep_add_computed_variables <- function(
-                                   study_data,
-                                   meta_data,
-                                   label_col,
-                                   rules,
-                                   use_value_labels) {
-
-  prep_prepare_dataframes(.replace_missings = FALSE,
-                          .replace_hard_limits = FALSE,
-                          .adjust_data_type = FALSE,
-                          .amend_scale_level = FALSE)
+# nolint end
+prep_add_computed_variables <- function(study_data,
+  meta_data,
+  label_col,
+  rules,
+  use_value_labels) {
+  prep_prepare_dataframes(
+    .replace_missings = FALSE,
+    .replace_hard_limits = FALSE,
+    .adjust_data_type = FALSE,
+    .amend_scale_level = FALSE,
+    .allow_empty = TRUE
+  )
 
   if (!is.data.frame(rules) || !nrow(rules)) {
     return(list(ModifiedStudyData = ds1))
   }
 
-  util_expect_data_frame(rules, list(VAR_NAMES = function(x) {
-    !any(x %in% colnames(study_data))
-  },
-  COMPUTATION_RULE = is.character))
+  util_expect_data_frame(rules, list(
+    VAR_NAMES = function(x) {
+      !any(x %in% colnames(study_data))
+    },
+    COMPUTATION_RULE = is.character
+  ))
   if (DATA_PREPARATION %in% colnames(rules)) {
     rules[[DATA_PREPARATION]] <-
-      vapply(lapply(lapply(lapply(lapply(
-        util_parse_assignments(rules[[DATA_PREPARATION]],
-                               multi_variate_text = TRUE),
-        toupper),
-        trimws),
-        sort),
-        unique), FUN =
-          prep_deparse_assignments, mode = "string_codes",
-        FUN.VALUE = character(1))
+      vapply(
+        lapply(
+          lapply(
+            lapply(
+              lapply(
+                util_parse_assignments(rules[[DATA_PREPARATION]],
+                  multi_variate_text = TRUE
+                ),
+                toupper
+              ),
+              trimws
+            ),
+            sort
+          ),
+          unique
+        ),
+        FUN =
+        prep_deparse_assignments, mode = "string_codes",
+        FUN.VALUE = character(1)
+      )
     rules_split <- split(rules, rules[[DATA_PREPARATION]])
     res <- ds1
     for (my_rules in names(rules_split)) {
-      to_apply <- util_parse_assignments(my_rules)
+      to_apply <- unlist(
+        util_parse_assignments(my_rules),
+        recursive = TRUE,
+        use.names = FALSE
+      )
       curr_rules <- rules_split[[my_rules]]
       curr_rules[[DATA_PREPARATION]] <- NULL
       replace_missing_by <- ""
-      if (sum("MISSING_INTERPRET" %in% to_apply,
-              "MISSING_LABEL" %in% to_apply,
-              "MISSING_NA" %in% to_apply) > 1) {
-        util_warning("Invalid %s in computation rules. Falling back to %s",
-                     sQuote(DATA_PREPARATION),
-                     dQuote("MISSING_NA"))
+      if (sum(
+        "MISSING_INTERPRET" %in% to_apply,
+        "MISSING_LABEL" %in% to_apply,
+        "MISSING_NA" %in% to_apply
+      ) > 1) {
+        util_warning(
+          "Invalid %s in computation rules. Falling back to %s",
+          sQuote(DATA_PREPARATION),
+          dQuote("MISSING_NA")
+        )
         to_apply <- to_apply[!startsWith(to_apply, "MISSING_")]
         to_apply <- c(to_apply, "MISSING_NA")
       }
@@ -91,38 +112,42 @@ prep_add_computed_variables <- function(
       if ("MISSING_LABEL" %in% to_apply) {
         replace_missing_by <- "LABEL"
       }
-      res <- .util_add_computed_variables(ds1 = res,
-                                          meta_data = meta_data,
-                                          label_col = label_col,
-                                          rules = curr_rules,
-                                          use_value_labels =
-                                            ("LABEL" %in% to_apply),
-                                          replace_missing_by =
-                                            replace_missing_by,
-                                          replace_limits =
-                                            ("LIMITS" %in% to_apply)
-                                          )$ModifiedStudyData
+      res <- .util_add_computed_variables(
+        ds1 = res,
+        meta_data = meta_data,
+        label_col = label_col,
+        rules = curr_rules,
+        use_value_labels =
+          ("LABEL" %in% to_apply),
+        replace_missing_by =
+          replace_missing_by,
+        replace_limits =
+          ("LIMITS" %in% to_apply)
+      )$ModifiedStudyData
     }
     return(list(ModifiedStudyData = res))
   } else {
-    return(.util_add_computed_variables(ds1 = ds1,
-                                        meta_data = meta_data,
-                                        label_col = label_col,
-                                        rules = rules,
-                                        use_value_labels =
-                                          use_value_labels))
+    return(.util_add_computed_variables(
+      ds1 = ds1,
+      meta_data = meta_data,
+      label_col = label_col,
+      rules = rules,
+      use_value_labels =
+        use_value_labels
+    ))
   }
-
 }
 
+#' Internal helper: util add computed variables
+#'
+#' @noRd
 .util_add_computed_variables <- function(ds1,
-                                         meta_data,
-                                         label_col,
-                                         rules,
-                                         use_value_labels,
-                                         replace_missing_by = "NA",
-                                         replace_limits = TRUE) {
-
+  meta_data,
+  label_col,
+  rules,
+  use_value_labels,
+  replace_missing_by = "NA",
+  replace_limits = TRUE) {
   if (missing(use_value_labels)) {
     use_value_labels <- VALUE_LABELS %in% colnames(meta_data) &&
       any(!util_empty(meta_data[[VALUE_LABELS]]))
@@ -130,37 +155,49 @@ prep_add_computed_variables <- function(
 
   util_expect_scalar(use_value_labels, check_type = is.logical)
 
-  compiled_rules <- lapply(setNames(nm = rules[[VAR_NAMES]],
-                                    rules[[COMPUTATION_RULE]]),
-                           util_parse_redcap_rule)
+  compiled_rules <- lapply(
+    setNames(
+      nm = rules[[VAR_NAMES]],
+      rules[[COMPUTATION_RULE]]
+    ),
+    util_parse_redcap_rule
+  )
 
-  rule_res <- mapply(SIMPLIFY = FALSE,
-                     rule = compiled_rules,
-                     nm = names(compiled_rules),
-                     function(rule, nm) {
-    # util_message("Rule: %s", paste(attr(rule, "src")))
-    util_message("%s", nm)
-    r <- try(util_eval_rule(rule = rule,
-                   ds1 = ds1,
-                   meta_data = meta_data,
-                   use_value_labels = use_value_labels,
-                   replace_missing_by = replace_missing_by,
-                   replace_limits = replace_limits))
-    if (util_is_try_error(r)) {
-      rl <- "?"
-      try(rl <- attr(rule, "src"), silent = TRUE)
-      if (length(rl) != 1)
+  rule_res <- mapply(
+    SIMPLIFY = FALSE,
+    rule = compiled_rules,
+    nm = names(compiled_rules),
+    function(rule, nm) {
+      # Use util_message() locally to trace compiled rule sources.
+      util_message("%s", nm)
+      r <- try(util_eval_rule(
+        rule = rule,
+        ds1 = ds1,
+        meta_data = meta_data,
+        use_value_labels = use_value_labels,
+        replace_missing_by = replace_missing_by,
+        replace_limits = replace_limits
+      ))
+      if (util_is_try_error(r)) {
         rl <- "?"
-      util_warning("Could not evaluate rule %s: %s, results are all NA",
-                   sQuote(rl),
-                   dQuote(conditionMessage(attr(r, "condition"))),
-                   applicability_problem =
-                     TRUE)
-      NA
-    } else {
-      r
+        try(rl <- util_attr(rule, "src", exact = TRUE), silent = TRUE)
+        if (length(rl) != 1) {
+          rl <- "?"
+        }
+        util_warning("Could not evaluate rule %s: %s, results are all NA",
+          sQuote(rl),
+          dQuote(conditionMessage(util_attr(r, "condition",
+                exact = TRUE
+              ))),
+          applicability_problem =
+            TRUE
+        )
+        NA
+      } else {
+        r
+      }
     }
-  })
+  )
 
   ModifiedStudyData <- ds1
 

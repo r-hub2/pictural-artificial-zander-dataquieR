@@ -38,20 +38,22 @@
 #' @concept data_management
 #' @noRd
 util_check_data_type <- function(x, type, check_convertible = FALSE,
-                                 threshold_value = 0, return_percentages =
-                                   FALSE, check_conversion_stable = FALSE,
-                                 robust_na = FALSE,
-                                 vname = "data") {
-  # FIXME: SLOW!!
+  threshold_value = 0, return_percentages =
+    FALSE, check_conversion_stable = FALSE,
+  robust_na = FALSE,
+  vname = "data") {
   hash_id <-
-    rlang::hash(list(x,
-                type,
-                check_convertible,
-                check_conversion_stable,
-                threshold_value,
-                robust_na,
-                return_percentages))
-  # HINT: if dep on dataframe env: as.list(.dataframe_environment()), also remind
+    rlang::hash(list(
+      x,
+      type,
+      check_convertible,
+      check_conversion_stable,
+      threshold_value,
+      robust_na,
+      return_percentages
+    ))
+  # HINT: if dep on dataframe env: as.list(.dataframe_environment()), also
+  # remind
   # global options(). Also remind possible side effects
   if (exists(hash_id, .cache[[".cache"]])) {
     return(get(hash_id, .cache[[".cache"]]))
@@ -69,7 +71,7 @@ util_check_data_type <- function(x, type, check_convertible = FALSE,
       vname,
       integrity_indicator = "int_vfe_inhom",
       varname = varname
-      )
+    )
     x[not_1] <- NA
   }
   if (robust_na) {
@@ -98,7 +100,8 @@ util_check_data_type <- function(x, type, check_convertible = FALSE,
   .is <- try(checks[[type]], silent = TRUE)
   if (length(.is) != 1 || inherits(.is, "try-error")) {
     util_error("%s is not a known data type.", dQuote(type),
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
   # function to check whether the data type matches (disregarding `NA`s)
   .is_or_na <- function(...) all(empty(...) | .is(...))
@@ -125,7 +128,7 @@ util_check_data_type <- function(x, type, check_convertible = FALSE,
     convertible_mismatch_all <-
       mismatches &
       vapply(x, empty, FUN.VALUE = logical(1)) ==
-        vapply(x2, empty, FUN.VALUE = logical(1))
+      vapply(x2, empty, FUN.VALUE = logical(1))
 
     convertible_mismatch_unstable <- convertible_mismatch_all & !stable
     convertible_mismatch_stable <- convertible_mismatch_all & stable
@@ -165,26 +168,34 @@ util_check_data_type <- function(x, type, check_convertible = FALSE,
       )
       attr(result, "which") <-
         list(
-          match = attr(pct_mismatches, "which"),
-          convertible_mismatch_stable = attr(pct_convertible_mismatch_stable, "which"),
-          convertible_mismatch_unstable = attr(pct_convertible_mismatch_unstable, "which"),
-          nonconvertible_mismatch = attr(pct_nonconvertible_mismatch, "which")
+          match = util_attr(pct_mismatches, "which", exact = TRUE),
+          convertible_mismatch_stable = util_attr(pct_convertible_mismatch_stable, # nolint: line_length_linter.
+            "which",
+            exact = TRUE
+          ),
+          convertible_mismatch_unstable = util_attr(pct_convertible_mismatch_unstable, # nolint: line_length_linter.
+            "which",
+            exact = TRUE
+          ),
+          nonconvertible_mismatch = util_attr(pct_nonconvertible_mismatch, "which", # nolint: line_length_linter.
+            exact = TRUE
+          )
         )
     } else {
-      if (pct_nonconvertible_mismatch > threshold_value)
-        { # NB: Order does matter
-        # 0 = Mismatch, not convertible
+      if (pct_nonconvertible_mismatch > threshold_value) { # NB: Order does matter # nolint: line_length_linter.
+        # Code 0 means mismatch, not convertible.
         result <- 0L
       } else if (pct_mismatches <= threshold_value) {
-        # 1 = Match
+        # Code 1 means match.
         result <- 1L
       } else if (pct_nonconvertible_mismatch <= threshold_value) {
         # 2 = Mismatch, but convertible
         result <- 2L
-      } else {
+      } else { # nocov start
         util_error(
-          "Internal error in util_check_data_type, sorry, and please report")
-      }
+          "Internal error in util_check_data_type, sorry, and please report"
+        )
+      } # nocov end
     }
   } else {
     if (return_percentages) {
@@ -198,7 +209,10 @@ util_check_data_type <- function(x, type, check_convertible = FALSE,
 
   return(result)
 }
-.cache <- new.env(parent = emptyenv()) # HINT: This is exported by dq_reoprt2, but not yet for parallel rendering, which is complicated an not fully working anyways.
+.cache <- new.env(parent = emptyenv()) # HINT: This is exported by dq_reoprt2, but not yet for parallel rendering, which is complicated an not fully working anyways. # nolint: line_length_linter.
+#' Internal helper: reset cache
+#'
+#' @noRd
 util_reset_cache <- function() {
   assign(x = ".cache", value = new.env(parent = emptyenv()), envir = .cache)
 }

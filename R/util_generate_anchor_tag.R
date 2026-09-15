@@ -15,12 +15,14 @@
 #' @concept process
 #' @noRd
 util_generate_anchor_tag <- function(
-    varname,
-    callname,
-    order_context = c("variable",
-                      "indicator"),
-    name) {
-  util_ensure_suggested("htmltools")
+  varname,
+  callname,
+  order_context = c(
+    "variable",
+    "indicator"
+  ),
+  name
+) {
   if (!missing(name)) {
     util_stop_if_not(missing(varname) && missing(callname))
     varname <- sub("^.*?\\.", "", name)
@@ -68,13 +70,15 @@ util_generate_anchor_tag <- function(
 #' @concept process
 #' @noRd
 util_generate_anchor_link <- function(
-    varname,
-    callname,
-    order_context = c("variable",
-                      "indicator"),
-    name,
-    title) {
-  util_ensure_suggested("htmltools")
+  varname,
+  callname,
+  order_context = c(
+    "variable",
+    "indicator"
+  ),
+  name,
+  title
+) {
   if (!missing(name)) {
     util_stop_if_not(missing(varname) && missing(callname))
     varname <- sub("^.*?\\.", "", name)
@@ -84,7 +88,8 @@ util_generate_anchor_link <- function(
         util_error("For links to an variable page, I need to know the variable")
       } else {
         util_error(
-          "For links to an indicator page, I need to know the indicator")
+          "For links to an indicator page, I need to know the indicator"
+        )
       }
     }
     if (varname == "[ALL]") varname <- ""
@@ -103,14 +108,16 @@ util_generate_anchor_link <- function(
       .title <- title
     } else {
       .title <- prep_title_escape(util_alias2caption(callname, long = TRUE),
-                                  html = TRUE)
+        html = TRUE
+      )
     }
     href <- sprintf("VAR_%s.html#%s%s%s", varname, varname, dot, callname)
   } else {
     .title <- prep_title_escape(orig_varname, html = TRUE)
     if (startsWith(callname, "acc_")) {
       fil <- paste0("dim_", "acc_", callname, ".html")
-      # the "dim_" prefix is required because otherwise windows will ignore a file called con.html confusing it with a special device con:
+      # the "dim_" prefix is required because otherwise windows will ignore a
+      # file called con.html confusing it with a special device con:
     } else {
       dim <- sub("_.*$", "", callname)
       fil <- paste0("dim_", dim, ".html")

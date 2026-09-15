@@ -26,31 +26,39 @@
 #' @family missing_functions
 #' @concept missing
 #' @noRd
-util_observation_expected <- # TODO: Support segment level metadata links to SEGMENT_PART_VARS
+util_observation_expected <-
   function(rv, study_data, meta_data, label_col = LABEL,
-           expected_observations =
-             c("HIERARCHY",
-               "ALL",
-               "SEGMENT")) { # TODO: make prep
+    expected_observations =
+    c(
+      "HIERARCHY",
+      "ALL",
+      "SEGMENT"
+    )) {
 
     util_expect_scalar(expected_observations, allow_more_than_one = TRUE)
     expected_observations <- match.arg(expected_observations)
     util_expect_scalar(expected_observations)
 
     all_need_to_be_1 <- # and the order is from root to leaf in the PART_VAR
-                        # hierarchy
+      # hierarchy
       util_all_intro_vars_for_rv(rv, study_data, meta_data, label_col,
-                                 expected_observations = expected_observations)
+        expected_observations = expected_observations
+      )
 
     sd <- study_data
     missing_vars <- setdiff(all_need_to_be_1, colnames(study_data))
-    if (any(missing_vars)) {
-      util_warning(c("Missing %s from %s, I fill it with NA.",
-                     "This may cause inconsistencies, if below in the",
-                     "hierarchy, something is expected"),
-                   paste0(dQuote(missing_vars), collapse = ", "),
-                   sQuote("meta_data"))
-      sd[, missing_vars] <- NA
+    if (length(missing_vars) > 0L) {
+      util_message(
+        c(
+          "Missing %s from %s. Assuming constant participation",
+          "with value 1, so all observations are expected for",
+          "these participation variables."
+        ),
+        paste0(dQuote(missing_vars), collapse = ", "),
+        sQuote("study_data"),
+        applicability_problem = TRUE
+      )
+      sd[, missing_vars] <- 1
     }
     sd <- sd[, all_need_to_be_1, drop = FALSE]
 

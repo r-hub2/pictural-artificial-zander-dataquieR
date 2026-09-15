@@ -35,7 +35,11 @@ may also work. All file formats supported by your \code{rio} installation will
 work.
 }
 \details{
-The data frames will be cached automatically, you can define an alternative
+The data frames will be cached automatically. This cache is mainly a registry
+of already loaded or explicitly registered tables: repeated calls by the same
+name return the registered object and do not re-read the source file or URL.
+Arguments such as \code{keep_types} therefore affect loading, but not later
+retrieval of an already cached data frame. You can define an alternative
 environment for this using the argument \code{.data_frame_list}, and you can purge
 the cache using \link{prep_purge_data_frame_cache}.
 
@@ -45,23 +49,27 @@ cache, e.g., if you have loaded them from more complex sources, before.
 \examples{
 \dontrun{
 bl <- as.factor(prep_get_data_frame(
-  paste0("https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus",
+  paste0(
+    "https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus",
     "/Projekte_RKI/COVID-19_Todesfaelle.xlsx?__blob=",
-    "publicationFile|COVID_Todesfälle_BL|Bundesland"))[[1]])
+    "publicationFile|COVID_Todesfälle_BL|Bundesland"
+  )
+)[[1]])
 
 n <- as.numeric(prep_get_data_frame(paste0(
   "https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/",
   "Projekte_RKI/COVID-19_Todesfaelle.xlsx?__blob=",
   "publicationFile|COVID_Todesfälle_BL|Anzahl verstorbene",
-  " COVID-19 Fälle"))[[1]])
+  " COVID-19 Fälle"
+))[[1]])
 plot(bl, n)
 # Working names would be to date (2022-10-21), e.g.:
 #
-# https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/ \\
+# https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/ \
 #    Projekte_RKI/COVID-19_Todesfaelle.xlsx?__blob=publicationFile
-# https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/  \\
+# https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/  \
 #    Projekte_RKI/COVID-19_Todesfaelle.xlsx?__blob=publicationFile|2
-# https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/ \\
+# https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/ \
 #    Projekte_RKI/COVID-19_Todesfaelle.xlsx?__blob=publicationFile|name
 # study_data
 # ship

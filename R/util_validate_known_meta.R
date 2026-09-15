@@ -4,54 +4,104 @@
 #' and verifies for these, that they follow its metadata conventions.
 #'
 #' @param meta_data [data.frame] the data frame that contains metadata
-#'                               attributes of study data
+#'   attributes of study data
+#' @param relevant_var_names [character] optional variable names for
+#'   relevance-aware hard uniqueness checks.
 #'
 #' @return [data.frame] possibly modified `meta_data`, `invisible()`
 #'
 #' @family metadata_management
 #' @concept robustness
 #' @noRd
-util_validate_known_meta <- function(meta_data) {
-  # TODO: use redcap parser instead, include tests for LOCATION columns and PROPORTIONS columns
+util_remove_identical_meta_rows <- function(meta_data) {
+  duplicated_rows <- duplicated(meta_data)
+  if (any(duplicated_rows)) {
+    meta_data <- meta_data[!duplicated_rows, , drop = FALSE]
+  }
+  meta_data
+}
+
+#' Verify uniqueness for relevant metadata rows
+#'
+#' @param meta_data [data.frame] metadata to validate.
+#' @param relevant_var_names [character] optional relevant variable names.
+#'
+#' @return [data.frame] possibly modified `meta_data`.
+#'
+#' @family metadata_management
+#' @concept robustness
+#' @noRd
+util_validate_relevant_meta_uniqueness <- function(meta_data,
+  relevant_var_names = NULL) {
+  meta_data <- util_remove_identical_meta_rows(meta_data)
+  if (!VAR_NAMES %in% colnames(meta_data)) {
+    return(meta_data)
+  }
+  if (!is.null(relevant_var_names)) {
+    if (!is.character(relevant_var_names)) {
+      util_error(
+        "%s must be a character vector.",
+        sQuote("relevant_var_names")
+      )
+    }
+    relevant_meta_rows <- meta_data[[VAR_NAMES]] %in% relevant_var_names
+    relevant_meta_rows[is.na(relevant_meta_rows)] <- FALSE
+  } else {
+    relevant_meta_rows <- rep(TRUE, nrow(meta_data))
+  }
+  meta_data_relevant <- meta_data[relevant_meta_rows, , drop = FALSE]
+
+  for (no_dups in
+    c(
+      VAR_NAMES,
+      grep("^LABEL(_.+)?$", colnames(meta_data), value = TRUE),
+      grep("^LONG_LABEL(_.+)?$", colnames(meta_data), value = TRUE)
+    )
+  ) {
+    if (any(duplicated(meta_data_relevant[[no_dups]]))) {
+      util_error("Found duplicated %s in item-level metadata: %s. Please fix.",
+        sQuote(no_dups),
+        util_pretty_vector_string(
+          sort(unique(meta_data_relevant[[no_dups]][
+            duplicated(meta_data_relevant[[no_dups]])
+          ]))
+        ),
+        applicability_problem = TRUE
+      )
+    }
+  }
+  meta_data
+}
+
+#' Internal helper: validate known meta
+#'
+#' @noRd
+util_validate_known_meta <- function(meta_data, relevant_var_names = NULL) {
   if (!VAR_NAMES %in% colnames(meta_data)) { # avoid errors in checks, if
     # not a complete metadata frame is being checked.
     meta_data[[VAR_NAMES]] <- paste0("v", seq_len(nrow(meta_data)))
   }
   if (any(util_empty(meta_data[[VAR_NAMES]]))) {
     util_warning("Found variables w/o %s. Added dummy names", sQuote(VAR_NAMES),
-                 applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
     meta_data[[VAR_NAMES]][util_empty(meta_data[[VAR_NAMES]])] <-
       paste0("v", seq_len(nrow(meta_data)))[util_empty(meta_data[[VAR_NAMES]])]
   }
-  if (any(duplicated(meta_data))) {
-    util_error(
-      "Found duplicated rows in item-level metadata. Please fix.",
-      applicability_problem = TRUE)
-    # sorrry, cannot fix on the fly, because the context, where this is called, is too heterogeneous.
-#    meta_data <- meta_data[!duplicated(meta_data), , FALSE]
-  }
-  for (no_dups in
-        c(VAR_NAMES,
-          grep("^LABEL(_.+)?$", colnames(meta_data)),
-          grep("^LONG_LABEL(_.+)?$", colnames(meta_data)))
-       ) {
-    if (any(duplicated(meta_data[[no_dups]]))) {
-      util_error("Found duplicated %s in item-level metadata: %s. Please fix.",
-                 sQuote(no_dups),
-                 util_pretty_vector_string(
-                   sort(unique(meta_data[[no_dups]][
-                     duplicated(meta_data[[no_dups]])]))
-                 ),
-                 applicability_problem = TRUE)
-    }
-  }
+  meta_data <- util_validate_relevant_meta_uniqueness(
+    meta_data,
+    relevant_var_names = relevant_var_names
+  )
   util_validate_missing_lists(meta_data)
   env <- new.env(environment())
   env$error <- character(0)
   if (any(grepl("^(HARD|SOFT|DETECTION)_LIMITS$", colnames(meta_data)))) {
+    meta_data_legacy_limits <- util_mask_stratified_limits_for_validation(
+      meta_data
+    )
     suppressMessages(suppressWarnings(
       l <- withCallingHandlers(
-        util_interpret_limits(mdata = meta_data),
+        util_interpret_limits(mdata = meta_data_legacy_limits),
         warning = function(w) env$error <- c(env$error, conditionMessage(w)),
         error = function(e) env$error <- c(env$error, conditionMessage(e))
       )
@@ -60,23 +110,30 @@ util_validate_known_meta <- function(meta_data) {
     newlimcols <- gsub("^INCL_", "", newlimcols)
     newlimcols <- unique(gsub("_LIMIT_(LOW|UP)$", "", newlimcols))
     for (limc in newlimcols) {
-      wrong_interval_order <- l[, sprintf("%s_LIMIT_LOW", limc), FALSE] >
-        l[, sprintf("%s_LIMIT_UP", limc), FALSE]
+      wrong_interval_order <- l[, sprintf("%s_LIMIT_LOW", limc), drop = FALSE] >
+        l[, sprintf("%s_LIMIT_UP", limc), drop = FALSE]
       wrong_interval_order[is.na(wrong_interval_order)] <- FALSE
       if (any(wrong_interval_order)) {
-        env$error <- c(env$error,
-                   sprintf("Found %s with lower limit > upper limit: %s",
-                           limc,
-                           unique(unlist(l[wrong_interval_order,
-                                    sprintf("%s_LIMITS", limc),
-                                    TRUE]))))
+        env$error <- c(
+          env$error,
+          sprintf(
+            "Found %s with lower limit > upper limit: %s",
+            limc,
+            unique(unlist(l[
+              wrong_interval_order,
+              sprintf("%s_LIMITS", limc),
+              drop = TRUE
+            ]))
+          )
+        )
       }
     }
     env$error <- unique(env$error)
     if (length(env$error) > 0) {
       util_warning("Invalid limits detected: %s",
-                   paste0(env$error, collapse = "\n"),
-                   applicability_problem = TRUE)
+        paste0(env$error, collapse = "\n"),
+        applicability_problem = TRUE
+      )
     }
   }
 
@@ -101,91 +158,111 @@ util_validate_known_meta <- function(meta_data) {
       if (!util_empty(vlt)) {
         df <- try(prep_get_data_frame(vlt))
         if (util_is_try_error(df)) {
-          env$error <- c(env$error,
-                         sprintf(
-                           "Cannot load %s %s for %s: %s",
-                           sQuote(VALUE_LABEL_TABLE),
-                           dQuote(vlt),
-                           dQuote(vn),
-                           util_condition_from_try_error(df)))
+          env$error <- c(
+            env$error,
+            sprintf(
+              "Cannot load %s %s for %s: %s",
+              sQuote(VALUE_LABEL_TABLE),
+              dQuote(vlt),
+              dQuote(vn),
+              util_condition_from_try_error(df)
+            )
+          )
         } else {
           if (!CODE_VALUE %in% colnames(df)) {
-            env$error <- c(env$error,
-                           sprintf(
-                             "%s %s is missing column %s for %s",
-                             sQuote(VALUE_LABEL_TABLE),
-                             dQuote(vlt),
-                             sQuote(CODE_VALUE),
-                             dQuote(vn)))
+            env$error <- c(
+              env$error,
+              sprintf(
+                "%s %s is missing column %s for %s",
+                sQuote(VALUE_LABEL_TABLE),
+                dQuote(vlt),
+                sQuote(CODE_VALUE),
+                dQuote(vn)
+              )
+            )
           } else if (length(unique(df[[CODE_VALUE]])) == 0) {
-            env$error <- c(env$error,
-                           sprintf(
-                             "%s %s is empty for %s",
-                             sQuote(VALUE_LABEL_TABLE),
-                             dQuote(vlt),
-                             dQuote(vn)))
+            env$error <- c(
+              env$error,
+              sprintf(
+                "%s %s is empty for %s",
+                sQuote(VALUE_LABEL_TABLE),
+                dQuote(vlt),
+                dQuote(vn)
+              )
+            )
           } else if (length(unique(df[[CODE_VALUE]])) == 1) {
-            env$error <- c(env$error,
-                           sprintf(
-                             "%s %s is suspicious for %s: only one value",
-                             sQuote(VALUE_LABEL_TABLE),
-                             dQuote(vlt),
-                             dQuote(vn)))
+            env$error <- c(
+              env$error,
+              sprintf(
+                "%s %s is suspicious for %s: only one value",
+                sQuote(VALUE_LABEL_TABLE),
+                dQuote(vlt),
+                dQuote(vn)
+              )
+            )
           }
           if (CODE_ORDER %in% colnames(df) &&
               !is.na(sl) &&
               sl != SCALE_LEVELS$ORDINAL) {
-            env$error <- c(env$error,
-                           sprintf(
-                             "Ordinal variable with unordered %s: %s",
-                             sQuote(VALUE_LABEL_TABLE),
-                             dQuote(vn)))
+            env$error <- c(
+              env$error,
+              sprintf(
+                "Ordinal variable with unordered %s: %s",
+                sQuote(VALUE_LABEL_TABLE),
+                dQuote(vn)
+              )
+            )
           }
           if (!CODE_ORDER %in% colnames(df) &&
               !is.na(sl) &&
               sl != SCALE_LEVELS$NOMINAL) {
-            env$error <- c(env$error,
-                           sprintf(
-                             "Nominal variable with ordered %s: %s",
-                             sQuote(VALUE_LABEL_TABLE),
-                             dQuote(vn)))
+            env$error <- c(
+              env$error,
+              sprintf(
+                "Nominal variable with ordered %s: %s",
+                sQuote(VALUE_LABEL_TABLE),
+                dQuote(vn)
+              )
+            )
           }
         }
       }
     }
   ))
 
-  # TODO: Check STANDARDIZED_VOCABULARY_TABLE, too
   if (VALUE_LABELS %in% colnames(meta_data)) {
-    invisible(mapply(vl = meta_data[[VALUE_LABELS]],
-           vn = meta_data[[VAR_NAMES]],
+    invisible(mapply(
+      vl = meta_data[[VALUE_LABELS]],
+      vn = meta_data[[VAR_NAMES]],
       FUN = function(vl, vn) {
         if (!util_empty(vl)) {
           if (!grepl(SPLIT_CHAR, vl, fixed = TRUE) &&
               !grepl("<", vl, fixed = TRUE)) {
-            env$error <- c(env$error,
-                           sprintf(
-           "Suspicious value labels (only 1 level) detected: %s (%s)",
-                             dQuote(vl), dQuote(vn)))
+            env$error <- c(
+              env$error,
+              sprintf(
+                "Suspicious value labels (only 1 level) detected: %s (%s)",
+                dQuote(vl), dQuote(vn)
+              )
+            )
           }
         }
       }
     ))
-    # TODO: do the check for unsuitable missing code type from util_get_code_list (util_get_code_list) here, instead, and summarize the warnings.
-    # TODO: Check whether VALUE_LABELS and entries in the study data match (e.g.,
-    # SEX_0 coded as string ("female", "male"), but VALUE_LABELS are
-    # 0 = "female" | 1 = "male", or the other way around - SEX_0 coded as
-    # integer, but VALUE_LABELS give only "female", "male"
     if (SCALE_LEVEL %in% colnames(meta_data)) {
       invalid_scale_levels <-
         !util_empty(meta_data[[SCALE_LEVEL]]) &
         !(meta_data[[SCALE_LEVEL]] %in% unlist(SCALE_LEVELS))
       if (any(invalid_scale_levels)) {
-        util_warning("Found invalid scale levels: %s",
+        util_warning(
+          "Found invalid scale levels: %s",
           util_pretty_vector_string(
-            paste0(meta_data[invalid_scale_levels, VAR_NAMES, drop = TRUE],
-                   ": ",
-                  meta_data[invalid_scale_levels, SCALE_LEVEL, drop = TRUE]))
+            paste0(
+              meta_data[invalid_scale_levels, VAR_NAMES, drop = TRUE],
+              ": ",
+              meta_data[invalid_scale_levels, SCALE_LEVEL, drop = TRUE]
+            )
+          )
         )
       }
       value_list_scale_level_missmatch <-
@@ -196,24 +273,35 @@ util_validate_known_meta <- function(meta_data) {
           util_parse_assignments(
             meta_data[[VALUE_LABELS]],
             multi_variate_text = TRUE,
-            split_char = c(SPLIT_CHAR, "<")), attr, "split_char") == SPLIT_CHAR
+            split_char = c(SPLIT_CHAR, "<")
+          ), util_attr, "split_char"
+        ) == SPLIT_CHAR
       ] <- FALSE
       if (any(value_list_scale_level_missmatch)) {
-        env$error <- c(env$error,
-                       sprintf(
-              "Value labels with %s found for variable(s) %s with %s = %s",
-                        dQuote("<"),
-                        paste(dQuote(meta_data[value_list_scale_level_missmatch,
-                                         VAR_NAMES, drop = TRUE]),
-                              collapse = ", "),
-                        sQuote(SCALE_LEVEL),
-                        dQuote(SCALE_LEVELS$NOMINAL)))
+        env$error <- c(
+          env$error,
+          sprintf(
+            "Value labels with %s found for variable(s) %s with %s = %s",
+            dQuote("<"),
+            paste(
+              dQuote(meta_data[value_list_scale_level_missmatch,
+                  VAR_NAMES,
+                  drop = TRUE
+                ]),
+              collapse = ", "
+            ),
+            sQuote(SCALE_LEVEL),
+            dQuote(SCALE_LEVELS$NOMINAL)
+          )
+        )
       }
     }
     env$error <- unique(env$error)
-    if (length(env$error) > 0)
+    if (length(env$error) > 0) {
       util_warning(paste(env$error, collapse = "\n"),
-                   applicability_problem = TRUE)
+        applicability_problem = TRUE
+      )
+    }
   }
   if (any(c(MISSING_LIST, JUMP_LIST) %in% colnames(meta_data))) {
     env$error <- character(0)
@@ -221,65 +309,93 @@ util_validate_known_meta <- function(meta_data) {
       vl <- meta_data[[l]]
       notnumdat <- !grepl(sprintf(
         "^[%s0-9\\s\\-\\.\\: ]*$",
-        SPLIT_CHAR), perl = TRUE, vl)
-      not_assign <- vapply(vl, FUN.VALUE = logical(1),
-                           function(x) {
-                             if (is.na(x)) return(FALSE);
-                             v <- names(util_parse_assignments(x))
-                             any(is.na(v) != suppressWarnings(
-                                 is.na(as.numeric(v))) &
-                                   is.na(v) != suppressWarnings(
-                                     is.na(util_parse_date(v))) &
-                                   is.na(v) != suppressWarnings(
-                                     is.na(util_parse_time(v)))
-                                   )
-                           })
+        SPLIT_CHAR
+      ), perl = TRUE, vl)
+      not_assign <- vapply(vl,
+        FUN.VALUE = logical(1),
+        function(x) {
+          if (is.na(x)) {
+            return(FALSE)
+          }
+          v <- names(util_parse_assignments(x))
+          any(is.na(v) != suppressWarnings(
+            is.na(as.numeric(v))
+          ) &
+            is.na(v) != suppressWarnings(
+              is.na(util_parse_date(v))
+            ) &
+            is.na(v) != suppressWarnings(
+              is.na(util_parse_time(v))
+            ))
+        }
+      )
       if (any(!util_empty(vl) & notnumdat & not_assign)) {
-        env$error <- c(env$error,
-                   sprintf(
-                     "Suspicious %s: not numeric/date/time/assignment: %s",
-                     sQuote(l),
-                     paste(dQuote(unique(sort(
-                       as.character(vl[!util_empty(vl) & notnumdat & not_assign])))),
-                       collapse = ", ")))
+        env$error <- c(
+          env$error,
+          sprintf(
+            "Suspicious %s: not numeric/date/time/assignment: %s",
+            sQuote(l),
+            paste(
+              dQuote(unique(sort(
+                as.character(vl[!util_empty(vl) & notnumdat & not_assign])
+              ))),
+              collapse = ", "
+            )
+          )
+        )
       } else {
         vlc <- as.character(vl)
         if (any(is.na(vlc) != is.na(vl))) { # nocov start
-          util_warning(c("This should never be displayed,",
-                         "so you've found a bug in dataquieR.",
-                         "Please report it as bug in",
-                         "%s to %s"),
-                       dQuote("util_validate_known_meta"),
-                       dQuote(utils::packageDescription("dataquieR")[["BugReports"]]),
-                       applicability_problem = FALSE)
-          env$error <- c(env$error,
-            sprintf("Found missing or jump code not being a character: %s",
-                       dQuote(
-                         deparse(head(vl[is.na(vlc) != is.na(vl)], 1),
-                                 nlines = 1)))
+          util_warning(
+            c(
+              "This should never be displayed,",
+              "so you've found a bug in dataquieR.",
+              "Please report it as bug in",
+              "%s to %s"
+            ),
+            dQuote("util_validate_known_meta"),
+            dQuote(utils::packageDescription("dataquieR")[["BugReports"]]),
+            applicability_problem = FALSE
+          )
+          env$error <- c(
+            env$error,
+            sprintf(
+              "Found missing or jump code not being a character: %s",
+              dQuote(
+                deparse(head(vl[is.na(vlc) != is.na(vl)], 1),
+                  nlines = 1
+                )
+              )
+            )
           )
         } # nocov end
         vl <- vlc
         lists <- strsplit(vl,
-                 split = sprintf("\\s*[%s]\\s*", SPLIT_CHAR),
-                 perl = TRUE,
-                )
+          split = sprintf("\\s*[%s]\\s*", SPLIT_CHAR),
+          perl = TRUE,
+        )
         dups <-
           vapply(lists, FUN.VALUE = logical(1), function(x) any(duplicated(x)))
         if (any(dups)) {
           dup_lists <- unique(unlist(
-            lapply(lists[dups], paste, collapse = sprintf(" %s ", SPLIT_CHAR))))
+            lapply(lists[dups], paste, collapse = sprintf(" %s ", SPLIT_CHAR))
+          ))
           util_warning(
             "Duplicates in %s: %s. Maybe another missing code is not listed?",
-                       dQuote(l),
-                       paste0(sQuote(dup_lists), collapse = ", "),
-            applicability_problem = TRUE)
+            dQuote(l),
+            paste0(sQuote(dup_lists), collapse = ", "),
+            applicability_problem = TRUE
+          )
         }
       }
     }
     env$error <- unique(env$error)
-    if (length(env$error) > 0)
-      util_warning(env$error, applicability_problem = TRUE)
+    if (length(env$error) > 0) {
+      util_warning("%s",
+        paste(env$error, collapse = "\n"),
+        applicability_problem = TRUE
+      )
+    }
   }
 
   invisible(meta_data)
@@ -297,13 +413,14 @@ util_validate_known_meta <- function(meta_data) {
 #' @concept string
 #' @noRd
 util_abbreviate_unique <- function(initial, max_value_label_len) {
-  # TODO: use code from util_ensure_label for abbreviations
   no_dups <- !any(duplicated(initial))
   abb <- substr(initial, 1, max_value_label_len)
-  if (no_dups) while (any(dups <- duplicated(abb))) {
-    abb[dups] <- substr(initial[dups], 1, max(1, max_value_label_len -
-                          nchar(sum(dups))))
-    abb[dups] <- paste0(abb[dups], seq_len(sum(dups)))
+  if (no_dups) {
+    while (any(dups <- duplicated(abb))) {
+      abb[dups] <- substr(initial[dups], 1, max(1, max_value_label_len -
+            nchar(sum(dups))))
+      abb[dups] <- paste0(abb[dups], seq_len(sum(dups)))
+    }
   }
   abb
 }

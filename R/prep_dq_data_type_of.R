@@ -8,10 +8,10 @@
 #' @seealso [`DATA_TYPES_OF_R_TYPE`]
 #' @export
 prep_dq_data_type_of <- function(x, guess_character =
-                                    getOption("dataquieR.guess_character",
-                                              default =
-                                              dataquieR.guess_character_default
-                                            )) {
+    getOption("dataquieR.guess_character",
+      default =
+      dataquieR.guess_character_default
+    )) {
   util_expect_scalar(guess_character, check_type = is.logical)
   if (is.list(x) && all(vapply(x, inherits, "hms", FUN.VALUE = logical(1)))) {
     return(tolower(DATA_TYPES_OF_R_TYPE$hms))
@@ -29,7 +29,7 @@ prep_dq_data_type_of <- function(x, guess_character =
         r <- "integer"
       }
     } else if (guess_character && r == "character") {
-      r <- switch (readr::guess_parser(x, guess_integer = TRUE),
+      r <- switch(readr::guess_parser(x, guess_integer = TRUE),
         integer = "integer",
         character = "character",
         double = "double",
@@ -40,13 +40,8 @@ prep_dq_data_type_of <- function(x, guess_character =
         logical = "logical",
         "character" # fallback
       )
-      # readr::guess_parser(as.character(1:10), guess_integer = TRUE) # integer
-      # readr::guess_parser("asdf", guess_integer = TRUE) # character
-      # readr::guess_parser("1.4", guess_integer = TRUE) # double, number
-      # readr::guess_parser("12:00:00", guess_integer = TRUE) # time
-      # readr::guess_parser("2007-08-07", guess_integer = TRUE) # date
-      # readr::guess_parser("2007-08-07 01:01:01", guess_integer = TRUE) # datetime
-      # readr::guess_parser("true", guess_integer = TRUE) # logical
+      # readr::guess_parser examples cover integer, character, double/number,
+      # time, date, datetime, and logical inputs.
       # factor or guess are obviously never returned.
     }
 

@@ -30,10 +30,8 @@ with labels of variables}
 \item{threshold_value}{\link{numeric} from=0 to=100. a numerical value
 ranging from 0-100}
 
-\item{meta_data_cross_item}{\link{data.frame} contradiction rules table.  Table
-defining contradictions. See
-\href{https://dataquality.qihs.uni-greifswald.de/VIN_Cross_Item_Level_Metadata.html}{online documentation}
-for its required structure.}
+\item{meta_data_cross_item}{\link{data.frame} -- optional: Cross-item level
+metadata}
 
 \item{use_value_labels}{\link{logical} Deprecated in favor of \link{DATA_PREPARATION}.
 If set to \code{TRUE}, labels can be used in the
@@ -43,13 +41,19 @@ contractions have to be specified using the coded
 values. In case that this argument is not set in
 the function call, it will be set to \code{TRUE} if
 the metadata contains a column \code{VALUE_LABELS}
-which is not empty.}
+which is not empty.
+
+\code{con_contradictions_redcap()} expects contradiction rules in the cross-item
+level metadata. See the
+\href{https://dataquality.qihs.uni-greifswald.de/VIN_Cross_Item_Level_Metadata.html}{online documentation}
+for the cross-item metadata structure.}
 
 \item{summarize_categories}{\link{logical} Needs a column \code{CONTRADICTION_TYPE} in
 the \code{meta_data_cross_item}.
 If set, a summary output is generated for the
 defined categories plus one plot per
-category. TODO: Not yet controllable by metadata.}
+category. Categories cannot currently be
+configured through metadata.}
 
 \item{meta_data}{\link{data.frame} old name for \code{item_level}}
 
@@ -129,6 +133,10 @@ List function.
 }
 \seealso{
 \href{https://dataquality.qihs.uni-greifswald.de/VIN_con_impl_contradictions_redcap.html}{Online Documentation for the function}
-\link{meta_data_cross}
+\link{meta_data_cross_item}
 \href{https://dataquality.qihs.uni-greifswald.de/Cross_Item_Level_Metadata.html}{Online Documentation for the required cross-item-level metadata}
+}
+\author{
+Thomas J. Musholt contributed the contradiction-type readability
+improvements for the summary plot.
 }

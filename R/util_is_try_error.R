@@ -16,9 +16,11 @@ util_is_try_error <- function(x) {
 #' @noRd
 util_condition_from_try_error <- function(x) {
   if (!util_is_try_error(x)) {
-    util_error("Internal error %s: Not a try-error. Please report, sorry.",
-               dQuote(class(x)))
+    util_error(
+      "Internal error %s: Not a try-error. Please report, sorry.",
+      dQuote(class(x))
+    )
   } else {
-    attr(x, "condition")
+    util_attr(x, "condition", exact = TRUE)
   }
 }

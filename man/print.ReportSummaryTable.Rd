@@ -22,10 +22,10 @@
 
 \item{relative}{deprecated}
 
-\item{dt}{\link{logical} use \code{DT::datatables}, if installed}
+\item{dt}{\link{logical} use the selected DT2 or DT table backend, if installed}
 
 \item{fillContainer}{\link{logical} if \code{dt} is \code{TRUE}, control table size,
-see \code{DT::datatables}.}
+filling the available widget container when enabled.}
 
 \item{displayValues}{\link{logical} if \code{dt} is \code{TRUE}, also display the actual
 values}

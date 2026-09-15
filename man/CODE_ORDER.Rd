@@ -2,10 +2,10 @@
 % Please edit documentation in R/000_globs.R
 \name{CODE_ORDER}
 \alias{CODE_ORDER}
-\title{Only existence is checked, order not yet used}
+\title{Optional ordering column for value-label tables.}
 \usage{
 CODE_ORDER
 }
 \description{
-Only existence is checked, order not yet used
+Optional ordering column for value-label tables.
 }

@@ -19,26 +19,31 @@
 #' @noRd
 util_recode <- function(values, mapping_table, from, to, default = NULL) {
   util_expect_scalar(values,
-                     allow_more_than_one = TRUE,
-                     allow_null = TRUE,
-                     allow_na = TRUE)
+    allow_more_than_one = TRUE,
+    allow_null = TRUE,
+    allow_na = TRUE
+  )
   util_expect_scalar(from, check_type = is.character)
   util_expect_scalar(to, check_type = is.character)
   if (length(default) == 1) {
     util_expect_scalar(default,
-                       allow_na = TRUE, check_type = is.character)
+      allow_na = TRUE, check_type = is.character
+    )
   } else {
     util_expect_scalar(default,
-                       allow_na = TRUE,
-                       allow_null = TRUE,
-                       allow_more_than_one = TRUE,
-                       min_length = length(values),
-                       max_length = length(values))
+      allow_na = TRUE,
+      allow_null = TRUE,
+      allow_more_than_one = TRUE,
+      min_length = length(values),
+      max_length = length(values)
+    )
   }
   util_expect_data_frame(mapping_table, c(from, to))
   mapping_list <- setNames(mapping_table[[to]], nm = mapping_table[[from]])
-  mapping_list <- c(list(.x = values),
-                    mapping_list,
-                    list(.default = default))
+  mapping_list <- c(
+    list(.x = values),
+    mapping_list,
+    list(.default = default)
+  )
   do.call(recode, mapping_list)
 }

@@ -20,43 +20,43 @@
 #' @return [numeric] ratio of convertible entries in `vector`
 #' @noRd
 util_conversion_stable <- function(vector, data_type,
-                                   return_percentages = FALSE) {
+  return_percentages = FALSE) {
   util_expect_scalar(return_percentages, check_type = is.logical)
   util_expect_scalar(vector,
-                     allow_more_than_one = TRUE,
-                     allow_na = TRUE,
-                     error_message =
-                       sprintf(
-                         "argument %s needs to be convertible to a string",
-                                             sQuote("vector")),
-                     check_type = is.character,
-                     convert_if_possible = util_as_character)
+    allow_more_than_one = TRUE,
+    allow_na = TRUE,
+    error_message =
+      sprintf(
+        "argument %s needs to be convertible to a string",
+        sQuote("vector")
+      ),
+    check_type = is.character,
+    convert_if_possible = util_as_character
+  )
   util_match_arg(data_type, DATA_TYPES)
   if (data_type == DATA_TYPES$INTEGER) {
     as_target <- util_data_type_conversion(vector, data_type)
-    if (identical(attr(data_type, "orig_type"), "logical")) {
+    if (identical(util_attr(data_type, "orig_type", exact = TRUE), "logical")) {
       as_num <- util_data_type_conversion(as.logical(vector), DATA_TYPES$FLOAT)
       res <-
         (
           (util_empty(as_target) & util_empty(vector)) |
-            ((!util_empty(as_target) & !util_empty(vector) &
-                as_target == as_num))
+          ((!util_empty(as_target) & !util_empty(vector) &
+              as_target == as_num))
         )
     } else {
       as_num <- util_data_type_conversion(vector, DATA_TYPES$FLOAT)
       res <-
         (
           (util_empty(as_target) & util_empty(vector)) |
-            ((!util_empty(as_target) & !util_empty(vector) &
-                as_target == as_num))
+          ((!util_empty(as_target) & !util_empty(vector) &
+              as_target == as_num))
         )
     }
   } else if (data_type == DATA_TYPES$FLOAT) { # scientific notation
     as_target <- util_data_type_conversion(vector, data_type)
     res <- util_empty(vector) == util_empty(as_target)
   } else if (data_type == DATA_TYPES$DATETIME) {
-    # FIXME: integrate somehow my_parse_date to util_data_type_conversion -- also parse_time and so on
-    # as_target <- util_data_type_conversion(string, data_type)
     as_target <- .my_parse_date(vector)
     res <- util_empty(vector) == util_empty(as_target)
   } else if (data_type == DATA_TYPES$TIME) {
@@ -71,8 +71,14 @@ util_conversion_stable <- function(vector, data_type,
   res
 }
 
-# x <- c("2009-09-29x", "2012-11-29 CET", "2015-29-12", "2009-09-29x", "2009-09-29x", "2012-11-29 12:00:00 CET", "2015-29-12 13:00:00", "2009-09-29x")
-# x2 <- as.character(as.POSIXct(rnorm(1000000, mean = 1000000000, sd = 100000000)))
+# x <- c("2009-09-29x", "2012-11-29 CET", "2015-29-12", "2009-09-29x",
+# "2009-09-29x", "2012-11-29 12:00:00 CET", "2015-29-12 13:00:00",
+# "2009-09-29x")
+# x2 <- as.character(as.POSIXct(rnorm(1000000, mean = 1000000000, sd =
+# 100000000)))
+#' Internal helper: my parse date
+#'
+#' @noRd
 .my_parse_date <- function(x) {
   x <- trimws(x, "right")
   # remove all OlsonNames, if endswith
@@ -82,10 +88,11 @@ util_conversion_stable <- function(vector, data_type,
     x[subst] <-
       substr(x[subst], 1, nchar(x[subst]) - l)
   }
-  # IDEA: can using this in favor of lubridate everywhere remove the dependency from lubridate: no, lubridate has also round_date and duration-related stuff?
   return(suppressWarnings(readr::parse_datetime(x,
-                                                locale =
-                                                  readr::locale(
-                                                    tz =
-                                                      Sys.timezone()))))
+    locale =
+      readr::locale(
+        tz =
+        Sys.timezone()
+      )
+  )))
 }

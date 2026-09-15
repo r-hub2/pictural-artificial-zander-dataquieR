@@ -13,7 +13,7 @@
 
 
 util_get_vars_in_segment <- function(segment, meta_data = "item_level",
-                                     label_col = LABEL) {
+  label_col = LABEL) {
   util_expect_scalar(segment, check_type = is.character)
   util_expect_data_frame(meta_data, list(
     STUDY_SEGMENT = is.character,
@@ -30,19 +30,11 @@ util_get_vars_in_segment <- function(segment, meta_data = "item_level",
   def[[label_col]] <- is.character
   util_expect_data_frame(meta_data, def)
   kss <- meta_data[[STUDY_SEGMENT]]
-  # kss_lc <- prep_map_labels(kss,
-  #                           to = LABEL,
-  #                           meta_data = meta_data,
-  #                           ifnotfound = kss)
-  # kss_lb <- prep_map_labels(kss,
-  #                 to = label_col,
-  #                 meta_data = meta_data,
-  #                 ifnotfound = kss)
+  # Historical segment-label mapping variants removed in commit 214dd76a7d.
   r <-
     unique(c(
-      meta_data[kss == segment, label_col, drop = TRUE]#,
-#      meta_data[kss_lc == segment, label_col, drop = TRUE],
-#      meta_data[kss_lb == segment, label_col, drop = TRUE]
+      meta_data[kss == segment, label_col, drop = TRUE]
+      # Historical mapped segment matches removed in commit 214dd76a7d.
     ))
   sort(r)
 }

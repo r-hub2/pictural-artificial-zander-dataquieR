@@ -9,7 +9,7 @@
 #' @noRd
 util_get_fg_color <- function(cl) {
   cl <- col2rgb(util_col2rgb(cl), alpha = TRUE)
-  brightness <- cl["red", ] * 0.299 + cl["green", ] * 0.587 +
-    cl["blue", ] * 0.114
-  ifelse(brightness > 160, "#000000", "#ffffff")
+  brightness <- cl["red", , drop = FALSE] * 0.299 + cl["green", , drop = FALSE] * 0.587 + # nolint: line_length_linter.
+    cl["blue", , drop = FALSE] * 0.114
+  as.vector(ifelse(brightness > 160, "#000000", "#ffffff"))
 }

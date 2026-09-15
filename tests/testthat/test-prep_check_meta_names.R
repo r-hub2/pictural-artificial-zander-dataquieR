@@ -1,14 +1,18 @@
 test_that("prep_check_meta_names works", {
   skip_on_cran()
-  
-  withr::local_options(dataquieR.CONDITIONS_WITH_STACKTRACE = TRUE,
-                  dataquieR.ERRORS_WITH_CALLER = TRUE,
-                  dataquieR.WARNINGS_WITH_CALLER = TRUE,
-                  dataquieR.MESSAGES_WITH_CALLER = TRUE)
- expect_silent(prep_check_meta_names(data.frame(), level = NULL))
 
- expect_silent( prep_check_meta_names(data.frame(VAR_NAMES = 1, DATA_TYPE = 2,
-                        MISSING_LIST = 3)))
+  withr::local_options(
+    dataquieR.CONDITIONS_WITH_STACKTRACE = TRUE,
+    dataquieR.ERRORS_WITH_CALLER = TRUE,
+    dataquieR.WARNINGS_WITH_CALLER = TRUE,
+    dataquieR.MESSAGES_WITH_CALLER = TRUE
+  )
+  expect_silent(prep_check_meta_names(data.frame(), level = NULL))
+
+  expect_silent(prep_check_meta_names(data.frame(
+    VAR_NAMES = 1, DATA_TYPE = 2,
+    MISSING_LIST = 3
+  )))
 
   expect_silent(prep_check_meta_names(
     data.frame(
@@ -58,52 +62,82 @@ test_that("prep_check_meta_names works", {
       LOCATION_RANGE = "LOCATION_RANGE",
       LOCATION_METRIC = "LOCATION_METRIC",
       PROPORTION_RANGE = "PROPORTION_RANGE",
+      REPEATED_MEASURES_VARS = "REPEATED_MEASURES_VARS",
       MISSING_LIST_TABLE = "MISSING_LIST_TABLE",
       CO_VARS = "CO_VARS",
       GRADING_RULESET = "GRADING_RULESET",
       RECODE_CASES = "RECODE_CASES",
       RECODE_CONTROL = "RECODE_CONTROL",
+      EVENT_LEVELS = "EVENT_LEVELS",
+      CONTROL_LEVELS = "CONTROL_LEVELS",
       DATAFRAMES = "DATAFRAMES",
       ENCODING = "ENCODING",
       UNIVARIATE_OUTLIER_CHECKTYPE = "UNIVARIATE_OUTLIER_CHECKTYPE",
       N_RULES = "N_RULES",
       EXTENDED_DATA_TYPE = "EXTENDED_DATA_TYPE",
+      ITEM_TYPE = "ITEM_TYPE",
       TIME_VAR_END = "TIME_VAR_END"
     ),
     OPTIONAL
   ))
 
   expect_error(
-    prep_check_meta_names(data.frame(VAR_NAMES = 1, DATA_TYPE = 2,
-    MISSING_LIST = 3), TECHNICAL),
+    prep_check_meta_names(
+      data.frame(),
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+    ),
+    regexp = "character.only"
+  )
+
+  expect_error(
+    prep_check_meta_names(data.frame(
+      VAR_NAMES = 1, DATA_TYPE = 2,
+      MISSING_LIST = 3
+    ), TECHNICAL),
     regexp = "Not all variable attributes of requirement level .+technical.+",
     perl = TRUE
   )
 
   expect_error(
-    prep_check_meta_names(data.frame(VAR_NAMES = 1, DATA_TYPE = 2,
-                                     MISSING_LIST = 3), "TECHNICAL",
-                          character.only = TRUE),
+    prep_check_meta_names(
+      data.frame(
+        VAR_NAMES = 1, DATA_TYPE = 2,
+        MISSING_LIST = 3
+      ), "TECHNICAL",
+      character.only = TRUE
+    ),
     regexp = "Not all variable attributes of requirement level .+technical.+",
     perl = TRUE
   )
 
   expect_error(
-    prep_check_meta_names(data.frame(VAR_NAMES = 1, DATA_TYPE = 2,
-                                     MISSING_LIST = 3), "TEXCHNICAL",
-                          character.only = TRUE),
-    regexp = paste("Error regarding argument .+level.+: .+arg.+ should be",
-                   "one of .+COMPATIBILITY.+, .+REQUIRED.+, .+RECOMMENDED.+,",
-                   ".+OPTIONAL.+, .+TECHNICAL.+"),
+    prep_check_meta_names(
+      data.frame(
+        VAR_NAMES = 1, DATA_TYPE = 2,
+        MISSING_LIST = 3
+      ), "TEXCHNICAL",
+      character.only = TRUE
+    ),
+    regexp = paste(
+      "Error regarding argument .+level.+: .+arg.+ should be",
+      "one of .+COMPATIBILITY.+, .+REQUIRED.+, .+RECOMMENDED.+,",
+      ".+OPTIONAL.+, .+TECHNICAL.+"
+    ),
     perl = TRUE
   )
 
   expect_error(
-    prep_check_meta_names(meta_data = list(VAR_NAMES = 1, DATA_TYPE = 2,
-                                           MISSING_LIST = 3), "TECHNICAL",
-                          character.only = TRUE),
-    regexp = paste(".+meta_data.+",
-                   "is not a data frame"),
+    prep_check_meta_names(
+      meta_data = list(
+        VAR_NAMES = 1, DATA_TYPE = 2,
+        MISSING_LIST = 3
+      ), "TECHNICAL",
+      character.only = TRUE
+    ),
+    regexp = paste(
+      ".+meta_data.+",
+      "is not a data frame"
+    ),
     perl = TRUE
   )
 
@@ -132,6 +166,6 @@ test_that("prep_check_meta_names works", {
       "Found the following addtional metadata columns,",
       "which look like typos of defined names: .+VARNAMES.+ -> .+VAR_NAMES.+"
     ),
-    perl  = TRUE
+    perl = TRUE
   )
 })

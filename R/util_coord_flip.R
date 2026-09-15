@@ -15,7 +15,8 @@
 #' @concept process
 #' @noRd
 util_coord_flip <- function(w, h, p, ref_env, ...) {
-  ## NEU: ggf. lazy-Plot einmal realisieren, bevor wir layer_scales() etc. nutzen
+  ## NEU: ggf. lazy-Plot einmal realisieren, bevor wir layer_scales() etc.
+  #nutzen
   if (!missing(p) && inherits(p, "dq_lazy_ggplot")) {
     p <- prep_realize_ggplot(p)
   }
@@ -27,23 +28,33 @@ util_coord_flip <- function(w, h, p, ref_env, ...) {
     }
   }
   if (n >= 4000) {
-    util_error(c("Internal error, sorry. As a dataquieR developer: There is",
-                 "some call to util_coord_flip with a ref_env outside the",
-                 "call trace, maybe inside a util_create_lean_ggplot()"))
+    util_error(c(
+      "Internal error, sorry. As a dataquieR developer: There is",
+      "some call to util_coord_flip with a ref_env outside the",
+      "call trace, maybe inside a util_create_lean_ggplot()"
+    ))
   }
   rm(ref_env) # this reference should go to save resources
   calling_fn_name <- rlang::call_name(rlang::caller_call(n = n))
-  if (!"flip_mode" %in% names(formals(calling_fn_name, envir =
-                                      rlang::caller_env(n = n)))) {
-    util_error("%s can only be called from a function with the %s argument",
-               sQuote(rlang::caller_call()[[1]]),
-               sQuote("flip_mode"))
+  if (!"flip_mode" %in% names(formals(calling_fn_name,
+        envir =
+          rlang::caller_env(n = n)
+      ))) {
+    util_error(
+      "%s can only be called from a function with the %s argument",
+      sQuote(rlang::caller_call()[[1]]),
+      sQuote("flip_mode")
+    )
   }
-  .default <- formals(calling_fn_name, envir =
-                        rlang::caller_env(n = n))$flip_mode
+  .default <- formals(calling_fn_name,
+    envir =
+      rlang::caller_env(n = n)
+  )$flip_mode
   .default <- eval(.default, envir = rlang::caller_env(n = n))
-  if (eval(call("missing", as.symbol("flip_mode")), envir =
-           rlang::caller_env(n = n))) {
+  if (eval(call("missing", as.symbol("flip_mode")),
+      envir =
+        rlang::caller_env(n = n)
+    )) {
     flip_mode <- getOption("dataquieR.flip_mode", dataquieR.flip_mode_default)
   } else {
     flip_mode <- get("flip_mode", parent.frame())
@@ -54,7 +65,6 @@ util_coord_flip <- function(w, h, p, ref_env, ...) {
   }
 
   if ((flip_mode == "auto") && (missing(w) || missing(h))) {
-
     if (!missing(p)) {
       if (inherits(ggplot2::layer_scales(p)$x, "ScaleDiscrete") &&
           inherits(ggplot2::layer_scales(p)$y, "ScaleDiscrete")) {
@@ -67,7 +77,7 @@ util_coord_flip <- function(w, h, p, ref_env, ...) {
     if (flip_mode == "auto") {
       flip_mode <- dataquieR.flip_mode_default
     }
-    if (flip_mode == "auto") {
+    if (flip_mode %in% c("default", "auto")) {
       flip_mode <- "noflip"
     }
   }
@@ -100,11 +110,10 @@ util_coord_flip <- function(w, h, p, ref_env, ...) {
         .lazy = FALSE
       ))
     }
-  } else {
+  } else { # nocov start
     util_error("Internal error 234243xx2423 -- Should never happen.")
-  }
+  } # nocov end
 }
-
 
 
 #' Lazily add a `coord` to a (possibly lazy) ggplot
@@ -130,17 +139,25 @@ util_lazy_add_coord <- function(p, coord) { # nolint
   }
 
   ## globale Lazy-Option wie bei %lean+% auswerten
-  lazy <- as.logical(getOption("dataquieR.lazy_plots",
-                               dataquieR.lazy_plots_default))
+  lazy <- as.logical(getOption(
+    "dataquieR.lazy_plots",
+    dataquieR.lazy_plots_default
+  ))
   if (length(lazy) != 1 || is.na(lazy)) {
-    util_warning(c(
-      "Cannot use option dataquieR.lazy_plots %s as a logical value",
-      "using %s"
-    ),
-    dQuote(paste(getOption("dataquieR.lazy_plots",
-                           dataquieR.lazy_plots_default),
-                 collapse = ",")),
-    dQuote(dataquieR.lazy_plots_default))
+    util_warning(
+      c(
+        "Cannot use option dataquieR.lazy_plots %s as a logical value",
+        "using %s"
+      ),
+      dQuote(paste(
+        getOption(
+          "dataquieR.lazy_plots",
+          dataquieR.lazy_plots_default
+        ),
+        collapse = ","
+      )),
+      dQuote(dataquieR.lazy_plots_default)
+    )
     lazy <- as.logical(dataquieR.lazy_plots_default)
   }
 
@@ -149,7 +166,7 @@ util_lazy_add_coord <- function(p, coord) { # nolint
     {
       prep_realize_ggplot(p) + coord
     },
-    p     = p,
+    p = p,
     coord = coord,
     .lazy = lazy
   )

@@ -32,18 +32,26 @@ util_create_lean_ggplot <- function(expr, ..., .lazy = FALSE) { # nolint
 #' \code{dq_lazy_ggplot} object is returned.
 #'
 #' @noRd
-`%lean+%` <- function(lhs, rhs) {
-  lazy <- as.logical(getOption("dataquieR.lazy_plots",
-                               dataquieR.lazy_plots_default))
+`%lean+%` <- function(lhs, rhs) { # nolint: object_name_linter.
+  lazy <- as.logical(getOption(
+    "dataquieR.lazy_plots",
+    dataquieR.lazy_plots_default
+  ))
   if (length(lazy) != 1 || is.na(lazy)) {
-    util_warning(c(
-      "Cannot use option dataquieR.lazy_plots %s as a logical value",
-      "using %s"
-    ),
-    dQuote(paste(getOption("dataquieR.lazy_plots",
-                           dataquieR.lazy_plots_default),
-                 collapse = ",")),
-    dQuote(dataquieR.lazy_plots_default))
+    util_warning(
+      c(
+        "Cannot use option dataquieR.lazy_plots %s as a logical value",
+        "using %s"
+      ),
+      dQuote(paste(
+        getOption(
+          "dataquieR.lazy_plots",
+          dataquieR.lazy_plots_default
+        ),
+        collapse = ","
+      )),
+      dQuote(dataquieR.lazy_plots_default)
+    )
     lazy <- as.logical(dataquieR.lazy_plots_default)
   }
 
@@ -63,7 +71,7 @@ util_create_lean_ggplot <- function(expr, ..., .lazy = FALSE) { # nolint
 #' This variant always returns a lazy \code{dq_lazy_ggplot} object.
 #'
 #' @noRd
-`%lean_lazy+%` <- function(lhs, rhs) {
+`%lean_lazy+%` <- function(lhs, rhs) { # nolint: object_name_linter.
   util_create_lean_ggplot(
     {
       util_realize_if_lazy(lhs) + util_realize_if_lazy(rhs)
@@ -105,10 +113,16 @@ ggplot_build.dq_lazy_ggplot <- function(plot, ...) { # nolint
   ggplot2::ggplot_build(p, ...)
 }
 
+#' Internal method: as grob dq lazy ggplot s7
+#'
+#' @noRd
 as_grob.dq_lazy_ggplot_s7 <- function(plot, ...) { # nolint
   ggplot2::ggplotGrob(prep_realize_ggplot(plot@payload), ...)
 }
 
+#' Internal method: as grob dq lazy ggplot
+#'
+#' @noRd
 as_grob.dq_lazy_ggplot <- function(plot, ...) { # nolint
   ggplot2::ggplotGrob(prep_realize_ggplot(plot), ...)
 }

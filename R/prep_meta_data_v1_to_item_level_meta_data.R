@@ -6,10 +6,7 @@
 #' `FALSE`) tells the system, to always fill in `res_vars` columns to the
 #' `MISSING_LIST_TABLE`, even, if the column already exists, but is empty.
 #'
-#' @param item_level [data.frame] the old item-level-metadata
-#' @param meta_data [data.frame] old name for `item_level`
-#' @param label_col [variable attribute] the name of the column in the metadata
-#'                                       with labels of variables
+#' @inheritParams .template_function_indicator
 #' @param verbose [logical] display all estimated decisions, defaults to `TRUE`,
 #'                          except if called in a [dq_report2] pipeline.
 #' @param cause_label_df [data.frame] missing code table, see [cause_label_df].
@@ -19,29 +16,23 @@
 #' @return [data.frame] the updated metadata
 #' @export
 prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
-                                                      verbose = TRUE,
-                                                      label_col = LABEL,
-                                                      cause_label_df,
-                                                      meta_data = item_level) {
-
-  # TODO: Rename, the function normalizes item_level metdata, not only in v1.0.
-  # TOOD: Amend documentation: If you call it with v2 metadata, you can specify MISSING_LIST_TABLE; if so, then this table is searched using prep_get_dataframe, so it must have been loaded before,
-  #        e.g. sing prep_load_workbook_like_file("inst/extdata/meta_data_extended.xlsx") or prep_add_data_frames(...). As a result, JUMP_LIST, MISSING_LIST and MISSING_LIST_TABLE will be consistent.
-  #       JUMP_LIST and MISSING_LIST are used by all old functions to find information about jump codes and missing codes.
-  #       MISSING_LIST_TABLE is compatible with the data frame passed as `cause_label_df` to `com_item_missingness`, so it works also with `prep_add_cause_label_df` and can be extracted form the JUMP_LIST and MISSING_LIST (without the v2 mapping columns for qualified mssingness) using `prep_extract_cause_label_df`
-  # TODO: Re-Check, if besides prep_prepare_dataframes, all other a places, where meta_data is used, call this function
+  verbose = TRUE,
+  label_col = LABEL,
+  cause_label_df,
+  meta_data = item_level) {
 
   if (missing(verbose) && .called_in_pipeline) {
     verbose <- FALSE
   }
 
-  if (identical(attr(meta_data, "version"), 2)) {
+  if (identical(util_attr(meta_data, "version", exact = TRUE), 2)) {
     return(.util_internal_normalize_meta_data(meta_data, label_col))
   }
 
   util_expect_data_frame(meta_data,
-                         col_names = list(VAR_NAMES = is.character),
-                         convert_if_possible = list(VAR_NAMES = as.character))
+    col_names = list(VAR_NAMES = is.character),
+    convert_if_possible = list(VAR_NAMES = as.character)
+  )
   util_expect_scalar(verbose, check_type = is.logical)
 
   if (!LABEL %in% colnames(meta_data)) {
@@ -49,31 +40,37 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
   }
 
   if (!label_col %in% colnames(meta_data)) {
-    util_warning("Missing %s from %s.",
-                 dQuote(label_col),
-                 sQuote("meta_data"))
-    meta_data[[label_col]] <- NA_character_
+    util_warning(
+      "Missing %s from %s.",
+      dQuote(label_col),
+      sQuote("meta_data")
+    )
+    meta_data[[label_col]] <- rep(NA_character_, nrow(meta_data))
   }
 
   # End digits requested? ----
   if (DATA_ENTRY_TYPE %in% colnames(meta_data) &&
       END_DIGIT_CHECK %in% colnames(meta_data)) {
-    util_warning("Have %s and %s in %s, will prefer %s.",
-                 sQuote(END_DIGIT_CHECK),
-                 sQuote(DATA_ENTRY_TYPE),
-                 sQuote("meta_data"),
-                 sQuote(END_DIGIT_CHECK))
+    util_warning(
+      "Have %s and %s in %s, will prefer %s.",
+      sQuote(END_DIGIT_CHECK),
+      sQuote(DATA_ENTRY_TYPE),
+      sQuote("meta_data"),
+      sQuote(END_DIGIT_CHECK)
+    )
     meta_data[[DATA_ENTRY_TYPE]] <- NULL
   }
 
   if (!END_DIGIT_CHECK %in% colnames(meta_data) &&
       DATA_ENTRY_TYPE %in% colnames(meta_data)) {
     meta_data[[END_DIGIT_CHECK]] <-
-      !tolower(trimws(meta_data[[DATA_ENTRY_TYPE]])) %in% c("auto",
-                                                            "automatic",
-                                                            "machine",
-                                                            "computational",
-                                                            "electronic") &
+      !tolower(trimws(meta_data[[DATA_ENTRY_TYPE]])) %in% c(
+        "auto",
+        "automatic",
+        "machine",
+        "computational",
+        "electronic"
+      ) &
       !util_is_na_0_empty_or_false(meta_data[[DATA_ENTRY_TYPE]])
     meta_data[[DATA_ENTRY_TYPE]] <- NULL
   }
@@ -84,13 +81,19 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
 
   # KEY_STUDY_SEGMENT -> STUDY_SEGMENT and PART_VAR ----
   if (KEY_STUDY_SEGMENT %in% colnames(meta_data)) {
-    if (!all(meta_data[[KEY_STUDY_SEGMENT]] %in% c(NA_character_,
-                                                   meta_data[[VAR_NAMES]]))) {
-      if (all(meta_data[[KEY_STUDY_SEGMENT]] %in% c(NA_character_,
-                                                    meta_data[[label_col]]))) {
+    if (!all(meta_data[[KEY_STUDY_SEGMENT]] %in% c(
+      NA_character_,
+      meta_data[[VAR_NAMES]]
+    ))) {
+      if (all(meta_data[[KEY_STUDY_SEGMENT]] %in% c(
+        NA_character_,
+        meta_data[[label_col]]
+      ))) {
         util_message(
-          c("All entries in %s are %s. Could convert them to",
-            "%s."),
+          c(
+            "All entries in %s are %s. Could convert them to",
+            "%s."
+          ),
           dQuote(KEY_STUDY_SEGMENT),
           dQuote(label_col),
           dQuote(VAR_NAMES),
@@ -98,16 +101,20 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
         )
         meta_data[[KEY_STUDY_SEGMENT]] <-
           util_map_labels(meta_data[[KEY_STUDY_SEGMENT]],
-                          meta_data,
-                          to = VAR_NAMES,
-                          from = label_col,
-                          ifnotfound = meta_data[[KEY_STUDY_SEGMENT]])
-      } else if (all(meta_data[[KEY_STUDY_SEGMENT]] %in% c(NA_character_,
-                                                           meta_data[[LABEL]]
-                                                           ))) {
+            meta_data,
+            to = VAR_NAMES,
+            from = label_col,
+            ifnotfound = meta_data[[KEY_STUDY_SEGMENT]]
+          )
+      } else if (all(meta_data[[KEY_STUDY_SEGMENT]] %in% c(
+        NA_character_,
+        meta_data[[LABEL]]
+      ))) {
         util_message(
-          c("All entries in %s are %s. Could convert them to",
-            "%s."),
+          c(
+            "All entries in %s are %s. Could convert them to",
+            "%s."
+          ),
           dQuote(KEY_STUDY_SEGMENT),
           dQuote(LABEL),
           dQuote(VAR_NAMES),
@@ -115,32 +122,37 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
         )
         meta_data[[KEY_STUDY_SEGMENT]] <-
           util_map_labels(meta_data[[KEY_STUDY_SEGMENT]],
-                          meta_data,
-                          to = VAR_NAMES,
-                          from = LABEL,
-                          ifnotfound = meta_data[[KEY_STUDY_SEGMENT]])
+            meta_data,
+            to = VAR_NAMES,
+            from = LABEL,
+            ifnotfound = meta_data[[KEY_STUDY_SEGMENT]]
+          )
       } else {
         not_matched <- !(meta_data[[KEY_STUDY_SEGMENT]] %in%
-                           c(NA_character_, meta_data[[VAR_NAMES]]))
+            c(NA_character_, meta_data[[VAR_NAMES]]))
         meta_data[[KEY_STUDY_SEGMENT]][not_matched] <-
           util_map_labels(meta_data[[KEY_STUDY_SEGMENT]][not_matched],
-                          meta_data,
-                          to = VAR_NAMES,
-                          from = label_col,
-                          ifnotfound = meta_data[[KEY_STUDY_SEGMENT]][not_matched])
+            meta_data,
+            to = VAR_NAMES,
+            from = label_col,
+            ifnotfound = meta_data[[KEY_STUDY_SEGMENT]][not_matched]
+          )
         meta_data[[KEY_STUDY_SEGMENT]][not_matched] <-
           util_map_labels(meta_data[[KEY_STUDY_SEGMENT]][not_matched],
-                          meta_data,
-                          to = VAR_NAMES,
-                          from = LABEL,
-                          ifnotfound =
-                            meta_data[[KEY_STUDY_SEGMENT]][not_matched])
+            meta_data,
+            to = VAR_NAMES,
+            from = LABEL,
+            ifnotfound =
+            meta_data[[KEY_STUDY_SEGMENT]][not_matched]
+          )
         not_matched <- !(meta_data[[KEY_STUDY_SEGMENT]] %in%
-                           c(NA_character_, meta_data[[VAR_NAMES]]))
+            c(NA_character_, meta_data[[VAR_NAMES]]))
         util_message(
-          c("Not all entries in %s are found in %s. Could convert %d of",
+          c(
+            "Not all entries in %s are found in %s. Could convert %d of",
             "these %d to match %s. This may be caused by providing",
-            "subsets of %s."),
+            "subsets of %s."
+          ),
           dQuote(KEY_STUDY_SEGMENT),
           dQuote(VAR_NAMES),
           length(not_matched) - sum(not_matched, na.rm = TRUE),
@@ -155,102 +167,109 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
 
   if (KEY_STUDY_SEGMENT %in% colnames(meta_data)) {
     if (all(meta_data[[KEY_STUDY_SEGMENT]] %in%
-            c(meta_data[[VAR_NAMES]], NA_character_))) {
+          c(meta_data[[VAR_NAMES]], NA_character_))) {
       # KEY_STUDY_SEGMENT is PART_VAR, new STUDY_SEGMENT is the LABEL of the
       # referred variable
-      if (verbose)
-        util_message("%s is %s, new %s is the %s of the referred variable",
-                     sQuote(KEY_STUDY_SEGMENT),
-                     sQuote(PART_VAR),
-                     sQuote(STUDY_SEGMENT),
-                     sQuote(LABEL))
+      if (verbose) {
+        util_message(
+          "%s is %s, new %s is the %s of the referred variable",
+          sQuote(KEY_STUDY_SEGMENT),
+          sQuote(PART_VAR),
+          sQuote(STUDY_SEGMENT),
+          sQuote(LABEL)
+        )
+      }
       meta_data[[PART_VAR]] <- meta_data[[KEY_STUDY_SEGMENT]]
       meta_data[[STUDY_SEGMENT]] <-
         util_map_labels(meta_data[[KEY_STUDY_SEGMENT]],
-                        meta_data = meta_data,
-                        warn_ambiguous = FALSE,
-                        ifnotfound = meta_data[[KEY_STUDY_SEGMENT]])
+          meta_data = meta_data,
+          warn_ambiguous = FALSE,
+          ifnotfound = meta_data[[KEY_STUDY_SEGMENT]]
+        )
       meta_data[[KEY_STUDY_SEGMENT]] <- NULL
     } else if (!any(meta_data[[KEY_STUDY_SEGMENT]] %in%
-                    c(meta_data[[VAR_NAMES]]))) { # NA_character_ is not allowed here, because NA should not cause doubts, if keystudysegment contains varnames, NA is not a varname
+          c(meta_data[[VAR_NAMES]]))) { # NA_character_ is not allowed here, because NA should not cause doubts, if keystudysegment contains varnames, NA is not a varname # nolint: line_length_linter.
       # KEY_STUDY_SEGMENT is STUDY_SEGMENT, PART_VAR is empty
-      if (verbose)
-        util_message("%s is %s, %s is empty",
-                     sQuote(KEY_STUDY_SEGMENT),
-                     sQuote(STUDY_SEGMENT),
-                     sQuote(PART_VAR))
+      if (verbose) {
+        util_message(
+          "%s is %s, %s is empty",
+          sQuote(KEY_STUDY_SEGMENT),
+          sQuote(STUDY_SEGMENT),
+          sQuote(PART_VAR)
+        )
+      }
       meta_data[[STUDY_SEGMENT]] <-
         meta_data[[KEY_STUDY_SEGMENT]]
       meta_data[[KEY_STUDY_SEGMENT]] <- NULL
     } else {
-      util_error(c("Some, but not all entries in %s found in %s. So, I cannot",
-                   "decide, if %s contains links to %s or labels for %s only."),
-                 sQuote(KEY_STUDY_SEGMENT), sQuote(VAR_NAMES),
-                 sQuote(KEY_STUDY_SEGMENT), sQuote(PART_VAR),
-                 sQuote(STUDY_SEGMENT))
+      util_error(
+        c(
+          "Some, but not all entries in %s found in %s. So, I cannot",
+          "decide, if %s contains links to %s or labels for %s only."
+        ),
+        sQuote(KEY_STUDY_SEGMENT), sQuote(VAR_NAMES),
+        sQuote(KEY_STUDY_SEGMENT), sQuote(PART_VAR),
+        sQuote(STUDY_SEGMENT)
+      )
     }
   }
 
   if (PART_VAR %in% colnames(meta_data)) {
-    if (!all(meta_data[[PART_VAR]] %in% c(NA_character_,
-                                          meta_data[[VAR_NAMES]]))) {
-      if (all(meta_data[[PART_VAR]] %in% c(NA_character_,
-                                           meta_data[[label_col]]))) {
-        # util_message(
-        #   c("All entries in %s (old: %s) are %s. Could convert them to",
-        #     "standard, i.e., %s."),
-        #   dQuote(PART_VAR),
-        #   dQuote(KEY_STUDY_SEGMENT),
-        #   dQuote(label_col),
-        #   dQuote(VAR_NAMES),
-        #   applicability_problem = TRUE
-        # )
+    if (!all(meta_data[[PART_VAR]] %in% c(
+      NA_character_,
+      meta_data[[VAR_NAMES]]
+    ))) {
+      if (all(meta_data[[PART_VAR]] %in% c(
+        NA_character_,
+        meta_data[[label_col]]
+      ))) {
+        # PART_VAR values matching `label_col` are converted silently.
         meta_data[[PART_VAR]] <-
           util_map_labels(meta_data[[PART_VAR]],
-                          meta_data,
-                          to = VAR_NAMES,
-                          from = label_col,
-                          ifnotfound = meta_data[[PART_VAR]])
-      } else if (all(meta_data[[PART_VAR]] %in% c(NA_character_,
-                                                  meta_data[[LABEL]]))) {
-        # TODO: Be robust, if LABEL, LONG_LABEL, VAR_NAMES and label_col are mixed
-        # util_message(
-        #   c("All entries in %s (old: %s) are %s. Could convert them to",
-        #     "standard, i.e., %s."),
-        #   dQuote(PART_VAR),
-        #   dQuote(KEY_STUDY_SEGMENT),
-        #   dQuote(LABEL),
-        #   dQuote(VAR_NAMES),
-        #   applicability_problem = TRUE
-        # )
+            meta_data,
+            to = VAR_NAMES,
+            from = label_col,
+            ifnotfound = meta_data[[PART_VAR]]
+          )
+      } else if (all(meta_data[[PART_VAR]] %in% c(
+        NA_character_,
+        meta_data[[LABEL]]
+      ))) {
         meta_data[[PART_VAR]] <-
           util_map_labels(meta_data[[PART_VAR]],
-                          meta_data,
-                          to = VAR_NAMES,
-                          from = LABEL,
-                          ifnotfound = meta_data[[PART_VAR]])
+            meta_data,
+            to = VAR_NAMES,
+            from = LABEL,
+            ifnotfound = meta_data[[PART_VAR]]
+          )
       } else {
-        not_matched <- !(meta_data[[PART_VAR]] %in% c(NA_character_,
-                                                      meta_data[[VAR_NAMES]]))
+        not_matched <- !(meta_data[[PART_VAR]] %in% c(
+          NA_character_,
+          meta_data[[VAR_NAMES]]
+        ))
         meta_data[[PART_VAR]][not_matched] <-
           util_map_labels(meta_data[[PART_VAR]][not_matched],
-                          meta_data,
-                          to = VAR_NAMES,
-                          from = label_col,
-                          ifnotfound = meta_data[[PART_VAR]][not_matched])
+            meta_data,
+            to = VAR_NAMES,
+            from = label_col,
+            ifnotfound = meta_data[[PART_VAR]][not_matched]
+          )
         meta_data[[PART_VAR]][not_matched] <-
           util_map_labels(meta_data[[PART_VAR]][not_matched],
-                          meta_data,
-                          to = VAR_NAMES,
-                          from = LABEL,
-                          ifnotfound = meta_data[[PART_VAR]][not_matched])
+            meta_data,
+            to = VAR_NAMES,
+            from = LABEL,
+            ifnotfound = meta_data[[PART_VAR]][not_matched]
+          )
         not_matched <- !(meta_data[[PART_VAR]] %in%
-                           c(NA_character_, meta_data[[VAR_NAMES]]))
+            c(NA_character_, meta_data[[VAR_NAMES]]))
         util_message(
-          c("Not all entries in %s (old: %s) are found in %s.",
+          c(
+            "Not all entries in %s (old: %s) are found in %s.",
             "Could convert %d of",
             "these %d to match %s. This may be caused by providing",
-            "subsets of %s."),
+            "subsets of %s."
+          ),
           dQuote(PART_VAR),
           dQuote(KEY_STUDY_SEGMENT),
           dQuote(VAR_NAMES),
@@ -272,17 +291,22 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
 
   # GROUP_VAR_OBSERVER, GROUP_VAR_DEVICE -- KEY_* -> GROUP_VAR_* ----
   colnames(meta_data) <- gsub("KEY_(.*)",
-                             "GROUP_VAR_\\1",
-                             perl = TRUE,
-                             colnames(meta_data))
+    "GROUP_VAR_\\1",
+    perl = TRUE,
+    colnames(meta_data)
+  )
 
   if (!missing(cause_label_df)) {
-    util_expect_data_frame(cause_label_df,
-                           c(CODE_VALUE, CODE_LABEL))
+    util_expect_data_frame(
+      cause_label_df,
+      c(CODE_VALUE, CODE_LABEL)
+    )
     meta_data[] <-
-      prep_add_cause_label_df(meta_data = meta_data,
-                              cause_label_df = cause_label_df,
-                              label_col = VAR_NAMES)
+      prep_add_cause_label_df(
+        meta_data = meta_data,
+        cause_label_df = cause_label_df,
+        label_col = VAR_NAMES
+      )
   }
 
   attr(meta_data, "version") <- 2
@@ -299,12 +323,13 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
 #' @inheritParams prep_meta_data_v1_to_item_level_meta_data
 #' @noRd
 .util_internal_normalize_meta_data <- function(meta_data = "item_level",
-                                               label_col = LABEL,
-                                               verbose = TRUE) {
-  if (!identical(attr(meta_data, "version"), 2)) {
+  label_col = LABEL,
+  verbose = TRUE) {
+  if (!identical(util_attr(meta_data, "version", exact = TRUE), 2)) {
     util_error(c(
       "Internal error: .util_internal_normalize_meta_data called on meta_data",
-      "below v2.0"))
+      "below v2.0"
+    ))
   }
 
   meta_data <- util_handle_complex_data_types(meta_data)
@@ -323,30 +348,36 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
   already_warned <- c()
   already_warned_env <- environment()
 
-  if (!identical(attr(meta_data, "normalized"), TRUE)) {
-
-    for (lb in intersect(c(LABEL, LONG_LABEL, label_col, grep("^LONG_LABEL_",
-                                                    names(meta_data),
-                                                    value = TRUE,
-                                                    perl = TRUE),
-                 grep("^LABEL_",
-                      names(meta_data),
-                      value = TRUE,
-                      perl = TRUE)), colnames(meta_data))) {
+  if (!identical(util_attr(meta_data, "normalized", exact = TRUE), TRUE)) {
+    for (lb in intersect(c(
+      LABEL, LONG_LABEL, label_col, grep("^LONG_LABEL_",
+        names(meta_data),
+        value = TRUE,
+        perl = TRUE
+      ),
+      grep("^LABEL_",
+        names(meta_data),
+        value = TRUE,
+        perl = TRUE
+      )
+    ), colnames(meta_data))) {
       .mis <- util_empty(meta_data[[lb]])
       rep <- character(nrow(meta_data))
       if (LABEL %in% names(meta_data)) rep <- meta_data[[LABEL]]
       .nolb <- util_empty(rep)
 
       if (any(.nolb)) {
-        util_warning(c("Some variables have no label in %s in %s.",
-                       "Labels are required to create a report,",
-                       "that's why missing labels will be replaced",
-                       "provisionally. Please add missing labels in",
-                       "your metadata."),
-                     dQuote(LABEL),
-                     sQuote("meta_data"),
-                     applicability_problem = TRUE
+        util_warning(
+          c(
+            "Some variables have no label in %s in %s.",
+            "Labels are required to create a report,",
+            "that's why missing labels will be replaced",
+            "provisionally. Please add missing labels in",
+            "your metadata."
+          ),
+          dQuote(LABEL),
+          sQuote("meta_data"),
+          applicability_problem = TRUE
         )
       }
 
@@ -357,11 +388,12 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
     }
 
     if (!N_RULES %in% names(meta_data)) {
-      meta_data[[N_RULES]] <- NA_integer_
+      meta_data[[N_RULES]] <- rep(NA_integer_, nrow(meta_data))
     }
 
     if (!UNIVARIATE_OUTLIER_CHECKTYPE %in% names(meta_data)) {
-      meta_data[[UNIVARIATE_OUTLIER_CHECKTYPE]] <- NA_character_
+      meta_data[[UNIVARIATE_OUTLIER_CHECKTYPE]] <-
+        rep(NA_character_, nrow(meta_data))
     }
 
     if (is.null(meta_data[[MISSING_LIST_TABLE]])) {
@@ -370,56 +402,77 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
     no_mlt <- util_empty(meta_data[[MISSING_LIST_TABLE]])
     has_both_mlt_and_ml_jl <- !no_mlt &
       (!util_empty(meta_data[[JUMP_LIST]]) |
-         !util_empty(meta_data[[MISSING_LIST]]))
+          !util_empty(meta_data[[MISSING_LIST]]))
     if (any(has_both_mlt_and_ml_jl)) { # have to combine lists
-      util_warning(c("Should not have %s and %s / %s for the same variable.",
-                     "I'll try to combine them. This will take some time, so",
-                     "you should fix this in your %s to avoid waiting."),
-                   dQuote(MISSING_LIST_TABLE),
-                   dQuote(MISSING_LIST),
-                   dQuote(JUMP_LIST),
-                   sQuote("meta_data"),
-                   applicability_problem = TRUE)
+      util_warning(
+        c(
+          "Should not have %s and %s / %s for the same variable.",
+          "I'll try to combine them. This will take some time, so",
+          "you should fix this in your %s to avoid waiting."
+        ),
+        dQuote(MISSING_LIST_TABLE),
+        dQuote(MISSING_LIST),
+        dQuote(JUMP_LIST),
+        sQuote("meta_data"),
+        applicability_problem = TRUE
+      )
       for (r in which(has_both_mlt_and_ml_jl)) {
-        tb <- data.frame(CODE_VALUE = character(0),
-                         CODE_LABEL = character(0),
-                         CODE_INTERPRET = character(0))
+        tb <- data.frame(
+          CODE_VALUE = character(0),
+          CODE_LABEL = character(0),
+          CODE_INTERPRET = character(0)
+        )
         try({
-          tb <- prep_get_data_frame(meta_data[r, MISSING_LIST_TABLE])
+          tb <- prep_get_data_frame(meta_data[r, MISSING_LIST_TABLE, drop = TRUE]) # nolint: line_length_linter.
           if (!CODE_VALUE %in% colnames(tb)) {
             tb[[CODE_VALUE]] <- NA
           }
-          tb <- tb[!util_empty(tb[[CODE_VALUE]]), ,
-                                 FALSE]
+          tb <- tb[
+            !util_empty(tb[[CODE_VALUE]]), ,
+            drop = FALSE
+          ]
           if (CODE_INTERPRET %in% colnames(tb) &&
               !CODE_CLASS %in% colnames(tb)) {
             tb[[CODE_CLASS]] <- ifelse(tb[[CODE_INTERPRET]] %in%
-                                           c("NE"), "JUMP", "MISSING") # TODO: Verify, if, e.g., PL is also a JUMP
+                c("NE"), "JUMP", "MISSING")
           }
         })
-        legacy_tb <- data.frame(CODE_VALUE = character(0),
-                                CODE_LABEL = character(0))
+        legacy_tb <- data.frame(
+          CODE_VALUE = character(0),
+          CODE_LABEL = character(0)
+        )
         try({
           legacy_tb <- prep_extract_cause_label_df(
-            meta_data[r, , drop = FALSE], label_col = label_col)$cause_label_df
+            meta_data[r, , drop = FALSE],
+            label_col = label_col
+          )$cause_label_df
           util_stop_if_not(length(unique(legacy_tb$resp_vars)) < 2)
           legacy_tb$resp_vars <- NULL # is always only for the item in row r
           if (!CODE_VALUE %in% colnames(legacy_tb)) {
             legacy_tb[[CODE_VALUE]] <- NA
           }
-          legacy_tb <- legacy_tb[!util_empty(legacy_tb[[CODE_VALUE]]), ,
-                                 FALSE]
+          legacy_tb <- legacy_tb[
+            !util_empty(legacy_tb[[CODE_VALUE]]), ,
+            drop = FALSE
+          ]
         })
-        cld_name <- paste0(meta_data[r, MISSING_LIST_TABLE], '_',
-                           prep_link_escape(meta_data[r, label_col],
-                                            html = TRUE))
+        cld_name <- paste0(
+          meta_data[r, MISSING_LIST_TABLE, drop = TRUE], "_",
+          prep_link_escape(meta_data[r, label_col, drop = TRUE],
+            html = TRUE
+          )
+        )
         if (exists( # find an available name for a new data frame
           cld_name,
-          envir = .dataframe_environment())) {
+          envir = .dataframe_environment()
+        )) {
           i <- 0
           while (exists( # find an available name for a new data frame
             paste0(cld_name, "_", i),
-            envir = .dataframe_environment())) i <- i + 1
+            envir = .dataframe_environment()
+          )) {
+            i <- i + 1
+          }
           cld_name <- paste0(cld_name, "_", i)
         }
         meta_data[r, MISSING_LIST] <- NA
@@ -427,63 +480,83 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
         meta_data[r, MISSING_LIST_TABLE] <- NA
         combined_table <- merge(legacy_tb, tb, by = CODE_VALUE, all = TRUE)
         if (all(c("CODE_LABEL.x", "CODE_LABEL.y") %in%
-                colnames(combined_table))) {
+              colnames(combined_table))) {
           combined_table[util_empty(combined_table$CODE_LABEL.x) |
-                           combined_table$CODE_LABEL.x ==
-            paste("MISSING", combined_table$CODE_VALUE), "CODE_LABEL.x"] <-
-            combined_table[util_empty(combined_table$CODE_LABEL.x) |
-                             combined_table$CODE_LABEL.x ==
-                             paste("MISSING", combined_table$CODE_VALUE),
-                           "CODE_LABEL.y"]
+              combined_table$CODE_LABEL.x ==
+                paste("MISSING", combined_table$CODE_VALUE), "CODE_LABEL.x"] <-
+            combined_table[
+              util_empty(combined_table$CODE_LABEL.x) |
+              combined_table$CODE_LABEL.x ==
+              paste("MISSING", combined_table$CODE_VALUE),
+              "CODE_LABEL.y"
+            ]
 
           combined_table[util_empty(combined_table$CODE_LABEL.x) |
-                           combined_table$CODE_LABEL.x ==
-            paste("JUMP", combined_table$CODE_VALUE), "CODE_LABEL.x"] <-
-            combined_table[util_empty(combined_table$CODE_LABEL.x) |
-                             combined_table$CODE_LABEL.x ==
-                             paste("JUMP", combined_table$CODE_VALUE),
-                           "CODE_LABEL.y"]
+              combined_table$CODE_LABEL.x ==
+                paste("JUMP", combined_table$CODE_VALUE), "CODE_LABEL.x"] <-
+            combined_table[
+              util_empty(combined_table$CODE_LABEL.x) |
+              combined_table$CODE_LABEL.x ==
+              paste("JUMP", combined_table$CODE_VALUE),
+              "CODE_LABEL.y"
+            ]
 
           combined_table[util_empty(combined_table$CODE_LABEL.y) |
-                           combined_table$CODE_LABEL.y ==
-            paste("MISSING", combined_table$CODE_VALUE), "CODE_LABEL.y"] <-
-            combined_table[util_empty(combined_table$CODE_LABEL.y) |
-                             combined_table$CODE_LABEL.y ==
-                             paste("MISSING", combined_table$CODE_VALUE),
-                           "CODE_LABEL.x"]
+              combined_table$CODE_LABEL.y ==
+                paste("MISSING", combined_table$CODE_VALUE), "CODE_LABEL.y"] <-
+            combined_table[
+              util_empty(combined_table$CODE_LABEL.y) |
+              combined_table$CODE_LABEL.y ==
+              paste("MISSING", combined_table$CODE_VALUE),
+              "CODE_LABEL.x"
+            ]
 
           combined_table[util_empty(combined_table$CODE_LABEL.y) |
-                           combined_table$CODE_LABEL.y ==
-            paste("JUMP", combined_table$CODE_VALUE), "CODE_LABEL.y"] <-
-            combined_table[util_empty(combined_table$CODE_LABEL.y) |
-                             combined_table$CODE_LABEL.y ==
-                             paste("JUMP", combined_table$CODE_VALUE),
-                           "CODE_LABEL.x"]
+              combined_table$CODE_LABEL.y ==
+                paste("JUMP", combined_table$CODE_VALUE), "CODE_LABEL.y"] <-
+            combined_table[
+              util_empty(combined_table$CODE_LABEL.y) |
+              combined_table$CODE_LABEL.y ==
+              paste("JUMP", combined_table$CODE_VALUE),
+              "CODE_LABEL.x"
+            ]
           combined_table$CODE_LABEL <- combined_table$CODE_LABEL.x
           combined_table$CODE_LABEL.x <- NULL
           combined_table$CODE_LABEL.y <- NULL
         }
         if (all(c("CODE_CLASS.x", "CODE_CLASS.y") %in%
-                colnames(combined_table))) {
-          combined_table[util_empty(combined_table$CODE_CLASS.x),
-                         "CODE_CLASS.x"] <-
-            combined_table[util_empty(combined_table$CODE_CLASS.x),
-                           "CODE_CLASS.y"]
-          combined_table[util_empty(combined_table$CODE_CLASS.y),
-                         "CODE_CLASS.y"] <-
-            combined_table[util_empty(combined_table$CODE_CLASS.y),
-                           "CODE_CLASS.x"]
+              colnames(combined_table))) {
+          combined_table[
+            util_empty(combined_table$CODE_CLASS.x),
+            "CODE_CLASS.x"
+          ] <-
+            combined_table[
+              util_empty(combined_table$CODE_CLASS.x),
+              "CODE_CLASS.y"
+              , drop = TRUE]
+          combined_table[
+            util_empty(combined_table$CODE_CLASS.y),
+            "CODE_CLASS.y"
+          ] <-
+            combined_table[
+              util_empty(combined_table$CODE_CLASS.y),
+              "CODE_CLASS.x"
+              , drop = TRUE]
           if (any(
             (!is.na(combined_table$CODE_CLASS.y) &
-             combined_table$CODE_CLASS.x != combined_table$CODE_CLASS.y))) {
+                combined_table$CODE_CLASS.x != combined_table$CODE_CLASS.y)
+          )) {
             util_warning(
-              c("Code classes in old and new missing code settings",
+              c(
+                "Code classes in old and new missing code settings",
                 "don't match for %s, missing and jump codes overlap.",
-                "Will use the new %s: %s as the reference."),
-              dQuote(meta_data[r, label_col]),
+                "Will use the new %s: %s as the reference."
+              ),
+              dQuote(meta_data[r, label_col, drop = TRUE]),
               sQuote(MISSING_LIST_TABLE),
               dQuote(cld_name),
-              applicability_problem = TRUE)
+              applicability_problem = TRUE
+            )
           }
           combined_table$CODE_CLASS <- combined_table$CODE_CLASS.y
           combined_table$CODE_CLASS.x <- NULL
@@ -502,13 +575,17 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
       # If no missing list table, yet, for a variable
       # generate one from JUMP_LIST/MISSING_LIST
       cld <- prep_extract_cause_label_df(
-        meta_data = meta_data[no_mlt, , FALSE],
-        label_col = VAR_NAMES)
+        meta_data = meta_data[no_mlt, , drop = FALSE],
+        label_col = VAR_NAMES
+      )
       meta_data[no_mlt, colnames(cld$meta_data)] <- cld$meta_data
       i <- 0
       while (exists( # find an available name for a new data frame
         paste0(MISSING_LIST_TABLE, "_", i),
-        envir = .dataframe_environment())) i <- i + 1
+        envir = .dataframe_environment()
+      )) {
+        i <- i + 1
+      }
       cld_name <- paste0(MISSING_LIST_TABLE, "_", i)
 
       # store in the internal data frame cache
@@ -532,31 +609,37 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
           return(NULL)
         }
         r <- data.frame()
-        try(silent = TRUE,
+        try(
+          silent = TRUE,
           withCallingHandlers(
             r <- prep_get_data_frame(cld),
-          error = function(cnd) {
-            if (!isTRUE(already_warned_env$already_warned[cld])) {
-              already_warned_env$already_warned[cld] <- TRUE
-              my_cnd <- warningCondition(
-                sprintf(
-                  "Could not load table %s: %s",
-                  dQuote(cld),
-                  sQuote(sub("\nwhen calling .*$", "", conditionMessage(cnd)))
+            error = function(cnd) {
+              if (!isTRUE(already_warned_env$already_warned[cld])) {
+                already_warned_env$already_warned[cld] <- TRUE
+                my_cnd <- warningCondition(
+                  sprintf(
+                    "Could not load table %s: %s",
+                    dQuote(cld),
+                    sQuote(sub("\nwhen calling .*$", "", conditionMessage(cnd)))
+                  )
                 )
-              )
-              util_warning(my_cnd, immediate = TRUE) # TODO: Check for sheet names very close to standard names, warn in such cases.
+                util_warning(my_cnd, immediate = TRUE)
+              }
             }
-          })
+          )
         )
-        if (!prod(dim(r))) return(data.frame())
+        if (!prod(dim(r))) {
+          return(data.frame())
+        }
         if (!("resp_vars" %in% colnames(r))) {
           r$resp_vars <- vn
         } else {
           have_vn <- !util_empty(r$resp_vars)
           mapped_vn <- r$resp_vars[have_vn]
-          other_col <- intersect(c(VAR_NAMES, LABEL, LONG_LABEL),
-                                 colnames(meta_data)) # TODO: For all similar mapping functions (util_find_var_by_meta and util_correct_variable_use)
+          other_col <- intersect(
+            c(VAR_NAMES, LABEL, LONG_LABEL),
+            colnames(meta_data)
+          )
           map_res <- lapply(setNames(nm = other_col), function(oc) {
             unname(
               util_map_labels(
@@ -578,26 +661,30 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
                 mr <- mr[!is.na(mr)]
                 mr <- mr[[1]]
                 as.character(mr)
-                # unique(na.omit(as.character(map_res[i, ])))[1]
-                # We select here the first element, such that in case of ambiguities
-                # VAR_NAME is preferred over LABEL and LONG_LABEL, and LABEL over LONG_LABEL.
+                # We select here the first element, such that in case of
+                # ambiguities
+                # VAR_NAME is preferred over LABEL and LONG_LABEL, and LABEL
+                # over LONG_LABEL.
                 # If there are no ambiguities, this works as well.
               }
             )
           r$resp_vars[have_vn] <- mapped_vn
-          if (isTRUE(getOption("dataquieR.force_item_specific_missing_codes",
-                               dataquieR.force_item_specific_missing_codes_default))) {
+          if (isTRUE(getOption(
+            "dataquieR.force_item_specific_missing_codes",
+            dataquieR.force_item_specific_missing_codes_default
+          ))) {
             r$resp_vars[!have_vn] <- vn
           }
           r
         }
-        r[util_empty(r$resp_vars) | r$resp_vars == vn, , FALSE]
+        r[util_empty(r$resp_vars) | r$resp_vars == vn, , drop = FALSE]
       }
     )
 
-    mlts <- lapply(mlts, function(mlt) { # avoid coerction of missing code values
-      if (CODE_VALUE %in% colnames(mlt))
+    mlts <- lapply(mlts, function(mlt) { # avoid coerction of missing code values # nolint: line_length_linter.
+      if (CODE_VALUE %in% colnames(mlt)) {
         mlt[[CODE_VALUE]] <- as.character(mlt[[CODE_VALUE]])
+      }
       mlt
     })
 
@@ -609,9 +696,11 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
       util_stop_if_not(all(!util_empty(mlts$resp_vars)))
 
       # ensure, that all missing codes for an item are in MISSING/JUMP_LIST
-      new <- prep_add_cause_label_df(meta_data = meta_data,
-                                     cause_label_df = mlts,
-                                     label_col = VAR_NAMES)
+      new <- prep_add_cause_label_df(
+        meta_data = meta_data,
+        cause_label_df = mlts,
+        label_col = VAR_NAMES
+      )
 
       new_cols <- setdiff(colnames(new), colnames(meta_data))
       if (length(new_cols)) {
@@ -624,10 +713,10 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
       }
 
       util_stop_if_not(length(intersect(colnames(meta_data), colnames(new))) ==
-                         length(union(colnames(meta_data), colnames(new))))
+          length(union(colnames(meta_data), colnames(new))))
 
       if (!all(colnames(meta_data) == colnames(new))) {
-        new <- new[, colnames(meta_data)]
+        new <- new[, colnames(meta_data), drop = FALSE]
       }
 
       meta_data[] <- new
@@ -636,5 +725,3 @@ prep_meta_data_v1_to_item_level_meta_data <- function(item_level = "item_level",
   }
   meta_data
 }
-
-# TODO: add some metadata management functios (write to XLSX, edit, ...)

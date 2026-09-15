@@ -52,9 +52,9 @@ out_dataframe <- int_all_datastructure_dataframe(
 )
 md0 <- prep_get_data_frame("ship_meta")
 md0
-md0$VAR_NAMES
-md0$VAR_NAMES[[1]] <- "Id" # is this missmatch reported -- is the data frame
-                           # also reported, if nothing is wrong with it
+md0[[VAR_NAMES]]
+md0[[VAR_NAMES]][[1]] <- "Id" # is this missmatch reported -- is the data frame
+# also reported, if nothing is wrong with it
 out_dataframe <- int_all_datastructure_dataframe(
   meta_data_dataframe = "meta_data_dataframe",
   meta_data = md0
@@ -64,12 +64,16 @@ out_dataframe <- int_all_datastructure_dataframe(
 # but outside this function  checktype is exact by default
 options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "subset_u")
 lapply(setNames(nm = prep_get_data_frame("meta_data_dataframe")$DF_NAME),
-  int_sts_element_dataframe, meta_data = md0)
-md0$VAR_NAMES[[1]] <-
+  int_sts_element_dataframe,
+  meta_data = md0
+)
+md0[[VAR_NAMES]][[1]] <-
   "id" # is this missmatch reported -- is the data frame also reported,
-       # if nothing is wrong with it
+# if nothing is wrong with it
 lapply(setNames(nm = prep_get_data_frame("meta_data_dataframe")$DF_NAME),
-  int_sts_element_dataframe, meta_data = md0)
+  int_sts_element_dataframe,
+  meta_data = md0
+)
 options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "exact")
 }
 

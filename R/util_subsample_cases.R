@@ -67,51 +67,62 @@
 #'
 #' @noRd
 util_subsample_cases <- function(
-    data,
-    x,
-    y = NULL,
-    nmax = 5000L,
-    pinc = 0.05,
-    resids = 0.01,
-    random = FALSE,
-    case_id = NULL,
-    seed = NULL) {
-
+  data,
+  x,
+  y = NULL,
+  nmax = 5000L,
+  pinc = 0.05,
+  resids = 0.01,
+  random = FALSE,
+  case_id = NULL,
+  seed = NULL
+) {
   # ---------- checks ----------
   util_expect_data_frame(data)
   ds1 <- data
 
-  meta_data <- prep_study2meta(ds1, level = VARATT_REQUIRE_LEVELS$REQUIRED,
-                               convert_factors = FALSE,
-                               cumulative = TRUE,
-                               guess_missing_codes = FALSE,
-                               guess_character = FALSE)
+  meta_data <- prep_study2meta(ds1,
+    level = VARATT_REQUIRE_LEVELS$REQUIRED,
+    convert_factors = FALSE,
+    cumulative = TRUE,
+    guess_missing_codes = FALSE,
+    guess_character = FALSE
+  )
 
   util_correct_variable_use(x)
   if (!missing(y)) {
     util_correct_variable_use(y)
   }
   util_expect_scalar(nmax,
-                     check_type = util_is_numeric_in(min = 1,
-                                                     whole_num = TRUE,
-                                                     finite = TRUE),
-                     error_message = "'nmax' must be a positive integer >= 1.")
+    check_type = util_is_numeric_in(
+      min = 1,
+      whole_num = TRUE,
+      finite = TRUE
+    ),
+    error_message = "'nmax' must be a positive integer >= 1."
+  )
 
   util_expect_scalar(pinc,
-                     check_type = util_is_numeric_in(min = 0,
-                                                     max = 1,
-                                                     whole_num = FALSE,
-                                                     finite = TRUE),
-                     error_message =
-                       "'pinc' must be a single number in [0, 1].")
+    check_type = util_is_numeric_in(
+      min = 0,
+      max = 1,
+      whole_num = FALSE,
+      finite = TRUE
+    ),
+    error_message =
+      "'pinc' must be a single number in [0, 1]."
+  )
 
   util_expect_scalar(resids,
-                     check_type = util_is_numeric_in(min = 0,
-                                                     max = 1,
-                                                     whole_num = FALSE,
-                                                     finite = TRUE),
-                     error_message =
-                       "'resids' must be a single number in [0, 1].")
+    check_type = util_is_numeric_in(
+      min = 0,
+      max = 1,
+      whole_num = FALSE,
+      finite = TRUE
+    ),
+    error_message =
+      "'resids' must be a single number in [0, 1]."
+  )
 
   util_expect_scalar(random, check_type = is.logical)
 
@@ -126,8 +137,12 @@ util_subsample_cases <- function(
   ids_all <- if (is.null(case_id)) seq_len(nrow(data)) else data[[case_id]]
 
   simple_sample_ids <- function(ids, size) {
-    if (size <= 0L || length(ids) == 0L) return(ids[FALSE])
-    if (length(ids) <= size) return(ids)
+    if (size <= 0L || length(ids) == 0L) {
+      return(ids[FALSE])
+    }
+    if (length(ids) <= size) {
+      return(ids)
+    }
     sample(ids, size = size, replace = FALSE)
   }
 
@@ -141,8 +156,12 @@ util_subsample_cases <- function(
 
   nobs <- nrow(d)
 
-  if (nobs == 0L) return(ids_all[FALSE])
-  if (nobs <= nmax) return(d$.case_id)
+  if (nobs == 0L) {
+    return(ids_all[FALSE])
+  }
+  if (nobs <= nmax) {
+    return(d$.case_id)
+  }
 
   # ---------- random-only mode ----------
   if (random) {
@@ -169,14 +188,16 @@ util_subsample_cases <- function(
       i_grid_case <- d_unique$.case_id[1L]
     } else {
       breaks <- seq(min(x_unique, na.rm = TRUE),
-                    max(x_unique, na.rm = TRUE),
-                    length.out = B + 1L)
+        max(x_unique, na.rm = TRUE),
+        length.out = B + 1L
+      )
 
       bin_id <- cut(x_unique,
-                    breaks = breaks,
-                    include.lowest = TRUE,
-                    right = TRUE,
-                    labels = FALSE)
+        breaks = breaks,
+        include.lowest = TRUE,
+        right = TRUE,
+        labels = FALSE
+      )
 
       split_idx <- split(seq_along(x_unique), bin_id, drop = TRUE)
 
@@ -219,64 +240,65 @@ util_subsample_cases <- function(
   ny <- max(1L, ceiling(B / nx))
 
   # grid selection
-  if ((length(x_unique) == 1L || max(x_unique, na.rm = TRUE) == min(x_unique, na.rm = TRUE)) &&
-      (length(y_unique) == 1L || max(y_unique, na.rm = TRUE) == min(y_unique, na.rm = TRUE))) {
-
+  if ((length(x_unique) == 1L || max(x_unique, na.rm = TRUE) == min(x_unique, na.rm = TRUE)) && # nolint: line_length_linter.
+      (length(y_unique) == 1L || max(y_unique, na.rm = TRUE) == min(y_unique, na.rm = TRUE))) { # nolint: line_length_linter.
     i_grid_case <- d_unique$.case_id[1L]
-
   } else if (max(x_unique, na.rm = TRUE) == min(x_unique, na.rm = TRUE)) {
-
     # x constant -> bin only on y
     breaks_y <- seq(min(y_unique, na.rm = TRUE),
-                    max(y_unique, na.rm = TRUE),
-                    length.out = ny + 1L)
+      max(y_unique, na.rm = TRUE),
+      length.out = ny + 1L
+    )
 
     by <- cut(y_unique,
-              breaks = breaks_y,
-              include.lowest = TRUE,
-              right = TRUE,
-              labels = FALSE)
+      breaks = breaks_y,
+      include.lowest = TRUE,
+      right = TRUE,
+      labels = FALSE
+    )
 
     split_idx <- split(seq_along(y_unique), by, drop = TRUE)
     rep_idx <- vapply(split_idx, function(idx) idx[1L], integer(1L))
     i_grid_case <- d_unique$.case_id[rep_idx]
-
   } else if (max(y_unique, na.rm = TRUE) == min(y_unique, na.rm = TRUE)) {
-
     # y constant -> bin only on x
     breaks_x <- seq(min(x_unique, na.rm = TRUE),
-                    max(x_unique, na.rm = TRUE),
-                    length.out = nx + 1L)
+      max(x_unique, na.rm = TRUE),
+      length.out = nx + 1L
+    )
 
     bx <- cut(x_unique,
-              breaks = breaks_x,
-              include.lowest = TRUE,
-              right = TRUE,
-              labels = FALSE)
+      breaks = breaks_x,
+      include.lowest = TRUE,
+      right = TRUE,
+      labels = FALSE
+    )
 
     split_idx <- split(seq_along(x_unique), bx, drop = TRUE)
     rep_idx <- vapply(split_idx, function(idx) idx[1L], integer(1L))
     i_grid_case <- d_unique$.case_id[rep_idx]
-
   } else {
-
     breaks_x <- seq(min(x_unique, na.rm = TRUE),
-                    max(x_unique, na.rm = TRUE),
-                    length.out = nx + 1L)
+      max(x_unique, na.rm = TRUE),
+      length.out = nx + 1L
+    )
     breaks_y <- seq(min(y_unique, na.rm = TRUE),
-                    max(y_unique, na.rm = TRUE),
-                    length.out = ny + 1L)
+      max(y_unique, na.rm = TRUE),
+      length.out = ny + 1L
+    )
 
     bx <- cut(x_unique,
-              breaks = breaks_x,
-              include.lowest = TRUE,
-              right = TRUE,
-              labels = FALSE)
+      breaks = breaks_x,
+      include.lowest = TRUE,
+      right = TRUE,
+      labels = FALSE
+    )
     by <- cut(y_unique,
-              breaks = breaks_y,
-              include.lowest = TRUE,
-              right = TRUE,
-              labels = FALSE)
+      breaks = breaks_y,
+      include.lowest = TRUE,
+      right = TRUE,
+      labels = FALSE
+    )
 
     cell_id <- paste(bx, by, sep = "_")
     split_idx <- split(seq_along(x_unique), cell_id, drop = TRUE)
@@ -304,7 +326,7 @@ util_subsample_cases <- function(
     stats::var(d[[x]], na.rm = TRUE) > 0
 
   if (regression_feasible) {
-    fit <- try(stats::lm(stats::as.formula(paste(y, "~", x)), data = d), silent = TRUE)
+    fit <- try(stats::lm(stats::as.formula(paste(y, "~", x)), data = d), silent = TRUE) # nolint: line_length_linter.
 
     if (!util_is_try_error(fit)) {
       rstud <- try(abs(stats::rstudent(fit)), silent = TRUE)
@@ -313,7 +335,6 @@ util_subsample_cases <- function(
           is.numeric(rstud) &&
           length(rstud) == nrow(d) &&
           any(is.finite(rstud))) {
-
         rstud[!is.finite(rstud)] <- -Inf
         nres <- as.integer(ceiling(nmax * resids))
 

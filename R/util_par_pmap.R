@@ -9,8 +9,11 @@
 #' @param ... additional, static arguments for calling `.f`
 #'
 #' @param cores number of cpu cores to use or a (named) list with arguments for
-#'              [parallelMap::parallelStart] or NULL, if parallel has already
-#'              been started by the caller.
+#'              the internal parallel backend (`util_parallel_start`) or NULL,
+#'              if parallel has already been started by the caller. In RStudio
+#'              report rendering, caller-owned clusters can make HTML
+#'              finalization hang; prefer letting `dataquieR` create the
+#'              cluster from a number or backend list.
 #' @param use_cache [logical] set to FALSE to omit re-using already distributed
 #'                            study- and metadata on a parallel cluster
 #'
@@ -26,40 +29,49 @@
 #' @concept reporting
 #' @noRd
 util_par_pmap <- function(.l, .f, ...,
-                          cores = list(mode = "socket",
-                                       cpus = util_detect_cores(),
-                                       logging = FALSE,
-                                       load.balancing = TRUE),
-                          use_cache = FALSE) {
+  cores = list(
+    mode = "socket",
+    cpus = util_detect_cores(),
+    logging = FALSE,
+    load.balancing = TRUE
+  ),
+  use_cache = FALSE) {
   if (!is.null(cores)) {
     if (inherits(cores, "list")) {
-      suppressMessages(do.call(parallelMap::parallelStart, cores))
+      suppressMessages(do.call(util_parallel_start, cores))
     } else {
-      suppressMessages(parallelMap::parallelStart("socket", cpus = cores,
-                                                  logging = FALSE,
-                                                  load.balancing = TRUE))
+      suppressMessages(util_parallel_start("socket",
+          cpus = cores,
+          logging = FALSE,
+          load.balancing = TRUE
+        ))
     }
-    on.exit({Sys.sleep(2);suppressMessages(parallelMap::parallelStop());}, add = TRUE) # whyever, rstudio needs these two seconds, it hangs, otherwise.
-  } # TODO: else it fails with Error in `assign(n, get(n, envir = env), envir = ee)`: cannot add bindings to a locked environment -- guess, the same problem I had in util_evaluate_calls see ''if (parallelMap::parallelGetOptions()$settings$mode == "local") {'' therein
+    withr::defer(
+      {
+        Sys.sleep(2)
+        suppressMessages(util_parallel_stop())
+      }
+    ) # whyever, rstudio needs these two seconds, it hangs, otherwise.
+  }
   more_args <- list(...)
   if ("meta_data" %in% names(more_args)) {
     meta_data <- more_args[["meta_data"]]
     if (use_cache &&
-        !all(unlist(parallelMap::parallelMap(exists, "meta_data")))) {
-      suppressWarnings(parallelMap::parallelExport("meta_data"))
+        !all(unlist(util_parallel_map(fun = exists, "meta_data")))) {
+      suppressWarnings(util_parallel_export("meta_data"))
       more_args[["meta_data"]] <- NULL
     }
   }
   if ("study_data" %in% names(more_args)) {
     study_data <- more_args[["study_data"]]
     if (use_cache &&
-        !all(unlist(parallelMap::parallelMap(exists, "study_data")))) {
-      suppressWarnings(parallelMap::parallelExport("study_data"))
+        !all(unlist(util_parallel_map(fun = exists, "study_data")))) {
+      suppressWarnings(util_parallel_export("study_data"))
       more_args[["study_data"]] <- NULL
     }
   }
   do.call(
-    parallelMap::parallelMap,
+    util_parallel_map,
     c(.l, list(
       fun = .f, more.args = more_args, simplify = FALSE, use.names = FALSE,
       show.info = FALSE, impute.error = identity

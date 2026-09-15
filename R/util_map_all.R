@@ -8,6 +8,9 @@
 #' @param study_data the name of the data frame that contains the measurements
 #' @param meta_data the name of the data frame that contains metadata attributes
 #'                  of study data
+#' @param relevant_var_names [character] optional variable names to map and
+#'                            validate. If `NULL`, all study data columns are
+#'                            relevant.
 #'
 #' @return [list] with slot `df` with a study data frame with mapped column
 #'                names
@@ -18,9 +21,9 @@
 #' @concept metadata_management
 #' @noRd
 util_map_all <- function(label_col = VAR_NAMES,
-                         study_data,
-                         meta_data) {
-
+  study_data,
+  meta_data,
+  relevant_var_names = NULL) {
   ################# checks ##################
 
   if (!nrow(meta_data)) {
@@ -29,8 +32,12 @@ util_map_all <- function(label_col = VAR_NAMES,
 
   if (length(label_col) != 1 || !is.character(label_col)) {
     util_error(
-      c("label_col must be exactly 1 metadata attribute,",
-        "neither a vector nor NULL."), applicability_problem = TRUE)
+      c(
+        "label_col must be exactly 1 metadata attribute,",
+        "neither a vector nor NULL."
+      ),
+      applicability_problem = TRUE
+    )
   }
 
   if (!label_col %in% colnames(meta_data)) {
@@ -38,60 +45,99 @@ util_map_all <- function(label_col = VAR_NAMES,
       label_col,
       function(v) {
         colnames(meta_data)[which.min(adist(trimws(v),
-                                            trimws(colnames(meta_data)),
-                                            ignore.case = TRUE, fixed = TRUE))]
+              trimws(colnames(meta_data)),
+              ignore.case = TRUE, fixed = TRUE
+            ))]
       },
       ""
     )
     util_error("label_col %s not found in metadata. Did you mean %s?",
-               dQuote(label_col), dQuote(fuzzy_match),
-               applicability_problem = TRUE)
-  }
-
-  if (!VAR_NAMES %in% colnames(meta_data)) {
-    util_error("VAR_NAMES not found in metadata.",
-               applicability_problem = TRUE)
-  }
-
-  if (any(duplicated(meta_data[[VAR_NAMES]]), na.rm = TRUE)) {
-    util_error(
-      c("The following variable names are duplicated in the metadata",
-        "and cannot be used as label therefore: %s"),
-      paste0(collapse = ", ",
-             dQuote(unique(meta_data[[VAR_NAMES]][(
-               duplicated(meta_data[[VAR_NAMES]]))]))),
+      dQuote(label_col), dQuote(fuzzy_match),
       applicability_problem = TRUE
     )
   }
 
-  if (any(duplicated(meta_data[[label_col]]), na.rm = TRUE)) {
+  if (!VAR_NAMES %in% colnames(meta_data)) {
+    util_error("VAR_NAMES not found in metadata.",
+      applicability_problem = TRUE
+    )
+  }
+
+  limit_to_relevant_var_names <- !is.null(relevant_var_names)
+  if (!is.null(relevant_var_names) && !is.character(relevant_var_names)) {
     util_error(
-      c("The following %s are duplicated in the metadata",
-        "and cannot be used as label therefore: %s"),
+      "%s must be a character vector or NULL",
+      sQuote("relevant_var_names")
+    )
+  }
+  if (is.null(relevant_var_names)) {
+    relevant_var_names <- colnames(study_data)
+  }
+  relevant_var_names <- unique(relevant_var_names)
+  relevant_study_data <- study_data[
+    ,
+    colnames(study_data) %in% relevant_var_names,
+    drop = FALSE
+  ]
+
+  relevant_meta_rows <- meta_data[[VAR_NAMES]] %in% relevant_var_names
+  relevant_meta_rows[is.na(relevant_meta_rows)] <- FALSE
+  relevant_meta_data <- meta_data[relevant_meta_rows, , drop = FALSE]
+
+  if (any(duplicated(relevant_meta_data[[VAR_NAMES]]), na.rm = TRUE)) {
+    util_error(
+      c(
+        "The following variable names are duplicated in the metadata",
+        "and cannot be used as label therefore: %s"
+      ),
+      paste0(
+        collapse = ", ",
+        dQuote(unique(relevant_meta_data[[VAR_NAMES]][(
+          duplicated(relevant_meta_data[[VAR_NAMES]]))]))
+      ),
+      applicability_problem = TRUE
+    )
+  }
+
+  if (any(duplicated(relevant_meta_data[[label_col]]), na.rm = TRUE)) {
+    util_error(
+      c(
+        "The following %s are duplicated in the metadata",
+        "and cannot be used as label therefore: %s"
+      ),
       sQuote(label_col),
-      paste0(collapse = ", ",
-             dQuote(unique(meta_data[[label_col]][(
-               duplicated(meta_data[[label_col]]))]))),
+      paste0(
+        collapse = ", ",
+        dQuote(unique(relevant_meta_data[[label_col]][(
+          duplicated(relevant_meta_data[[label_col]]))]))
+      ),
       applicability_problem = TRUE
     )
   }
 
   if (any(is.na(meta_data[[VAR_NAMES]]))) {
     util_error(
-      c("For the following variables, some variable",
-        "names are missing in the metadata: %s"),
+      c(
+        "For the following variables, some variable",
+        "names are missing in the metadata: %s"
+      ),
       paste0("Variable No. #", which(is.na(meta_data[[VAR_NAMES]])),
-             collapse = ", "), applicability_problem = TRUE
+        collapse = ", "
+      ),
+      applicability_problem = TRUE
     )
   }
 
   if (any(is.na(meta_data[[label_col]]))) {
     util_error(
-      c("For the following variables, some %s are missing in the metadata and",
-        "cannot be used as label therefore: %s"),
+      c(
+        "For the following variables, some %s are missing in the metadata and",
+        "cannot be used as label therefore: %s"
+      ),
       sQuote(label_col),
       paste0("Variable No. #", which(is.na(meta_data[[label_col]])),
-             collapse = ", "),
+        collapse = ", "
+      ),
       applicability_problem = TRUE
     )
   }
@@ -99,69 +145,92 @@ util_map_all <- function(label_col = VAR_NAMES,
   ################# mapping ##################
 
   # select only relevant variables from study_data
-  counter <- sum(!(colnames(study_data) %in% meta_data[[VAR_NAMES]]))
-  if (ncol(study_data) > 0) {
-    lost <- counter / ncol(study_data)
-  } else {
+  counter <- sum(!(colnames(relevant_study_data) %in% meta_data[[VAR_NAMES]]))
+  if (ncol(relevant_study_data) > 0) {
+    lost <- counter / ncol(relevant_study_data)
+  } else { # nocov start
     if (counter > 0) {
       lost <- Inf
     } else {
       lost <- 0
     }
-  }
+  } # nocov end
 
   if (!(exists(".called_in_pipeline") && .called_in_pipeline) &&
-      lost > 0 && !getOption("dataquieR.ELEMENT_MISSMATCH_CHECKTYPE",
-                             dataquieR.ELEMENT_MISSMATCH_CHECKTYPE_default) %in%
-      c("none", "subset_m")) {
+    lost > 0 && !getOption(
+    "dataquieR.ELEMENT_MISSMATCH_CHECKTYPE",
+    dataquieR.ELEMENT_MISSMATCH_CHECKTYPE_default
+  ) %in%
+    c("none", "subset_m")) {
     util_warning(
       "Lost %g%% of the study data because of missing/not assignable metadata",
       round(lost * 100, 1),
-      applicability_problem = TRUE, integrity_indicator = "int_sts_element")
-    vars <- colnames(study_data)[!(colnames(study_data) %in%
-                                     meta_data[[VAR_NAMES]])]
+      applicability_problem = TRUE, integrity_indicator = "int_sts_element"
+    )
+    vars <- colnames(relevant_study_data)[!(colnames(relevant_study_data) %in%
+          meta_data[[VAR_NAMES]])]
     util_message(
-      paste("Did not find any metadata for the following",
-             "variables from the study data: %s"),
+      paste(
+        "Did not find any metadata for the following",
+        "variables from the study data: %s"
+      ),
       paste0(dQuote(vars),
-             collapse = ", "), integrity_indicator = "int_sts_element",
+        collapse = ", "
+      ),
+      integrity_indicator = "int_sts_element",
       varname = vars
     )
   }
 
-  counter <- sum(!(meta_data[[VAR_NAMES]] %in% colnames(study_data)))
-  if (nrow(meta_data) > 0) {
-    unlost <- counter / nrow(meta_data)
+  meta_data_for_unlost <- if (limit_to_relevant_var_names) {
+    relevant_meta_data
   } else {
+    meta_data
+  }
+  counter <- sum(!(meta_data_for_unlost[[VAR_NAMES]] %in%
+        colnames(relevant_study_data)))
+  if (nrow(meta_data_for_unlost) > 0) {
+    unlost <- counter / nrow(meta_data_for_unlost)
+  } else { # nocov start
     if (counter > 0) {
       unlost <- Inf
     } else {
       unlost <- 0
     }
-  }
+  } # nocov end
 
   if (!(exists(".called_in_pipeline") && .called_in_pipeline) &&
-      unlost > 0 && !getOption("dataquieR.ELEMENT_MISSMATCH_CHECKTYPE",
-                               dataquieR.ELEMENT_MISSMATCH_CHECKTYPE_default) %in%
-      c("none", "subset_u")) {
+    unlost > 0 && !getOption(
+    "dataquieR.ELEMENT_MISSMATCH_CHECKTYPE",
+    dataquieR.ELEMENT_MISSMATCH_CHECKTYPE_default
+  ) %in%
+    c("none", "subset_u")) {
     util_warning(
       "Lost %g%% of the metadata because of missing/not assignable study data",
       round(unlost * 100, 1),
       applicability_problem = TRUE, integrity_indicator = "int_sts_element",
-      intrinsic_applicability_problem = TRUE)
-    vars <- meta_data[[VAR_NAMES]][!(meta_data[[VAR_NAMES]] %in%
-                                       colnames(study_data))]
+      intrinsic_applicability_problem = TRUE
+    )
+    vars <- meta_data_for_unlost[[VAR_NAMES]][!(meta_data_for_unlost[[VAR_NAMES]] %in% # nolint: line_length_linter.
+          colnames(relevant_study_data))]
     util_message(
-      paste("Found metadata for the following variables",
-            "not found in the study data: %s"),
+      paste(
+        "Found metadata for the following variables",
+        "not found in the study data: %s"
+      ),
       paste0(dQuote(vars),
-             collapse = ", "), integrity_indicator = "int_sts_element",
+        collapse = ", "
+      ),
+      integrity_indicator = "int_sts_element",
       varname = vars
     )
   }
 
-  ds1 <- study_data[, colnames(study_data) %in% meta_data[[VAR_NAMES]],
-                    drop = FALSE]
+  ds1 <- relevant_study_data[
+    ,
+    colnames(relevant_study_data) %in% meta_data[[VAR_NAMES]],
+    drop = FALSE
+  ]
 
   # select variable name from meta_data
   cn <- util_map_labels(colnames(ds1), meta_data, label_col, ifnotfound = "")
@@ -182,7 +251,7 @@ util_map_all <- function(label_col = VAR_NAMES,
 
   if (any(dups)) {
     e <- c(e, sprintf(
-      "Mapping of metadata on study data yielded duplicated variable labels: %s",
+      "Mapping of metadata on study data yielded duplicated variable labels: %s", # nolint: line_length_linter.
       paste0(dQuote(cn[dups]), collapse = ", ")
     ))
   }

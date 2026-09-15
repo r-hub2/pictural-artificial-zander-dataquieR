@@ -2,6 +2,26 @@ div.content {
   position: static; /* fixed; */
   margin-top: 3em; /* Hint: Now dynamically set */
   overflow: auto;
+  padding-bottom: 25vh;
+  box-sizing: border-box;
+}
+
+@media print {
+  div.content {
+    padding-bottom: 0;
+  }
+}
+
+:root {
+  --dq-base-font-family: Arial, Helvetica, sans-serif;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--dq-base-font-family);
 }
 
  .modebar {
@@ -9,13 +29,34 @@ div.content {
  }
 
 .navbar .dq-title {
+  display: flex;
+  align-items: center;
+  gap: 0.15em;
   overflow: hidden;
   color: white;
   padding: 0;
   margin: 0;
   white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.navbar .dq-title a {
+  float: none;
+}
+
+.navbar .dq-title .dq-report-overview-back {
+  flex: 0 0 auto;
+  min-width: 1.25em;
+  font-size: 1.2em;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.navbar .dq-title .dq-report-title-link {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .navbar .breadcrumb a:hover {
@@ -37,7 +78,7 @@ div.content {
   margin-left: 1em;
 }
 
-@media screen and (max-width: 1082px) { /* also adjust in CSS at line tagged with !!MEDIA!!*/
+@media screen and (max-width: 1280px) { /* also adjust DQ_RESPONSIVE_NAVBAR_QUERY */
   .navbar .dq-title {
     float: left;
   }
@@ -54,7 +95,7 @@ div.content {
   width: 100%;
   /* overflow: hidden; */
   background-color: #555;
-  font-family: Arial;
+  font-family: var(--dq-base-font-family);
 }
 
 /* Links inside the navbar */
@@ -124,9 +165,21 @@ div.content {
   text-align: left;
 }
 
+.dropdown-content .dropdown-divider {
+  border: 0;
+  border-top: 1px solid #ddd;
+  margin: 4px 0;
+}
+
 /* Add a grey background color to dropdown links on hover */
 .dropdown-content a:hover {
   background-color: #aaa;
+}
+
+.dropdown-content .dropdown-divider {
+  border: 0;
+  border-top: 1px solid #ddd;
+  margin: 4px 0;
 }
 
 .dropdown-content a:target {
@@ -180,6 +233,89 @@ div.singlePageFinal h6 {
   line-height: 1.2;
 }
 
+.dq-sunburst-container {
+  width: 100%;
+  height: clamp(560px, 85vh, 760px);
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.dq-sunburst-mode-notice {
+  padding: 0.75em 0.9em;
+  border-left: 0.3em solid #4e79a7;
+  background: #f1f6fa;
+}
+
+.dq-sunburst-mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin: 0.7em 0 1em;
+}
+
+.dq-sunburst-mode-button {
+  appearance: none;
+  border: 1px solid #5f6f7e;
+  border-radius: 0.25em;
+  padding: 0.55em 0.85em;
+  background: #fff;
+  color: #263746;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.dq-sunburst-mode-button:hover,
+.dq-sunburst-mode-button:focus-visible {
+  background: #edf3f7;
+  outline: 2px solid #356f9f;
+  outline-offset: 2px;
+}
+
+.dq-sunburst-mode-button.is-active {
+  border-color: #355f82;
+  background: #355f82;
+  color: #fff;
+}
+
+.dq-sunburst-mode-panel {
+  min-width: 0;
+}
+
+.dq-sunburst-mode-panel[hidden] {
+  display: none !important;
+}
+
+.dq-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media print {
+  .dq-sunburst-mode-notice,
+  .dq-sunburst-mode-tabs,
+  .dq-sunburst-mode-status {
+    display: none !important;
+  }
+
+  .dq-sunburst-mode-panel[hidden] {
+    display: block !important;
+  }
+}
+
+@media screen and (max-width: 1280px) {
+  .dq-sunburst-mode-button {
+    flex: 1 1 13em;
+  }
+}
+
 .dq-infobutton {
   all: unset;
   cursor: pointer;
@@ -216,21 +352,34 @@ div.default-target {
 
 /* https://stackoverflow.com/a/7354648 */
 /* When the screen is less than 640 pixels wide, hide all links, except for the first one ("Home"). Show the link that contains should open and close the navbar (.icon) */
-@media screen and (max-width: 1082px) { /* also adjust in CSS at line tagged with !!MEDIA!!*/
+@media screen and (max-width: 1280px) { /* also adjust DQ_RESPONSIVE_NAVBAR_QUERY */
   .navbar {
     height: unset;
   }
   .navbar :not(:first-child) {display: none;}
+  .navbar .dq-title,
+  .navbar .dq-title * {
+    display: flex;
+  }
+  .navbar .dq-title {
+    max-width: calc(100% - 10em);
+  }
+  .navbar .dq-title .dq-report-title-link {
+    display: block;
+  }
   .navbar a.icon {
     float: right;
     display: block;
+  }
+  #dq-reset-figures-btn {
+    right: 7em !important;
   }
 }
 
 /* https://stackoverflow.com/a/7354648 */
 /* The "responsive" class is added to the navbar with JavaScript when the user clicks on the icon. This class makes the navbar look good on small screens (display the links vertically instead of horizontally) */
-@media screen and (max-width: 1082px) { /* 835px is the point, where full fledged menus break, currently FIXME: seems to be not needed cause of huge menue, meanwhile, but unsure. */
-  .navbar.responsive *.icon {          /* also adjust in CSS at line tagged with !!MEDIA!!*/
+@media screen and (max-width: 1280px) {
+  .navbar.responsive *.icon { /* also adjust DQ_RESPONSIVE_NAVBAR_QUERY */
     position: absolute;
     right: 0;
     top: 0;
@@ -332,7 +481,18 @@ span.dataquieR-error-message {
 }
 td.max_60vw, th.max_60vw { /* for the first column in html tables, which are fixed, do not use more than 60vw */
   max-width: 60vw;
-  overflow: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+td.dq-readable-text, th.dq-readable-text {
+  min-width: min(16em, 60vw);
+}
+
+td.max_60vw pre, th.max_60vw pre {
+  white-space: normal;
+  overflow-x: visible;
 }
 
 /*
@@ -352,7 +512,10 @@ add a floating menu to the single page's divs
 
 .floatbar i {
   opacity: 0.7;
+  display: block;
+  line-height: 1.2;
   transition: opacity 0.2s ease, transform 0.2s ease;
+  transform-origin: left top;
 }
 
 .floatbar:hover i {
@@ -433,6 +596,26 @@ div.td-div {
 
 body {
   margin: 0px; /* avoid scroll problems in tables */
+}
+
+div.singlePageFinal,
+.table_result,
+.dataTables_wrapper,
+table.dataTable,
+.dataTables_wrapper input,
+.dataTables_wrapper select,
+.dataTables_wrapper button,
+.dt-button {
+  font-family: inherit;
+}
+
+.table_result table.dataTable,
+.table_result table.dataTable th,
+.table_result table.dataTable td,
+.table_result table.dataTable input,
+.table_result table.dataTable select,
+.table_result table.dataTable button {
+  font-family: inherit !important;
 }
 
 .statichtmlWidget .navbar { /* if used in an html widget, likely in rmarkdown, omit the navigation bar */
@@ -529,7 +712,7 @@ div.infobutton a {
   transform: translateY(0);
 }
 
-@media screen and (max-width: 1082px) { /* also adjust in CSS at line tagged with !!MEDIA!!*/
+@media screen and (max-width: 1280px) { /* also adjust DQ_RESPONSIVE_NAVBAR_QUERY */
   .navbar .dq-search-hint {
     display: block;
   }
@@ -541,4 +724,151 @@ div.infobutton a {
 
 .dq-search-hint:hover {
   opacity: 1;
+}
+
+.dq-report-scope-tree-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5em;
+  align-items: start;
+}
+
+.dq-report-scope-tree-panel {
+  overflow-x: auto;
+}
+
+.dq-report-scope-tree-panel h3 {
+  margin-top: 0;
+}
+
+.dq-report-scope-tree-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.dq-report-scope-tree-table th {
+  padding: 0.25em 0.35em;
+  border-bottom: 1px solid #c7d2da;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: right;
+  vertical-align: bottom;
+}
+
+.dq-report-scope-tree-table th:first-child {
+  width: 30%;
+  text-align: left;
+}
+
+.dq-report-scope-header-help {
+  all: unset;
+  display: inline-block;
+  margin-left: 0.25em;
+  cursor: help;
+  color: #4f6473;
+  font-size: 0.9em;
+  line-height: 1;
+  vertical-align: baseline;
+}
+
+.dq-report-scope-header-help:hover,
+.dq-report-scope-header-help:focus {
+  color: #1d4f73;
+}
+
+.dq-report-scope-tree-table td {
+  padding: 0.16em 0.35em;
+  border-bottom: 1px solid #edf1f4;
+  text-align: right;
+  vertical-align: top;
+}
+
+.dq-report-scope-tree-table td:first-child {
+  text-align: left;
+  white-space: normal;
+}
+
+.dq-report-scope-tree-toggle {
+  width: 1.3em;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dq-report-scope-tree-toggle-spacer {
+  display: inline-block;
+  width: 1.3em;
+}
+
+.dq-report-scope-tree-node {
+  display: inline;
+}
+
+.dq-report-scope-tree-coverage {
+  white-space: nowrap;
+}
+
+.dq-report-scope-tree-coverage-secondary {
+  display: block;
+  font-size: 0.78em;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.dq-report-scope-tree-table [aria-haspopup="dialog"] {
+  cursor: pointer;
+}
+
+.dq-report-scope-tooltip-close {
+  position: absolute;
+  top: 0.2em;
+  right: 0.25em;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.4em;
+  line-height: 1;
+}
+
+.dq-report-scope-tooltip-close:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+@media (max-width: 900px) {
+  .dq-report-scope-tree-table {
+    min-width: 58em;
+    font-size: 0.82em;
+  }
+
+  .dq-report-scope-tree-table th,
+  .dq-report-scope-tree-table td {
+    padding-right: 0.2em;
+    padding-left: 0.2em;
+  }
+
+  .dq-report-scope-tree-table th:first-child {
+    width: 30%;
+  }
+}
+.dq-assessment-scope {
+  border-top: 2px solid #b7c4cf;
+  margin: 2.25em 0 1.5em;
+  padding-top: 1.25em;
+}
+
+.dq-assessment-scope h2 {
+  margin: 0 0 0.35em;
+}
+
+.dq-assessment-scope-references {
+  font-size: 0.9em;
+  margin: 0 0 1.25em;
 }

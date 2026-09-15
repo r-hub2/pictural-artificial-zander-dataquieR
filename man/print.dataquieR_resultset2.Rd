@@ -12,11 +12,14 @@
   block_load_factor = getOption("dataquieR.print_block_load_factor",
     dataquieR.print_block_load_factor_default),
   advanced_options = list(),
+  html_table_backend = getOption("dataquieR.html_table_backend",
+    dataquieR.html_table_backend_default),
   dashboard = NA,
   force_overwrite = FALSE,
   ...,
   cores = list(mode = "socket", logging = FALSE, cpus = util_detect_cores(),
-    load.balancing = TRUE)
+    load.balancing = TRUE),
+  output_dir = NULL
 )
 }
 \arguments{
@@ -35,6 +38,9 @@ if omitted. Directory will be created, if missing}
 \item{advanced_options}{\link{list} options to set during report computation,
 see \code{\link[=options]{options()}}}
 
+\item{html_table_backend}{\link{character} HTML table backend to use for
+rendering. One of \code{"auto"}, \code{"DT2"}, or \code{"DT"}.}
+
 \item{dashboard}{\link{logical} dashboard mode: \code{TRUE}: create a dashboard only,
 \code{FALSE}: don't create a dashboard at all,
 \code{NA} or missing: create a "normal" report with
@@ -45,9 +51,26 @@ a dashboard included.}
 \item{...}{additional arguments:}
 
 \item{cores}{\link{integer} number of cpu cores to use or a named list with
-arguments for \link[parallelMap:parallelStart]{parallelMap::parallelStart} or NULL,
+arguments for the internal parallel backend
+(\code{util_parallel_start}) or NULL,
 if parallel has already been started by the caller.
-Can also be a cluster.}
+Can also be a cluster. In RStudio, caller-created
+clusters may hang during HTML report finalization
+while thumbnail and embedded HTML files are written. Prefer
+passing a number, e.g., \code{cores = 4}, or a backend
+list, e.g.,
+\code{cores = list(mode = "socket", cpus = 4)}, so
+\code{dataquieR} can create and stop the cluster itself.
+Alternatively run the same command outside RStudio
+(on Windows start R from the Start menu, on macOS open
+Terminal and run R, on Linux run R in a terminal).
+To force a caller-owned
+cluster in RStudio, set
+\code{options(dataquieR.force_rstudio_user_cluster = TRUE)}
+or pass
+\code{advanced_options = list(dataquieR.force_rstudio_user_cluster = TRUE)}.}
+
+\item{output_dir}{\link{character} alias for \code{dir}.}
 }
 \value{
 file names of the generated report's HTML files

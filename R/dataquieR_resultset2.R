@@ -1,9 +1,5 @@
-# dataquieR_resultset2 <- function(...) {
-#   this <- list(...)
-#   # dataquieR_resultset_verify2(this) # TODO: Implement me!!
-#   class(this) <- dataquieR_resultset_class2
-#   this
-# }
+# Historical resultset constructor sketch removed here. Inspect with
+# `git show c7dfc32b18 -- R/dataquieR_resultset2.R` before restoring.
 dataquieR_resultset_class2 <- "dataquieR_resultset2"
 
 #' Get namespace for attributes
@@ -54,7 +50,7 @@ util_get_storr_summ_namespace <- function(my_storr_object) {
 
   if (is.null(my_storr_object)) {
     # default
-    all_calls <- attr(x, "all_calls")
+    all_calls <- util_attr(x, "all_calls", exact = TRUE)
 
     r <- NextMethod()
 
@@ -64,20 +60,31 @@ util_get_storr_summ_namespace <- function(my_storr_object) {
 
     r_names <- names(x)
 
-    if (is.numeric(el) && suppressWarnings(as.integer(el) == as.numeric(el)) &&
-        el > 0 && el <= length(r_names)) {
+    numeric_slot <- is.numeric(el) &&
+      length(el) == 1 &&
+      !is.na(el) &&
+      suppressWarnings(as.integer(el) == as.numeric(el)) &&
+      el > 0 &&
+      el <= length(r_names)
+    character_slot <- is.character(el) &&
+      length(el) == 1 &&
+      !is.na(el)
+    if (numeric_slot) {
       slot <- r_names[[el]]
-    } else if (is.character(el)) {
+    } else if (character_slot) {
       slot <- el
     } else {
       r <- NULL
     }
-    if (slot %in% names(all_calls))
-      r <- util_fix_dataquieR_result(r = r,
-                                     slot = slot,
-                                     cl = all_calls[[slot]])
+    if (exists("slot", inherits = FALSE) && slot %in% names(all_calls)) {
+      r <- util_fix_dataquieR_result(
+        r = r,
+        slot = slot,
+        cl = all_calls[[slot]]
+      )
+    }
     if (is.raw(r)) {
-      if (isTRUE(attr(x, "raw"))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed
+      if (isTRUE(util_attr(x, "raw", exact = TRUE))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed # nolint: line_length_linter.
         return(r)
       }
       r <- util_decompress(r)
@@ -86,60 +93,76 @@ util_get_storr_summ_namespace <- function(my_storr_object) {
     return(r)
   }
 
-  stopifnot(inherits(my_storr_object, "storr"))
+  util_stop_if_not(
+    "The report backend must inherit from `storr`" =
+      inherits(my_storr_object, "storr")
+  )
 
-  r_names <- my_storr_object$get("names", namespace =
-                                   util_get_storr_att_namespace(my_storr_object))
+  r_names <- my_storr_object$get("names",
+    namespace =
+      util_get_storr_att_namespace(my_storr_object)
+  )
 
-  if (is.numeric(el) && suppressWarnings(as.integer(el) == as.numeric(el)) &&
-      el > 0 && el <= length(r_names)) {
+  numeric_slot <- is.numeric(el) &&
+    length(el) == 1 &&
+    !is.na(el) &&
+    suppressWarnings(as.integer(el) == as.numeric(el)) &&
+    el > 0 &&
+    el <= length(r_names)
+  character_slot <- is.character(el) &&
+    length(el) == 1 &&
+    !is.na(el)
+  if (numeric_slot) {
     slot <- r_names[[el]]
     r <- NULL
     if (my_storr_object$exists(slot)) {
       r <- my_storr_object$get(slot)
       if (is.raw(r)) {
-        if (isTRUE(attr(x, "raw"))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed
+        if (isTRUE(util_attr(x, "raw", exact = TRUE))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed # nolint: line_length_linter.
           return(r)
         }
         r <- util_decompress(r)
       }
     }
     if (!inherits(r, "dataquieR_result")) {
-      all_calls <- attr(x, "all_calls")
+      all_calls <- util_attr(x, "all_calls", exact = TRUE)
 
-      r <- util_fix_dataquieR_result(r = r,
-                                     slot = slot,
-                                     cl = all_calls[[slot]])
+      r <- util_fix_dataquieR_result(
+        r = r,
+        slot = slot,
+        cl = all_calls[[slot]]
+      )
       if (is.raw(r)) {
-        if (isTRUE(attr(x, "raw"))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed
+        if (isTRUE(util_attr(x, "raw", exact = TRUE))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed # nolint: line_length_linter.
           return(r)
         }
         r <- util_decompress(r)
       }
-
     }
     return(r)
-  } else if (el %in% r_names) {
+  } else if (character_slot && el %in% r_names) {
     slot <- el
     r <- NULL
     if (my_storr_object$exists(slot)) {
       r <- my_storr_object$get(slot)
       if (is.raw(r)) {
-        if (isTRUE(attr(x, "raw"))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed
+        if (isTRUE(util_attr(x, "raw", exact = TRUE))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed # nolint: line_length_linter.
           return(r)
         }
         r <- util_decompress(r)
       }
     }
     if (!inherits(r, "dataquieR_result")) {
-      all_calls <- attr(x, "all_calls")
+      all_calls <- util_attr(x, "all_calls", exact = TRUE)
 
-      r <- util_fix_dataquieR_result(r = r,
-                                     slot = slot,
-                                     cl = all_calls[[slot]])
+      r <- util_fix_dataquieR_result(
+        r = r,
+        slot = slot,
+        cl = all_calls[[slot]]
+      )
 
       if (is.raw(r)) {
-        if (isTRUE(attr(x, "raw"))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed
+        if (isTRUE(util_attr(x, "raw", exact = TRUE))) { # attr raw is set by .access_dq_rs2, if only storr part of this is needed # nolint: line_length_linter.
           return(r)
         }
         r <- util_decompress(r)
@@ -151,37 +174,8 @@ util_get_storr_summ_namespace <- function(my_storr_object) {
   }
 }
 
-# # IDEA: attr, attr<-, attrbiutes, ..., cave wrt my_storr_object, which needs to be found by the primitive, always, postponed, since obviously impossible
-# Solution, so far: keep the attributes in all backends (this will not be kept in sync automatically, but it should still work)
-# does not really work, we need to handle attributes separately
-# trace ("attr", edit =  function (...)
-# {
-#   args <- list(...)
-#   x <- NULL
-#   if (length(args) > 0) {
-#     x <- args[[1]]
-#   }
-#   if (inherits(x, "dataquieR_resultset2")) {
-#     return(42)
-#   }
-#   .prim <- .Primitive("attr")
-#   .prim(...)
-# }
-
-# attr.dataquieR_resultset2 <- function(x, which, exact = FALSE) {
-#
-#     y <- unclass(x)
-#     my_storr_object <- attr(y, "my_storr_object")
-#
-#     if (is.null(my_storr_object)) {
-#       # default
-#       return(NextMethod())
-#     }
-#
-#     stopifnot(inherits(my_storr_object, "storr"))
-#
-#     my_storr_object$get(which, namespace = util_get_storr_att_namespace(my_storr_object))
-# }
+# Historical attribute-access prototype removed here. Inspect with
+# `git show 042d4ad80b -- R/dataquieR_resultset2.R` before restoring.
 
 
 #' Set a single result from a `dataquieR 2` report
@@ -192,7 +186,7 @@ util_get_storr_summ_namespace <- function(my_storr_object) {
 #'
 #' @return the `dataquieR` result object
 #' @export
-`[[<-.dataquieR_resultset2` <- function(x, el, value) { # TODO: verify class of value
+`[[<-.dataquieR_resultset2` <- function(x, el, value) {
 
   if (is.null(value)) {
     value <- list()
@@ -210,10 +204,15 @@ util_get_storr_summ_namespace <- function(my_storr_object) {
     return(NextMethod())
   }
 
-  stopifnot(inherits(my_storr_object, "storr"))
+  util_stop_if_not(
+    "The report backend must inherit from `storr`" =
+      inherits(my_storr_object, "storr")
+  )
 
-  r_names <- my_storr_object$get("names", namespace =
-                                   util_get_storr_att_namespace(my_storr_object))
+  r_names <- my_storr_object$get("names",
+    namespace =
+      util_get_storr_att_namespace(my_storr_object)
+  )
 
   if (is.numeric(el) && suppressWarnings(as.integer(el) == as.numeric(el)) &&
       el > 0 && el <= length(r_names)) {
@@ -243,8 +242,10 @@ util_get_storr_summ_namespace <- function(my_storr_object) {
   if (nargs() > 3) {
     util_error("You cannot write subsets of a dataquieR report, yet.")
   }
-  if (nargs() == 3 && !identical(rlang::missing_arg(),
-                                 rlang::call_args(sys.call())[[2]])) {
+  if (nargs() == 3 && !identical(
+    rlang::missing_arg(),
+    rlang::call_args(sys.call())[[2]]
+  )) {
     args <- list(...)
   } else {
     args <- list()
@@ -285,19 +286,26 @@ as.list.dataquieR_resultset2 <- function(x, ...) {
     # default
     return(NextMethod())
   } else {
-    if (!getOption("dataquieR.convert_to_list_for_lapply",
-                  dataquieR.convert_to_list_for_lapply_default) &&
-        identical(rlang::env_parent(rlang::caller_env()),
-                  asNamespace("base")) && # called from base, likely *apply
-        rlang::call_name(rlang::caller_call()) %in% c("lapply",
-                                                      "vapply",
-                                                      "sapply")
-        ) { # no conversion needed, interface already compatible with list()
+    if (!getOption(
+      "dataquieR.convert_to_list_for_lapply",
+      dataquieR.convert_to_list_for_lapply_default
+    ) &&
+      identical(
+        rlang::env_parent(rlang::caller_env()),
+        asNamespace("base")
+      ) && # called from base, likely *apply
+      rlang::call_name(rlang::caller_call()) %in% c(
+        "lapply",
+        "vapply",
+        "sapply"
+      )
+    ) { # no conversion needed, interface already compatible with list()
       return(x)
     }
     util_warning("as.list is inefficient for dataquieR_resultset2 objects",
-            immediate = TRUE)
-    # print(rlang::trace_back())
+      immediate = TRUE
+    )
+    # Traceback logging is intentionally silent in regular result access.
     lapply(x, identity)
   }
 }
@@ -323,56 +331,76 @@ dataquieR_resultset2 <- methods::setClass("dataquieR_resultset2")
 #' @export
 prep_set_backend <- function(r, storr_factory = NULL, amend = FALSE) {
   util_expect_scalar(amend, check_type = is.logical)
-  stopifnot(inherits(r, "dataquieR_resultset2"))
+  util_stop_if_not(
+    "`r` must inherit from `dataquieR_resultset2`" =
+      inherits(r, "dataquieR_resultset2")
+  )
   if (is.null(storr_factory)) {
     my_storr_object <- util_get_storr_object_from_report(r)
-    stopifnot(inherits(my_storr_object, "storr"))
-    atts_r_nm <- my_storr_object$list(namespace =
-                                        util_get_storr_att_namespace(my_storr_object))
-    atts_r <- setNames(my_storr_object$mget(atts_r_nm,
-                                            namespace =
-                                              util_get_storr_att_namespace(my_storr_object)),
-                       atts_r_nm
+    util_stop_if_not(
+      "The report backend must inherit from `storr`" =
+        inherits(my_storr_object, "storr")
     )
-    r_nm <- atts_r[["names"]] # my_storr_object$list()
-    r <- setNames(my_storr_object$mget(r_nm), r_nm);
-    attr(r, "my_storr_object") <- NULL; # my_storr_object # never ever restore this
+    atts_r_nm <- my_storr_object$list(
+      namespace =
+        util_get_storr_att_namespace(my_storr_object)
+    )
+    atts_r <- setNames(
+      my_storr_object$mget(atts_r_nm,
+        namespace =
+          util_get_storr_att_namespace(my_storr_object)
+      ),
+      atts_r_nm
+    )
+    r_nm <- atts_r[["names"]] # Use stored result names, not a namespace scan.
+    r <- setNames(my_storr_object$mget(r_nm), r_nm)
+    attr(r, "my_storr_object") <- NULL # my_storr_object # never ever restore this # nolint: line_length_linter.
     attributes(r) <- atts_r
   } else {
-
     my_storr_object <- util_storr_object(storr_factory)
 
-    stopifnot(inherits(my_storr_object, "storr"))
+    util_stop_if_not(
+      "The report backend must inherit from `storr`" =
+        inherits(my_storr_object, "storr")
+    )
 
     if (!is.null(my_storr_object)) {
-
       if (!is.null(my_storr_object) && (
         length(my_storr_object$list()) > 0 ||
-        length(my_storr_object$list(
-          util_get_storr_att_namespace(my_storr_object))) > 0 ||
-        length(my_storr_object$list(
-          util_get_storr_summ_namespace(my_storr_object))) > 0
+          length(my_storr_object$list(
+            util_get_storr_att_namespace(my_storr_object)
+          )) > 0 ||
+          length(my_storr_object$list(
+            util_get_storr_summ_namespace(my_storr_object)
+          )) > 0
       )) {
         if (amend) {
-          util_message(c("Your storr-object is not empty, but %s was set %s,",
-                         "so I'll amend the storage object. This is unsupported,",
-                         "yet, so expect strange behavior."),
-                       dQuote("amend"), sQuote(TRUE))
+          util_message(
+            c(
+              "Your storr-object is not empty, but %s was set %s,",
+              "so I'll amend the storage object. This is unsupported,",
+              "yet, so expect strange behavior."
+            ),
+            dQuote("amend"), sQuote(TRUE)
+          )
         } else {
-          util_error(c("Your storr-object is not empty, and %s was set %s,",
-                       "so I won't amend the storage object, which would",
-                       "still be unsupported, so could cause strange behavior.",
-                       "We strongly recommend to use clear storr objects (or",
-                       "at least the default namespace (%s in your case)",
-                       "and its sister namespaces (the default namespace suffixed",
-                       "with %s and %s, should be empty. In case of %s, just",
-                       "delete the folder that backs the storr."),
-                     dQuote("amend"),
-                     sQuote(FALSE),
-                     sQuote(my_storr_object$default_namespace),
-                     sQuote(".attributes"),
-                     sQuote(".summary"),
-                     sQuote("driver_rds")
+          util_error(
+            c(
+              "Your storr-object is not empty, and %s was set %s,",
+              "so I won't amend the storage object, which would",
+              "still be unsupported, so could cause strange behavior.",
+              "We strongly recommend to use clear storr objects (or",
+              "at least the default namespace (%s in your case)",
+              "and its sister namespaces (the default namespace suffixed",
+              "with %s and %s, should be empty. In case of %s, just",
+              "delete the folder that backs the storr."
+            ),
+            dQuote("amend"),
+            sQuote(FALSE),
+            sQuote(my_storr_object$default_namespace),
+            sQuote(".attributes"),
+            sQuote(".summary"),
+            sQuote("driver_rds")
           )
         }
       }
@@ -381,15 +409,18 @@ prep_set_backend <- function(r, storr_factory = NULL, amend = FALSE) {
       my_storr_object <- util_fix_storr_object(my_storr_object)
       atts_r <- attributes(r)
       atts_r[["my_storr_object"]] <- NULL # dont save this ever
-      my_storr_object$mset(key = names(atts_r), value = atts_r, namespace =
-                             util_get_storr_att_namespace(my_storr_object))
+      my_storr_object$mset(
+        key = names(atts_r), value = atts_r, namespace =
+          util_get_storr_att_namespace(my_storr_object)
+      )
 
       my_storr_object$mset(key = names(r), value = r)
 
       my_storr_object$mset(
         key = names(r),
-        value = lapply(r, attr, "r_summary"),
-        namespace = util_get_storr_summ_namespace(my_storr_object))
+        value = lapply(r, util_attr, "r_summary"),
+        namespace = util_get_storr_summ_namespace(my_storr_object)
+      )
 
 
       r[] <- lapply(r, function(x) NA)
@@ -412,33 +443,44 @@ prep_set_backend <- function(r, storr_factory = NULL, amend = FALSE) {
 #' @seealso [prep_create_storr_factory()]
 #' @examples
 #' \dontrun{
-#' r <- dataquieR::dq_report2("study_data", meta_data_v2 = "meta_data_v2",
-#'                            dimensions = NULL)
+#' r <- dataquieR::dq_report2("study_data",
+#'   meta_data_v2 = "meta_data_v2",
+#'   dimensions = NULL
+#' )
 #' storr_factory <- prep_create_storr_factory()
 #' r_storr <- prep_set_backend(r, storr_factory)
 #' r_restorr <- prep_set_backend(r_storr, NULL)
 #' r_loaded <- prep_load_report_from_backend(storr_factory)
 #' }
 prep_load_report_from_backend <- function(
-    namespace = "objects",
-    db_dir,
-    storr_factory = prep_create_storr_factory(namespace = namespace,
-                                               db_dir = db_dir)) {
-
+  namespace = "objects",
+  db_dir,
+  storr_factory = prep_create_storr_factory(
+    namespace = namespace,
+    db_dir = db_dir
+  )
+) {
   my_storr_object <- util_storr_object(storr_factory)
 
   if (is.null(my_storr_object)) {
-    util_error("You did not pass a valid storr factory in the argument %s",
-               sQuote("storr_factory"))
+    util_error(
+      "You did not pass a valid storr factory in the argument %s",
+      sQuote("storr_factory")
+    )
   }
 
-  atts_r_nm <- my_storr_object$list(namespace =
-                                      util_get_storr_att_namespace(my_storr_object))
-  atts_r <- setNames(my_storr_object$mget(atts_r_nm, namespace =
-                                            util_get_storr_att_namespace(my_storr_object)),
-                     atts_r_nm
+  atts_r_nm <- my_storr_object$list(
+    namespace =
+      util_get_storr_att_namespace(my_storr_object)
   )
-  r_nm <- atts_r[["names"]] # my_storr_object$list()
+  atts_r <- setNames(
+    my_storr_object$mget(atts_r_nm,
+      namespace =
+        util_get_storr_att_namespace(my_storr_object)
+    ),
+    atts_r_nm
+  )
+  r_nm <- atts_r[["names"]] # Use stored result names, not a namespace scan.
   r <- lapply(r_nm, function(x) NULL)
   attributes(r) <- atts_r
   attr(r, "my_storr_object") <- my_storr_object
@@ -464,7 +506,7 @@ prep_load_report_from_backend <- function(
 #'
 #' @export
 `[.dataquieR_resultset2` <- function(x, row, col, res, drop = FALSE,
-                                     els = row, as_raw = FALSE) {
+  els = row, as_raw = FALSE) {
   util_stop_if_not(inherits(x, "dataquieR_resultset2"))
 
   if (identical(rlang::call_args_names(sys.call()), c("", "")) ||
@@ -473,25 +515,25 @@ prep_load_report_from_backend <- function(
     return(.access_dq_rs2(x, els, as_raw = as_raw))
   }
 
-  cn <- attr(x, "cn")
-  rn <- attr(x, "rn")
+  cn <- util_attr(x, "cn", exact = TRUE)
+  rn <- util_attr(x, "rn", exact = TRUE)
 
   if (missing(col)) {
-    col_matches <- rep(TRUE, length(attr(x, "names")))
+    col_matches <- rep(TRUE, length(util_attr(x, "names", exact = TRUE)))
   } else {
     if (!is.vector(col)) {
-      util_error("column coordinate %s is not a vector/scalar", sQuote(util_deparse1(
-        substitute(col))))
+      util_error("column coordinate %s is not a vector/scalar", sQuote(util_deparse1( # nolint: line_length_linter.
+        substitute(col)
+      )))
     }
     util_stop_if_not(!any(duplicated(col)))
     col_matches <- cn %in% col
   }
 
   if (missing(row)) {
-    row_matches <- rep(TRUE, length(attr(x, "names")))
+    row_matches <- rep(TRUE, length(util_attr(x, "names", exact = TRUE)))
   } else {
     util_stop_if_not(!any(duplicated(row)))
-    # row_matches <- rn %in% c(row, "[ALL]") # TODO: Ensure, that only one match is found (int_ should return [all] but nothing else, com_, eg, vv)
     row_matches <- rn %in% row
   }
 
@@ -514,11 +556,11 @@ prep_load_report_from_backend <- function(
 
   if (!missing(res) && length(res)) {
     util_stop_if_not(!any(duplicated(res)))
-    errors <- lapply(r, attr, "error")
+    errors <- lapply(r, util_attr, "error")
     errors <- vapply(errors, length, FUN.VALUE = integer(1)) > 0
     r[!errors] <- lapply(r[!errors], `[`, res, drop = drop)
-    # if (drop) r[!errors] <- lapply(r[!errors], `[[`, 1)
-    # if (drop && length(r) == 1) { r <- r[[1]] }
+    # Historical early drop handling removed here. Inspect commit 2b235f4511
+    # before restoring pre-combination dropping.
     want_combine <- TRUE
   } else {
     want_combine <- FALSE
@@ -529,21 +571,27 @@ prep_load_report_from_backend <- function(
       all(vapply(rs, is.null, FUN.VALUE = logical(1)))
     }, FUN.VALUE = logical(1))]
     if (length(r) > 0 &&
-        !all(vapply(r, FUN.VALUE = logical(1),
-                    function(x) {
-                      all(vapply(x,
-                                 function(y) {
-                                   length(y) == 0
-                                 }, FUN.VALUE = logical(1)))
-                    }))) {
+      !all(vapply(r,
+        FUN.VALUE = logical(1),
+        function(x) {
+          all(vapply(x,
+            function(y) {
+              length(y) == 0
+            },
+            FUN.VALUE = logical(1)
+          ))
+        }
+      ))) {
       if (!util_is_try_error(try(r <- util_combine_res(r), silent = TRUE))) {
         if (length(r) > 1) {
           for (i in seq_along(r)) {
-            class(r[[i]]) <- unique(c("master_result",
-                                      "dataquieR_result",
-                                      class(r[[i]])))
+            class(r[[i]]) <- unique(c(
+              "master_result",
+              "dataquieR_result",
+              class(r[[i]])
+            ))
           }
-          # class(r) <- unique(c("dataquieR_result", class(r)))
+          # The combined multi-result container keeps its current class.
         } else {
           r <- util_dataquieR_result(r[[1]])
         }
@@ -558,7 +606,6 @@ prep_load_report_from_backend <- function(
   }
 
   return(r)
-
 }
 
 #' Access elements from a `dataquieR_resultset2`
@@ -575,10 +622,8 @@ prep_load_report_from_backend <- function(
 .access_dq_rs2 <- function(x, els, as_raw = FALSE) {
   my_storr_object <- util_get_storr_object_from_report(x)
 
-  # if (is.null(my_storr_object)) {}
-  # if (is.raw(r)) {
-  #   r <- util_decompress(r)
-  # }
+  # Historical raw-result preflight removed here. Inspect commit 7212933dbb
+  # before restoring early decompression in direct resultset access.
 
   if (!as_raw) {
     .classit <- identity
@@ -601,8 +646,11 @@ prep_load_report_from_backend <- function(
     Recall(x, which(els), as_raw = as_raw)
   } else {
     util_error(
-      c("Access to report can use numbers, logical vectors or names as index,",
-        "but not %s"), util_pretty_vector_string(class(els)))
+      c(
+        "Access to report can use numbers, logical vectors or names as index,",
+        "but not %s"
+      ), util_pretty_vector_string(class(els))
+    )
   }
 }
 
@@ -632,8 +680,11 @@ prep_load_report_from_backend <- function(
     }
   } else {
     util_error(
-      c("Access to report can use numbers, logical vectors or names as index,",
-        "but not %s"), util_pretty_vector_string(class(els)))
+      c(
+        "Access to report can use numbers, logical vectors or names as index,",
+        "but not %s"
+      ), util_pretty_vector_string(class(els))
+    )
   }
   return(x)
 }
@@ -648,14 +699,20 @@ prep_load_report_from_backend <- function(
 #' @noRd
 util_fix_dataquieR_result <- function(r, slot, cl) {
   if (!inherits(r, "dataquieR_result")) {
-    r <- util_eval_to_dataquieR_result(init = TRUE,
-                                       quote({util_error(paste("No result available for unkown reasons",
-                                                               "(out of memory? try to reduce the number",
-                                                               "of parallel running jobs using the",
-                                                               "`cores` argument)"))}),
-                                       nm = slot,
-                                       function_name = rlang::call_name(cl),
-                                       my_call = cl)
+    r <- util_eval_to_dataquieR_result(
+      init = TRUE,
+      quote({
+        util_error(paste(
+          "No result available for unkown reasons",
+          "(out of memory? try to reduce the number",
+          "of parallel running jobs using the",
+          "`cores` argument)"
+        ))
+      }),
+      nm = slot,
+      function_name = rlang::call_name(cl),
+      my_call = cl
+    )
   }
   return(r)
 }

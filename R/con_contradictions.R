@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Checks user-defined contradictions in study data
 #'
 #' @description
@@ -33,7 +34,6 @@
 #'
 #' @inheritParams .template_function_indicator
 #'
-#' @param resp_vars [variable list] the name of the measurement variables
 #' @param threshold_value [numeric] from=0 to=100. a numerical value
 #'                                                 ranging from 0-100
 #' @param check_table [data.frame] contradiction rules table.  Table defining
@@ -78,34 +78,43 @@
 #' [Online Documentation](
 #' https://dataquality.qihs.uni-greifswald.de/VIN_con_impl_contradictions.html
 #' )
+# nolint end
 con_contradictions <- function(resp_vars = NULL,
-                               study_data,
-                               label_col,
-                               item_level = "item_level",
-                               threshold_value,
-                               check_table,
-                               summarize_categories = FALSE,
-                               # flip_mode = "flip" # TODO: Fix noflip graph
-                               meta_data = item_level,
-                               meta_data_v2) {
+  study_data,
+  label_col,
+  item_level = "item_level",
+  threshold_value,
+  check_table,
+  summarize_categories = FALSE,
+  # Historical `flip_mode` argument prototype removed here.
+  meta_data = item_level,
+  meta_data_v2) {
   # Preps ----------------------------------------------------------------------
   util_maybe_load_meta_data_v2()
   # labels used instead of variable names?
   if (!(missing(label_col)) && label_col != VAR_NAMES) {
     util_message(
-      sprintf(paste("Labels of variables from %s will be used.",
-                    "In this case columns A and B in check_tables must",
-                    "refer to labels.", collapse = " "),
-      dQuote(label_col))
+      sprintf(
+        paste("Labels of variables from %s will be used.",
+          "In this case columns A and B in check_tables must",
+          "refer to labels.",
+          collapse = " "
+        ),
+        dQuote(label_col)
+      )
     )
   } else {
-    util_message(paste("Variable names will be used. In this case columns A",
-                  "and B in check_tables must refer to variable names."))
+    util_message(paste(
+      "Variable names will be used. In this case columns A",
+      "and B in check_tables must refer to variable names."
+    ))
   }
 
   # map meta to study
-  prep_prepare_dataframes(.replace_hard_limits = TRUE,
-                          .apply_factor_metadata = TRUE)
+  prep_prepare_dataframes(
+    .replace_hard_limits = TRUE,
+    .apply_factor_metadata = TRUE
+  )
 
   util_correct_variable_use("resp_vars",
     allow_more_than_one = TRUE,
@@ -113,24 +122,31 @@ con_contradictions <- function(resp_vars = NULL,
     allow_any_obs_na = TRUE
   )
 
-  util_expect_data_frame(check_table, c("ID", "Function_name", "A", "A_levels",
-                                        "A_value", "B", "B_levels",  "B_value",
-                                        "Label"))
+  util_expect_data_frame(check_table, c(
+    "ID", "Function_name", "A", "A_levels",
+    "A_value", "B", "B_levels", "B_value",
+    "Label"
+  ))
 
   # table of specified contradictions
   if (missing(check_table) || !is.data.frame(check_table)) {
     util_error(
-      c("Missing check_table --",
-        "cannot apply contradictions checks w/o contradiction rules"),
-      applicability_problem = TRUE)
+      c(
+        "Missing check_table --",
+        "cannot apply contradictions checks w/o contradiction rules"
+      ),
+      applicability_problem = TRUE
+    )
   }
 
   if (missing(threshold_value)) {
     threshold_value <- 0
-    if (!.called_in_pipeline)
+    if (!.called_in_pipeline) {
       util_message("No %s has been set, will use default %d",
-                 dQuote("threshold_value"), threshold_value,
-                 applicability_problem = TRUE)
+        dQuote("threshold_value"), threshold_value,
+        applicability_problem = TRUE
+      )
+    }
   }
 
   ct <- check_table
@@ -162,13 +178,16 @@ con_contradictions <- function(resp_vars = NULL,
     )
   }
 
-  if (summarize_categories) { # TODO: Optimize graphics as in the redcap version of this function.
+  if (summarize_categories) {
     # if we want to summarize contradictions per category
     if (!("tag" %in% colnames(ct))) {
-      util_error(c(
-        "Cannot summerize categories of contradictions,",
-        "because these are not defined in the check_table as column 'tag'."),
-        applicability_problem = TRUE)
+      util_error(
+        c(
+          "Cannot summerize categories of contradictions,",
+          "because these are not defined in the check_table as column 'tag'."
+        ),
+        applicability_problem = TRUE
+      )
     }
     splitted_tags <- lapply(strsplit(ct$tag, SPLIT_CHAR, fixed = TRUE), trimws)
     tags <- sort(unique(unlist(splitted_tags)))
@@ -183,28 +202,32 @@ con_contradictions <- function(resp_vars = NULL,
         contains_tag <- function(x, tg) {
           any(x == tg, na.rm = TRUE)
         }
-        rows_matching_tag <- vapply(splitted_tags, contains_tag, tg = atag,
-                                    logical(1))
+        rows_matching_tag <- vapply(splitted_tags, contains_tag,
+          tg = atag,
+          logical(1)
+        )
         new_ct <- ct[rows_matching_tag, -which(colnames(ct) == "tag"),
-                     drop = FALSE]
+          drop = FALSE
+        ]
       }
       con_contradictions(
         resp_vars = resp_vars, study_data = study_data,
         meta_data = meta_data, label_col = label_col,
         threshold_value = threshold_value, check_table = new_ct,
         summarize_categories = FALSE
-        # , flip_mode = flip_mode TODO
       )
     })
     rx <- lapply(tags_ext, function(atag) {
       # and summarize the contradictions per category/tag
       if (is.na(atag)) {
         sum(rowSums(result[["all_checks"]]$FlaggedStudyData[, -1, drop = FALSE],
-                    na.rm = TRUE) > 0) /
+            na.rm = TRUE
+          ) > 0) /
           nrow(result[["all_checks"]]$FlaggedStudyData) * 100
       } else {
         sum(rowSums(result[[atag]]$FlaggedStudyData[, -1, drop = FALSE],
-                    na.rm = TRUE) > 0) /
+            na.rm = TRUE
+          ) > 0) /
           nrow(result[[atag]]$FlaggedStudyData) * 100
       }
     })
@@ -214,51 +237,50 @@ con_contradictions <- function(resp_vars = NULL,
       GRADING = ordered(ifelse(unlist(rx) > threshold_value, 1, 0))
     )
     result$SummaryData <- rx
-    # Plot for summarized contradiction checks -----------------------------------------------------
-    p <- util_create_lean_ggplot(ggplot(rx, aes(x = seq_len(nrow(rx)), y = percent,
-                        fill = as.ordered(GRADING))) +
-      geom_bar(stat = "identity") +
-      scale_fill_manual(values = cols, name = " ", guide = "none") +
-      theme_minimal() +
-      scale_y_continuous(name = "(%)",
-                         limits = (c(0, max(1.2 * max(rx$percent),
-                                            threshold_value))),
-                         expand = expansion(mult = c(0,0.05))) +
-      scale_x_continuous(breaks = seq_len(nrow(rx)),
-                         sec.axis = sec_axis(~., # TDOO: checl ~
-                                             breaks = seq_len(nrow(rx)),
-                                             labels = rx$category),
-                         trans = "reverse") +
-      xlab("Category of applied contradiction checks") +
-      geom_hline(yintercept = threshold_value, color = "red", linetype = 2) +
-      geom_text(label = paste0(" ", round(rx$percent, 2), "%"),
-                hjust = 0, vjust = 0.5) +
-      coord_flip() + # TODO
-      theme(axis.text.y.right = element_text(size = 14),
-            axis.text.y.left = element_blank()),
+    # Plot for summarized contradiction checks
+    # -----------------------------------------------------
+    p <- util_create_lean_ggplot(
+      ggplot(rx, aes(
+        x = seq_len(nrow(rx)), y = percent,
+        fill = as.ordered(GRADING)
+      )) +
+        geom_bar(stat = "identity") +
+        scale_fill_manual(values = cols, name = " ", guide = "none") +
+        theme_minimal() +
+        scale_y_continuous(
+          name = "(%)",
+          limits = (c(0, max(
+            1.2 * max(rx$percent),
+            threshold_value
+          ))),
+          expand = expansion(mult = c(0, 0.05))
+        ) +
+        scale_x_continuous(
+          breaks = seq_len(nrow(rx)),
+          sec.axis = sec_axis(~., # TDOO: checl ~
+            breaks = seq_len(nrow(rx)),
+            labels = rx$category
+          ),
+          trans = "reverse"
+        ) +
+        xlab("Category of applied contradiction checks") +
+        geom_hline(yintercept = threshold_value, color = "red", linetype = 2) +
+        geom_text(
+          label = paste0(" ", round(rx$percent, 2), "%"),
+          hjust = 0, vjust = 0.5
+        ) +
+        coord_flip() +
+        theme(
+          axis.text.y.right = element_text(size = 14),
+          axis.text.y.left = element_blank()
+        ),
       rx = rx,
       cols = cols,
       threshold_value = threshold_value
-      )
+    )
 
-    # p <- p + util_coord_flip(p = p) # TODO: estimate w and h, if p is not using discrete axes util_lazy_add_coord(p, fli)
-
-    # https://stackoverflow.com/a/51795017
-#    bp <- ggplot_build(p)
-#    w <- 2 * length(bp$layout$panel_params[[1]]$x$get_labels())
-#    if (w == 0) {
- #     w <- 10
-#    }
-#    w <- w + 2 +
-#      max(nchar(bp$layout$panel_params[[1]]$y$get_labels()),
-#          na.rm = TRUE)
-#    h <- 2 * length(bp$layout$panel_params[[1]]$y$get_labels())
- #   if (h == 0) {
-#      h <- 10
-#    }
- #   h <- h + 15
-
-#    p <- util_set_size(p, width_em = w, height_em = h)
+    # Historical category-plot sizing prototype removed here. Inspect with
+    # `git show 214dd76a7d -- R/con_contradictions.R`.
 
     result$SummaryPlot <- p
 
@@ -270,66 +292,77 @@ con_contradictions <- function(resp_vars = NULL,
     # check and prep metadata
     if (!(CONTRADICTIONS %in% colnames(meta_data))) {
       util_error(
-        c("Missing column %s in metadata cannot apply",
-          "contradictions checks w/o contradiction rules"),
+        c(
+          "Missing column %s in metadata cannot apply",
+          "contradictions checks w/o contradiction rules"
+        ),
         dQuote(CONTRADICTIONS),
         applicability_problem = TRUE
       )
     }
 
-    meta_data[["CONTRADICTIONS"]] <-
-      as.character(meta_data[["CONTRADICTIONS"]])
+    meta_data[[CONTRADICTIONS]] <-
+      as.character(meta_data[[CONTRADICTIONS]])
 
     # no variables defined?
     if (length(resp_vars) == 0) {
       if (all(is.na(meta_data[[CONTRADICTIONS]]))) {
         util_error(paste0("No Variables with defined CONTRADICTIONS."),
-                   applicability_problem = TRUE,
-                   intrinsic_applicability_problem = TRUE)
-      } else {
-        util_message(paste0(
-          "All variables with CONTRADICTIONS in the metadata are used."),
           applicability_problem = TRUE,
-          intrinsic_applicability_problem = TRUE)
-        resp_vars <- meta_data[[label_col]][!(is.na(meta_data[[CONTRADICTIONS]]))]
+          intrinsic_applicability_problem = TRUE
+        )
+      } else {
+        util_message(
+          paste0(
+            "All variables with CONTRADICTIONS in the metadata are used."
+          ),
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
+        resp_vars <- meta_data[[label_col]][!(is.na(meta_data[[CONTRADICTIONS]]))] # nolint: line_length_linter.
         resp_vars <- intersect(resp_vars, colnames(ds1))
       }
     } else {
       # contradictions defined at all?
       if (all(is.na(meta_data[[CONTRADICTIONS]][meta_data[[label_col]] %in%
-                                                resp_vars]))) {
+                resp_vars]))) {
         util_error(paste0("No Variables with defined CONTRADICTIONS."),
-                   applicability_problem = TRUE,
-                   intrinsic_applicability_problem = TRUE)
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       }
       # no contradictions for some variables?
-      rvs_with_contr <- meta_data[[label_col]][!(is.na(meta_data[[CONTRADICTIONS]])) &
-                                       meta_data[[label_col]] %in% resp_vars]
+      rvs_with_contr <- meta_data[[label_col]][!(is.na(meta_data[[CONTRADICTIONS]])) & # nolint: line_length_linter.
+          meta_data[[label_col]] %in% resp_vars]
       if (length(rvs_with_contr) < length(resp_vars)) {
-        util_message(paste0("The variables ", resp_vars[!(resp_vars %in% rvs_with_contr)],
-                            " have no defined CONTRADICTIONS.",
-                            collapse = ", "),
-                     applicability_problem = TRUE)
+        util_message(
+          paste0("The variables ", resp_vars[!(resp_vars %in% rvs_with_contr)],
+            " have no defined CONTRADICTIONS.",
+            collapse = ", "
+          ),
+          applicability_problem = TRUE
+        )
       }
       resp_vars <- rvs_with_contr
     }
 
     # select contradiction checks
     # get checks from metadata
-    cl <- meta_data[[CONTRADICTIONS]][!(is.na(meta_data$CONTRADICTIONS))]
+    cl <- meta_data[[CONTRADICTIONS]][!(is.na(meta_data[[CONTRADICTIONS]]))]
 
     # is list ?
     cl <- unlist(cl)
 
     # select unique checks
     cl <- unique(as.numeric(unlist(strsplit(as.character(cl), SPLIT_CHAR,
-                                            fixed = TRUE))))
+            fixed = TRUE
+          ))))
 
     cl <- intersect(cl, ct$ID)
 
     cl <- cl[order(cl)]
 
-    summary_df1 <- data.frame(Obs = 1:nrow(ds1))
+    summary_df1 <- data.frame(Obs = seq_len(nrow(ds1)))
 
     summary_df2 <- data.frame(
       Check_type = rep(NA, length(cl)),
@@ -364,13 +397,13 @@ con_contradictions <- function(resp_vars = NULL,
       # apply check
       summary_df1[i + 1] <-
         contradiction_functions[[check]](study_data = ds1,
-        A = paste(ct$A[ct$ID == cl[i]]),
-        A_levels = a_lev,
-        A_value = ct$A_value[ct$ID == cl[i]],
-        B = paste(ct$B[ct$ID == cl[i]]),
-        B_levels = b_lev,
-        B_value = ct$B_value[ct$ID == cl[i]]
-      )
+          A = paste(ct$A[ct$ID == cl[i]]),
+          A_levels = a_lev,
+          A_value = ct$A_value[ct$ID == cl[i]],
+          B = paste(ct$B[ct$ID == cl[i]]),
+          B_levels = b_lev,
+          B_value = ct$B_value[ct$ID == cl[i]]
+        )
 
       # summarize checks
       summary_df2[i, 1] <- cl[i]
@@ -381,10 +414,10 @@ con_contradictions <- function(resp_vars = NULL,
       )
       summary_df2[i, 4] <- paste(a_lev, collapse = SPLIT_CHAR)
       summary_df2[i, 5] <- paste(b_lev, collapse = SPLIT_CHAR)
-      summary_df2[i, 6] <- sum(summary_df1[, i + 1], na.rm = TRUE)
-      summary_df2[i, 7] <- sum(summary_df1[, i + 1], na.rm = TRUE) /
+      summary_df2[i, 6] <- sum(summary_df1[, i + 1, drop = TRUE], na.rm = TRUE)
+      summary_df2[i, 7] <- sum(summary_df1[, i + 1, drop = TRUE], na.rm = TRUE) / # nolint: line_length_linter.
         dim(ds1)[1] * 100
-      summary_df2[i, 8] <- ifelse(summary_df2[i, 7] > threshold_value, 1, 0)
+      summary_df2[i, 8] <- ifelse(summary_df2[i, 7, drop = TRUE] > threshold_value, 1, 0) # nolint: line_length_linter.
       summary_df2[i, 9] <- ct$Label[ct$ID == cl[i]]
     }
 
@@ -396,80 +429,81 @@ con_contradictions <- function(resp_vars = NULL,
       "GRADING", "Label"
     )
 
-    summary_df2$GRADING <- ordered(summary_df2$GRADING) # FIXME: Update GRADING -> Standard Name
+    summary_df2$GRADING <- ordered(summary_df2$GRADING)
 
-    x <- util_as_numeric(reorder(summary_df2[, 1], -summary_df2[, 1]))
-    lbs <- as.character(reorder(summary_df2[, 9], -summary_df2[, 1]))
+    x <- util_as_numeric(reorder(summary_df2[, 1, drop = TRUE], -summary_df2[, 1, drop = TRUE])) # nolint: line_length_linter.
+    lbs <- as.character(reorder(summary_df2[, 9, drop = TRUE], -summary_df2[, 1, drop = TRUE])) # nolint: line_length_linter.
     # plot summary_df2
-    p <- util_create_lean_ggplot(ggplot(summary_df2, aes(x = x, y = .data[["Contradictions (%)"]],
-                                 fill =
-                                    as.ordered(GRADING))) +
-      geom_bar(stat = "identity") +
-      geom_text(
-        label = paste0(" ", round(summary_df2[, 7], digits = 2), "%"),
-        hjust = 0, vjust = 0.5
-      ) +
-      scale_fill_manual(values = cols, name = " ", guide = "none") +
-      theme_minimal() +
-      xlab("IDs of applied checks") +
-      scale_y_continuous(name = "(%)",
-                         limits = (c(0, max(1.2 * max(summary_df2[, 7]),
-                                            threshold_value)))) +
-      scale_x_continuous(breaks = x, sec.axis =
-                           sec_axis(~., breaks = x, labels = lbs)) + # TODO: checl ~ ??
-      geom_hline(yintercept = threshold_value, color = "red", linetype = 2) +
-      coord_flip() + # TODO
-      theme(text = element_text(size = 20)),
+    p <- util_create_lean_ggplot(
+      ggplot(summary_df2, aes(
+        x = x, y = .data[["Contradictions (%)"]],
+        fill =
+          as.ordered(GRADING)
+      )) +
+        geom_bar(stat = "identity") +
+        geom_text(
+          label = paste0(" ", round(summary_df2[, 7, drop = TRUE], digits = 2), "%"), # nolint: line_length_linter.
+          hjust = 0, vjust = 0.5
+        ) +
+        scale_fill_manual(values = cols, name = " ", guide = "none") +
+        theme_minimal() +
+        xlab("IDs of applied checks") +
+        scale_y_continuous(
+          name = "(%)",
+          limits = (c(0, max(
+            1.2 * max(summary_df2[, 7, drop = TRUE]),
+            threshold_value
+          )))
+        ) +
+        scale_x_continuous(
+          breaks = x, sec.axis =
+            sec_axis(~., breaks = x, labels = lbs)
+        ) +
+        geom_hline(yintercept = threshold_value, color = "red", linetype = 2) +
+        coord_flip() +
+        theme(text = element_text(size = 20)),
       summary_df2 = summary_df2,
       threshold_value = threshold_value,
       x = x,
       lbs = lbs,
-      cols = cols)
+      cols = cols
+    )
 
-    # p <- p + util_coord_flip(p = p) # TODO: estimate w and h, if p is not using discrete axes util_lazy_add_coord(p, fli)
+    # Historical contradiction-plot flip prototype removed here.
 
     # create SummaryTable object
     st1 <- summary_df2
     st1$`Variables A and B` <- gsub("A is: ", "", st1$`Variables A and B`)
     st1$`Variables A and B` <- gsub("B is: ", "", st1$`Variables A and B`)
-    st1$Variables <- unlist(lapply(st1$`Variables A and B`,
-                                   function(x) unlist(strsplit(x, ";",
-                                                               fixed =
-                                                                 TRUE))[1]))
-    st1$`Reference variable` <- unlist(lapply(st1$`Variables A and B`,
-                                              function(x) unlist(
-                                                strsplit(x, ";", fixed =
-                                                           TRUE))[2]))
+    st1$Variables <- unlist(lapply(
+      st1$`Variables A and B`,
+      function(x) {
+        unlist(strsplit(x, ";",
+            fixed =
+              TRUE
+          ))[1]
+      }
+    ))
+    st1$`Reference variable` <- unlist(lapply(
+      st1$`Variables A and B`,
+      function(x) {
+        unlist(
+          strsplit(x, ";",
+            fixed =
+              TRUE
+          )
+        )[2]
+      }
+    ))
     st1$`Variables A and B` <- NULL
-    st1 <- st1[, c(9, 10, 1:8)]
-    #st1 <- dplyr::rename(st1, c("GRADING" = "Grading"))
-
-#    suppressWarnings({
-      # suppress wrong warnings: https://github.com/tidyverse/ggplot2/pull/4439/commits
-      # find out size of the plot https://stackoverflow.com/a/51795017
-#      bp <- ggplot_build(p)
-#      w <- 2 * length(bp$layout$panel_params[[1]]$x$get_labels())
-#      if (w == 0) {
-#        w <- 10
- #     }
- #     w <- w + 2 +
- #       max(nchar(bp$layout$panel_params[[1]]$y$get_labels()),
- #           na.rm = TRUE)
- #     w <- w +
- #       max(nchar(bp$layout$panel_params[[1]]$y.sec$get_labels()),
- #           na.rm = TRUE)
- #     h <- 2 * length(bp$layout$panel_params[[1]]$y$get_labels())
-#      if (h == 0) {
-#        h <- 10
-#      }
- #     h <- h + 15
-#      p <- util_set_size(p, width_em = w, height_em = h)
-#    })
+    st1 <- st1[, c(9, 10, 1:8), drop = FALSE]
+    # Historical SummaryTable rename and plot-size prototypes removed here.
+    # Inspect with `git show 214dd76a7d -- R/con_contradictions.R`.
 
     # Output
     return(list(
       FlaggedStudyData = summary_df1,
-      SummaryTable = st1, # TODO: VariableGroupTable
+      SummaryTable = st1,
       SummaryData = summary_df2,
       SummaryPlot = p
     ))

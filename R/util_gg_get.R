@@ -1,3 +1,6 @@
+#' Internal helper: gg get
+#'
+#' @noRd
 util_gg_get <- function(x, name, default = NULL) {
   if (is.null(x) || is.null(name)) {
     return(default)
@@ -25,13 +28,15 @@ util_gg_get <- function(x, name, default = NULL) {
       return(default)
     }
 
-    # --- named lists -----------------------------------------------------------
+    # --- named lists
+    # -----------------------------------------------------------
   } else if (is.list(x) && !is.null(names(x)) && name %in% names(x)) {
     out <- x[[name]]
 
-    # --- attributes fallback ---------------------------------------------------
+    # --- attributes fallback
+    # ---------------------------------------------------
   } else {
-    att <- attr(x, name, exact = TRUE)
+    att <- util_attr(x, name, exact = TRUE)
     if (!is.null(att)) {
       out <- att
     } else {

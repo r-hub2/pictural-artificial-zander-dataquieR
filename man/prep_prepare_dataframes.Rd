@@ -134,11 +134,15 @@ try(acc_test2(study_data = 12, meta_data = meta_data))
 print(head(acc_test1(study_data = study_data, meta_data = meta_data)))
 print(head(acc_test2(study_data = study_data, meta_data = meta_data)))
 print(head(acc_test3(study_data = study_data, meta_data = meta_data)))
-print(head(acc_test3(study_data = study_data, meta_data = meta_data,
-  label_col = LABEL)))
+print(head(acc_test3(
+  study_data = study_data, meta_data = meta_data,
+  label_col = LABEL
+)))
 print(head(acc_test4(study_data = study_data, meta_data = meta_data)))
-print(head(acc_test4(study_data = study_data, meta_data = meta_data,
-  label_col = LABEL)))
+print(head(acc_test4(
+  study_data = study_data, meta_data = meta_data,
+  label_col = LABEL
+)))
 try(acc_test2(study_data = NULL, meta_data = meta_data))
 }
 

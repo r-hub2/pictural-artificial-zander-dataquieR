@@ -3,76 +3,108 @@ test_that("util_plot_categorical_vars works", {
   skip_if_translated()
 
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
-  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData")
-  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE)
+  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData") # nolint: line_length_linter.
+  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE) # nolint: line_length_linter.
   require_english_locale_and_berlin_tz()
 
   expect_message2(
-    t1 <- util_plot_categorical_vars(resp_vars = "v00103",
-                                 group_vars = "v00012",
-                                 time_vars = "v00013",
-                                 study_data = study_data, meta_data = meta_data,
-                                 n_cat_max = 10,
-                                 n_group_max = 5,
-                                 n_data_min = 50),
+    t1 <- util_plot_categorical_vars(
+      resp_vars = "v00103",
+      group_vars = "v00012",
+      time_vars = "v00013",
+      study_data = study_data, meta_data = meta_data,
+      n_cat_max = 10,
+      n_group_max = 5,
+      n_data_min = 50
+    ),
     "Missing some or all entries"
   )
 
   expect_message2(
-    t2 <- util_plot_categorical_vars(resp_vars = "v00103",
-                               time_vars = "v00013",
-                               study_data = study_data, meta_data = meta_data,
-                               n_cat_max = 10,
-                               n_data_min = 50),
+    t2 <- util_plot_categorical_vars(
+      resp_vars = "v00103",
+      time_vars = "v00013",
+      study_data = study_data, meta_data = meta_data,
+      n_cat_max = 10,
+      n_data_min = 50
+    ),
     "Missing some or all entries"
   )
 
   expect_message2(
-    t3 <- util_plot_categorical_vars(resp_vars = "v00103",
-                                 group_vars = "v00012",
-                                 study_data = study_data, meta_data = meta_data,
-                                 n_cat_max = 10,
-                                 n_group_max = 5),
+    t3 <- util_plot_categorical_vars(
+      resp_vars = "v00103",
+      group_vars = "v00012",
+      study_data = study_data, meta_data = meta_data,
+      n_cat_max = 10,
+      n_group_max = 5
+    ),
     "Missing some or all entries"
   )
 
   expect_message2(
-    t4 <- util_plot_categorical_vars(resp_vars = "v00103",
-                                 study_data = study_data, meta_data = meta_data,
-                                 n_cat_max = 10),
+    t4 <- util_plot_categorical_vars(
+      resp_vars = "v00103",
+      study_data = study_data, meta_data = meta_data,
+      n_cat_max = 10
+    ),
     "Missing some or all entries"
   )
 })
 
-test_that("util_plot_categorical_vars works for nominal and ordinal variables", {
+test_that("util_plot_categorical_vars works for nominal and ordinal variables", { # nolint: line_length_linter.
   skip_on_cran() # slow
   skip_if_translated()
 
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
-  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData")
-  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE)
+  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData") # nolint: line_length_linter.
+  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE) # nolint: line_length_linter.
   require_english_locale_and_berlin_tz()
 
   meta_data[[SCALE_LEVEL]][meta_data[["VAR_NAMES"]] == "v00008"] <-
     SCALE_LEVELS$NOMINAL
   expect_message2(
-    t5 <- util_plot_categorical_vars(resp_vars = "v00008",
-                                     group_vars = "v00011",
-                                     study_data = study_data, meta_data = meta_data,
-                                     n_cat_max = 10,
-                                     n_group_max = 5),
+    t5 <- util_plot_categorical_vars(
+      resp_vars = "v00008",
+      group_vars = "v00011",
+      study_data = study_data, meta_data = meta_data,
+      n_cat_max = 10,
+      n_group_max = 5
+    ),
     "Missing some or all entries"
   )
 
   meta_data[[SCALE_LEVEL]][meta_data[["VAR_NAMES"]] == "v00008"] <-
     SCALE_LEVELS$ORDINAL
   expect_message2(
-    t6 <- util_plot_categorical_vars(resp_vars = "v00008",
-                                     group_vars = "v00011",
-                                     study_data = study_data, meta_data = meta_data,
-                                     n_cat_max = 10,
-                                     n_group_max = 5),
+    t6 <- util_plot_categorical_vars(
+      resp_vars = "v00008",
+      group_vars = "v00011",
+      study_data = study_data, meta_data = meta_data,
+      n_cat_max = 10,
+      n_group_max = 5
+    ),
     "Missing some or all entries"
   )
+})
 
+test_that("categorical bar plots receive plotly label positions", {
+  skip_on_cran()
+  skip_if_not_installed("plotly")
+
+  summary_plot <- util_bar_plot(
+    data.frame(category = c("a", "b"), frequency = c(1, 2)),
+    cat_var = "category",
+    num_var = "frequency",
+    show_numbers = TRUE
+  )
+
+  plotly_plot <- util_as_plotly_util_plot_categorical_vars(
+    list(SummaryPlot = summary_plot)
+  )
+
+  expect_s3_class(plotly_plot, "plotly")
+  expect_true(any(vapply(plotly_plot$x$data, function(trace) {
+    identical(trace$textposition, "bottom")
+  }, FUN.VALUE = logical(1))))
 })

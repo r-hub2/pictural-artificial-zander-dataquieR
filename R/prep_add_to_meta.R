@@ -20,24 +20,17 @@
 #'                                 `=`: `1 = male | 2 = female`
 #' @param ... Further defined variable attributes, see
 #'            [dataquieR::prep_create_meta]
-#' @param item_level [data.frame] the metadata to extend
-#' @param meta_data [data.frame] old name for `item_level`
-#' @param meta_data_v2 [character] path to workbook like metadata file, see
-#'                                 [`prep_load_workbook_like_file`] for details.
-#'                                 **ALL LOADED DATAFRAMES WILL BE PURGED**,
-#'                                 using [`prep_purge_data_frame_cache`],
-#'                                 if you specify `meta_data_v2`.
+#' @inheritParams .template_function_indicator
 #'
 #' @return a data frame with amended metadata.
 #'
 #' @export
 #'
 prep_add_to_meta <- function(VAR_NAMES, DATA_TYPE, LABEL, VALUE_LABELS,
-                             item_level = "item_level",
-                             meta_data = item_level,
-                             meta_data_v2,
-                             ...) {
-
+  item_level = "item_level",
+  meta_data = item_level,
+  meta_data_v2,
+  ...) {
   util_maybe_load_meta_data_v2()
 
   util_expect_data_frame(meta_data)
@@ -51,10 +44,10 @@ prep_add_to_meta <- function(VAR_NAMES, DATA_TYPE, LABEL, VALUE_LABELS,
     ...
   )
 
-  mini_md <- mini_md[, names(mini_md) %in% names(meta_data)]
+  mini_md <- mini_md[, names(mini_md) %in% names(meta_data), drop = FALSE]
   new_names <- c(names(mini_md), names(meta_data)[!(names(meta_data) %in%
-                                                      names(mini_md))])
-  # new_names <- unique(c(names(mini_md), names(meta_data)))
+          names(mini_md))])
+  # Historical unique-name merge variant removed here.
 
   mini_md[, (dim(mini_md)[2] + 1):dim(meta_data)[2]] <- NA
 
@@ -67,17 +60,24 @@ prep_add_to_meta <- function(VAR_NAMES, DATA_TYPE, LABEL, VALUE_LABELS,
     partvar_vector[!util_empty(partvar_vector)]
 
   if (PART_VAR %in% names(mini_md) &&
-      any(is.na(util_find_var_by_meta(resp_vars = as.character(
-        partvar_vector))))) {
+    any(is.na(util_find_var_by_meta(resp_vars = as.character(
+      partvar_vector
+    ))))) {
     miss <-
       partvar_vector[
         is.na(util_find_var_by_meta(resp_vars = as.character(
-          partvar_vector)))]
-    util_error(c("In the existing %s, in the column %s, at least one of the",
-                  "referred variables does not exist: %s."),
-               sQuote("meta_data"),
-               dQuote(PART_VAR),
-               util_pretty_vector_string(miss))
+          partvar_vector
+        )))
+      ]
+    util_error(
+      c(
+        "In the existing %s, in the column %s, at least one of the",
+        "referred variables does not exist: %s."
+      ),
+      sQuote("meta_data"),
+      dQuote(PART_VAR),
+      util_pretty_vector_string(miss)
+    )
   }
 
   meta_data <- dplyr::bind_rows(meta_data, mini_md)

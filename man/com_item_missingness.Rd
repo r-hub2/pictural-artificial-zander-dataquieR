@@ -24,7 +24,8 @@ com_item_missingness(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} the name of the measurement variables}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -97,7 +98,13 @@ if you specify \code{meta_data_v2}.}
 \value{
 a list with:
 \itemize{
-\item \code{SummaryTable}: data frame about item missingness per response variable
+\item \code{SummaryTable}: data frame about item missingness per response variable,
+including the count (\code{NUM_int_vfe_missunc}) and
+percentage (\code{PCT_int_vfe_missunc}) of system-missing
+values as uncertain missingness status, and the count
+(\code{NUM_com_qum_spec}) and percentage (\code{PCT_com_qum_spec})
+of missing and jump codes among expected observations
+that are not system missing
 \item \code{SummaryData}: data frame about item missingness per response variable
 formatted for user
 \item \code{SummaryPlot}: ggplot2 heatmap plot, if show_causes was TRUE

@@ -13,10 +13,9 @@
 #' @family robustness_functions
 #' @concept condition
 #' @noRd
-util_stop_if_not <- function(..., label, label_only) { # FIXME: Strange ... problems in some cases
+util_stop_if_not <- function(..., label, label_only) {
   cc <- rlang::current_call()
-  # rlang::call_name(cl)
-  # setdiff(rlang::call_args_names(rlang::caller_call(n = 0)), setdiff(names(formals(rlang::call_name(rlang::current_call()))), "..."))
+  # Compare call argument names to formals locally when debugging dots.
   my_own <-
     setdiff(names(formals(rlang::call_name(cc))), "...")
   zappings <- rep(list(rlang::zap()), length(my_own))
@@ -34,13 +33,15 @@ util_stop_if_not <- function(..., label, label_only) { # FIXME: Strange ... prob
   util_expect_scalar(label, check_type = is.character)
   util_expect_scalar(label_only, check_type = is.logical)
   if (inherits(ok, "try-error")) {
-    cm <- conditionMessage(attr(ok, "condition"))
+    cm <- conditionMessage(util_attr(ok, "condition", exact = TRUE))
     if (label_only && nzchar(label)) cm <- label
-    if (!label_only && nzchar(label) && nzchar(cm))
+    if (!label_only && nzchar(label) && nzchar(cm)) {
       cm <- paste0(label, ": ", cm)
+    }
     util_error(
       paste("Internal error:", gsub("%", "%%", fixed = TRUE, cm)),
-      applicability_problem = FALSE)
+      applicability_problem = FALSE
+    )
   }
   invisible(ok)
 }

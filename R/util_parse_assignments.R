@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Utility function to parse assignments
 #'
 #' This function parses labels & level assignments in the format
@@ -20,28 +21,34 @@
 #' @examples
 #' \dontrun{
 #' md <- prep_get_data_frame("meta_data")
-#' vl <- md$VALUE_LABELS
+#' vl <- md[[VALUE_LABELS]]
 #' vl[[50]] <- "low<medium < high"
-#' a <- util_parse_assignments(vl, split_char = c(SPLIT_CHAR, "<"),
-#'   multi_variate_text = TRUE)
-#' b <- util_parse_assignments(vl, split_char = c(SPLIT_CHAR, "<"),
-#'   split_on_any_split_char = TRUE, multi_variate_text = TRUE)
-#' is_ordered <- vapply(a, attr, "split_char", FUN.VALUE = character(1)) == "<"
-#' md$VALUE_LABELS[[50]] <- "low<medium < high"
-#' md$VALUE_LABELS[[51]] <- "1 = low< 2=medium < 3=high"
-#' md$VALUE_LABELS[[49]] <- "2 = medium< 1=low < 3=high" # counter intuitive
-#' with_sl <- prep_scalelevel_from_data_and_metadata(study_data = "study_data",
-#'   meta_data = md)
+#' a <- util_parse_assignments(vl,
+#'   split_char = c(SPLIT_CHAR, "<"),
+#'   multi_variate_text = TRUE
+#' )
+#' b <- util_parse_assignments(vl,
+#'   split_char = c(SPLIT_CHAR, "<"),
+#'   split_on_any_split_char = TRUE, multi_variate_text = TRUE
+#' )
+#' is_ordered <- vapply(a, util_attr, "split_char", FUN.VALUE = character(1)) == "<"
+#' md[[VALUE_LABELS]][[50]] <- "low<medium < high"
+#' md[[VALUE_LABELS]][[51]] <- "1 = low< 2=medium < 3=high"
+#' md[[VALUE_LABELS]][[49]] <- "2 = medium< 1=low < 3=high" # counter intuitive
+#' with_sl <- prep_scalelevel_from_data_and_metadata(
+#'   study_data = "study_data",
+#'   meta_data = md
+#' )
 #' View(with_sl[, union(SCALE_LEVEL, colnames(with_sl))])
 #' }
 #'
 #' @family parser_functions
 #' @concept metadata_management
 #' @noRd
+# nolint end
 util_parse_assignments <- function(text, split_char = SPLIT_CHAR,
-                                   multi_variate_text = FALSE, # Dont change default here, many calls of this function rely on a non-list-result
-                                   split_on_any_split_char = FALSE
-                                   ) {
+  multi_variate_text = FALSE, # Dont change default here, many calls of this function rely on a non-list-result # nolint: line_length_linter.
+  split_on_any_split_char = FALSE) {
   if (!multi_variate_text) {
     if (all(util_empty(text))) {
       text <- NA_character_
@@ -55,25 +62,33 @@ util_parse_assignments <- function(text, split_char = SPLIT_CHAR,
   use_regexp <- FALSE
   if (length(split_char) > 1) {
     if (!split_on_any_split_char) {
-      r <- lapply(X = setNames(nm = split_char),
-                  FUN = util_parse_assignments,
-                  text = text,
-                  multi_variate_text = TRUE)
+      r <- lapply(
+        X = setNames(nm = split_char),
+        FUN = util_parse_assignments,
+        text = text,
+        multi_variate_text = TRUE
+      )
       rl <- lapply(r, vapply, length, FUN.VALUE = integer(1))
       rl <- vapply(rl, identity, FUN.VALUE = integer(length(text)))
       if (is.null(dim(rl))) {
         rl <- matrix(rl,
-                     ncol = length(split_char),
-                     dimnames = list(as.character(seq_len(length(text))),
-                                     names(rl)))
+          ncol = length(split_char),
+          dimnames = list(
+            as.character(seq_along(text)),
+            names(rl)
+          )
+        )
       }
       rlwm <- apply(rl, 1, which.max, simplify = FALSE)
       atts <- vapply(rlwm, names,
-                     FUN.VALUE = character(1))
-      res <- mapply(SIMPLIFY = FALSE,
-                    wm = rlwm, i = seq_along(rlwm), function(wm, i) {
-        util_attach_attr(r[[wm]][[i]], split_char = atts[[i]])
-      })
+        FUN.VALUE = character(1)
+      )
+      res <- mapply(
+        SIMPLIFY = FALSE,
+        wm = rlwm, i = seq_along(rlwm), function(wm, i) {
+          util_attach_attr(r[[wm]][[i]], split_char = atts[[i]])
+        }
+      )
       return(res)
     } else {
       use_regexp <- TRUE
@@ -82,60 +97,82 @@ util_parse_assignments <- function(text, split_char = SPLIT_CHAR,
   res <- lapply(text, function(x) {
     if (is.list(x)) {
       x <- paste(unlist(x, recursive = TRUE, use.names = FALSE),
-                 collapse = "\n")
+        collapse = "\n"
+      )
     }
     if (use_regexp) {
-      split <- sprintf("[%s]", paste0(gsub("[", "\\[", fixed = TRUE,
-                                           gsub("]", "\\]", fixed = TRUE,
-                                                split_char)), collapse = ""))
+      split <- sprintf("[%s]", paste0(gsub("[", "\\[",
+            fixed = TRUE,
+            gsub("]", "\\]",
+              fixed = TRUE,
+              split_char
+            )
+          ), collapse = ""))
       if (all(util_empty(gsub(split, "", perl = TRUE, x)))) {
         return(setNames(list(), nm = character(0)))
       }
-      assignments <- base::strsplit(x = as.character(x),
-                                    split = split, perl = TRUE)[[1]]
+      assignments <- base::strsplit(
+        x = as.character(x),
+        split = split, perl = TRUE
+      )[[1]]
     } else {
       if (all(util_empty(gsub(split_char, "", fixed = TRUE, x)))) {
         return(setNames(list(), nm = character(0)))
       }
-      assignments <- base::strsplit(x = as.character(x),
-                                    split = split_char, fixed = TRUE)[[1]]
+      assignments <- base::strsplit(
+        x = as.character(x),
+        split = split_char, fixed = TRUE
+      )[[1]]
     }
 
-    keys <- trimws(gsub(pattern = "(?ms)\\s*=\\s*.*$", replacement = "",
-                        x = assignments, perl = TRUE))
-    values <- trimws(gsub(pattern = "(?ms)^.*?\\s*=\\s*", replacement = "\\1",
-                          x = assignments, perl = TRUE))
+    keys <- trimws(gsub(
+      pattern = "(?ms)\\s*=\\s*.*$", replacement = "",
+      x = assignments, perl = TRUE
+    ))
+    values <- trimws(gsub(
+      pattern = "(?ms)^.*?\\s*=\\s*", replacement = "\\1",
+      x = assignments, perl = TRUE
+    ))
     as.list(setNames(values, keys))
   })
-  res <- lapply(res,
-                function(r) {
-                  if (!length(r)) {
-                    return(r)
-                  } else if (
-                    all(startsWith(as.character(unlist(r)), "'") &
-                        endsWith(as.character(unlist(r)), "'"))) {
-                    r <- substr(r, 2, nchar(r))
-                    r <- substr(r, 1, nchar(r) - 1)
-                  } else                   if (
-                    all(startsWith(as.character(unlist(r)), '"') &
-                        endsWith(as.character(unlist(r)), '"'))) {
-                    r <- substr(r, 2, nchar(r))
-                    r <- substr(r, 1, nchar(r) - 1)
-                  }
-                  r
-                })
-  if (getOption("dataquieR.VALUE_LABELS_htmlescaped",
-                dataquieR.VALUE_LABELS_htmlescaped_default)) {
+  res <- lapply(
+    res,
+    function(r) {
+      if (!length(r)) {
+        return(r)
+      } else if (
+        all(startsWith(as.character(unlist(r)), "'") &
+            endsWith(as.character(unlist(r)), "'"))) {
+        r <- substr(r, 2, nchar(r))
+        r <- substr(r, 1, nchar(r) - 1)
+      } else if (
+        all(startsWith(as.character(unlist(r)), '"') &
+            endsWith(as.character(unlist(r)), '"'))) {
+        r <- substr(r, 2, nchar(r))
+        r <- substr(r, 1, nchar(r) - 1)
+      }
+      r
+    }
+  )
+  if (getOption(
+    "dataquieR.VALUE_LABELS_htmlescaped",
+    dataquieR.VALUE_LABELS_htmlescaped_default
+  )) {
     util_ensure_suggested(
       "textutils",
-      "use the option(dataquieR.VALUE_LABELS_htmlescaped = TRUE) ")
+      "use the option(dataquieR.VALUE_LABELS_htmlescaped = TRUE) "
+    )
     res[] <- lapply(res, lapply, textutils::HTMLdecode)
   }
   if (!multi_variate_text) {
     if (length(res) != 1) { # nocov start
-      util_error(c("univariate use of util_parse_assignments returned %d",
-                   "results. Sorry, this should not happen, internal error."),
-                 length(res))
+      util_error(
+        c(
+          "univariate use of util_parse_assignments returned %d",
+          "results. Sorry, this should not happen, internal error."
+        ),
+        length(res)
+      )
     } # nocov end
     return(res[[1]])
   } else {

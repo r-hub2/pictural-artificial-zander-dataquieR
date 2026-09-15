@@ -6,32 +6,35 @@
 #'
 #' @noRd
 util_init_respum_tab <- function(x) {
-  my_cols <- c("#7f0000", "#b30000", "#d7301f", "#ef6548", "#fc8d59",
-               "#fdbb84", "#fdd49e", "#fee8c8", "#2166AC")
+  my_cols <- c(
+    "#7f0000", "#b30000", "#d7301f", "#ef6548", "#fc8d59",
+    "#fdbb84", "#fdd49e", "#fee8c8", "#2166AC"
+  )
 
-  higher_means <- attr(x, "higher_means")
+  higher_means <- util_report_summary_table_higher_means(x)
   if (is.null(higher_means)) higher_means <- "worse"
-  continuous <- attr(x, "continuous")
+  continuous <- util_report_summary_table_continuous(x)
   if (is.null(continuous)) continuous <- TRUE
-  colcode <- attr(x, "colcode")
+  colcode <- util_report_summary_table_colcode(x)
   if (is.null(colcode)) {
     continuous <- TRUE
   }
-  level_names <- attr(x, "level_names")
+  level_names <- util_report_summary_table_level_names(x)
 
-  relative <- attr(x, "relative")
+  relative <- util_report_summary_table_relative(x)
   if (is.null(relative)) relative <- continuous
-  colscale <- attr(x, "colscale")
+  colscale <- util_report_summary_table_colscale(x)
   if (is.null(colscale)) {
     colscale <- my_cols
   }
 
-  if (!is.null(attr(x, "flip_mode"))) {
-    flip_mode <- attr(x, "flip_mode")
+  if (!is.null(util_report_summary_table_flip_mode(x))) {
+    flip_mode <- util_report_summary_table_flip_mode(x)
   }
 
-  if (higher_means != "worse")
+  if (higher_means != "worse") {
     colscale <- rev(colscale)
+  }
 
   as.list(environment())
 }

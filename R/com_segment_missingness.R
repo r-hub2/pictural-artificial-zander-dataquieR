@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Summarizes missingness for individuals in specific segments
 #'
 #' @description
@@ -27,17 +28,11 @@
 #'
 #' @details
 #' ### Implementation and use of thresholds
-#' This implementation uses one threshold to discriminate critical from
-#' non-critical values. If direction is above than all values below the
-#' threshold_value are normal (displayed in dark blue in the plot and flagged
-#' with GRADING = 0 in the dataframe). All values above the threshold_value are
-#' considered critical. The more they deviate from the threshold the displayed
-#' color shifts to dark red. All critical values are highlighted with GRADING =
-#' 1 in the summary data frame. By default, highest values are always shown in
-#' dark red irrespective of the absolute deviation.
-#'
-#' If direction is below than all values above the threshold_value are normal
-#' (displayed in dark blue, GRADING = 0).
+#' Without an explicit `threshold_value`, segment-missingness percentages are
+#' colored using the grading rules. An explicitly supplied threshold activates
+#' the legacy binary threshold display. If the direction is `above`, values
+#' below the threshold are normal and values above the threshold are critical.
+#' For `below`, the interpretation is reversed.
 #'
 #' ### Hint
 #' This function does not support a `resp_vars` argument but `exclude_roles` to
@@ -47,13 +42,13 @@
 #'
 #' @inheritParams .template_function_indicator
 #'
-#' @param group_vars [variable] the name of a variable used for grouping,
-#'                              defaults to *NULL* for not grouping output
 #' @param strata_vars [variable] the name of a variable used for stratification,
 #'                               defaults to NULL for not grouping output
 #' @param meta_data_segment [data.frame] Segment level metadata. Optional.
-#' @param threshold_value [numeric] from=0 to=100. a numerical value ranging
-#'                                                 from 0-100
+#'   [GRADING_RULESET] selects the ruleset for each [STUDY_SEGMENT]; missing
+#'   assignments use ruleset `0`.
+#' @param threshold_value [numeric] from=0 to=100. An optional legacy threshold.
+#'   If omitted, grading rules determine the colors.
 #' @param direction [enum] low | high. "high" or "low", i.e. are deviations
 #'                                     above/below the threshold critical. This argument is deprecated and replaced by *color_gradient_direction*.
 #' @param color_gradient_direction [enum] above | below. "above" or "below", i.e. are deviations
@@ -77,38 +72,43 @@
 #'                                     initial variable is only
 #'                                     expected, if both segment variables are
 #'                                     1.
-#' @param segment_level [data.frame] alias for `meta_data_segment`
 #'
 #' @return a list with:
-#'   - `ResultData`: data frame about segment missingness
-#'   - `SummaryPlot`: ggplot2 heatmap plot: a heatmap-like graphic that
-#'                    highlights critical values depending on the respective
-#'                    threshold_value and direction.
-#'   - `ReportSummaryTable`: data frame underlying `SummaryPlot`
+#'   - `ResultData`: data frame about segment missingness. Unless an explicit
+#'                   legacy threshold is active, it includes the effective
+#'                   [GRADING_RULESET] for every segment.
+#'   - `SummaryPlot`: visual summary of segment missingness. An explicitly
+#'                    supplied legacy threshold is applied to this plot.
+#'   - `ReportSummaryTable`: data frame underlying `SummaryPlot` for calls
+#'                           without grouping or stratification. Its colors
+#'                           follow grading rules or an explicitly supplied
+#'                           legacy threshold.
 #'
 #' @export
 #' @seealso
 #' [Online Documentation](
 #' https://dataquality.qihs.uni-greifswald.de/VIN_com_impl_segment_missingness.html
 #' )
+# nolint end
 com_segment_missingness <- function(study_data,
-                                    item_level = "item_level",
-                                    strata_vars = NULL,
-                                    group_vars = NULL,
-                                    label_col,
-                                    threshold_value,
-                                    direction,
-                                    color_gradient_direction,
-                                    expected_observations = c("HIERARCHY",
-                                                              "ALL",
-                                                              "SEGMENT"),
-                                    exclude_roles =
-                                      c(VARIABLE_ROLES$PROCESS),
-                                    meta_data = item_level,
-                                    meta_data_v2,
-                                    segment_level,
-                                    meta_data_segment) {
-
+  item_level = "item_level",
+  strata_vars = NULL,
+  group_vars = NULL,
+  label_col,
+  threshold_value,
+  direction,
+  color_gradient_direction,
+  expected_observations = c(
+    "HIERARCHY",
+    "ALL",
+    "SEGMENT"
+  ),
+  exclude_roles =
+    c(VARIABLE_ROLES$PROCESS),
+  meta_data = item_level,
+  meta_data_v2,
+  segment_level,
+  meta_data_segment) {
   #########
   # STOPS #
   #########
@@ -122,33 +122,45 @@ com_segment_missingness <- function(study_data,
   } else {
     meta_data_segment <- data.frame()
   }
+  meta_data_segment <- util_ensure_grading_ruleset_metadata(meta_data_segment)
 
   expected_observations_missing <- missing(expected_observations)
   util_expect_scalar(expected_observations, allow_more_than_one = TRUE)
   expected_observations <- match.arg(expected_observations)
   util_expect_scalar(expected_observations)
 
-  int_part_vars_structure(study_data = study_data,
-                          meta_data = meta_data,
-                          label_col = label_col,
-                          expected_observations = expected_observations,
-                          disclose_problem_paprt_var_data = FALSE)
+  if (expected_observations != "ALL") {
+    int_part_vars_structure(
+      study_data = study_data,
+      meta_data = meta_data,
+      label_col = label_col,
+      expected_observations = expected_observations,
+      disclose_problem_paprt_var_data = FALSE
+    )
+  }
 
-  if (missing(threshold_value) ||
-      length(threshold_value) != 1 ||
-      !is.numeric(threshold_value)) {
-    if (!missing(threshold_value) || !.called_in_pipeline) util_message(
-      c("threshold_value should be a single number between 0 and 100.",
-      "Invalid value specified, setting to 10%%."),
-      applicability_problem = TRUE)
-    threshold_value <- 10
+  use_legacy_threshold <- !missing(threshold_value)
+  if (use_legacy_threshold &&
+      (length(threshold_value) != 1 ||
+          !is.numeric(threshold_value) ||
+          is.na(threshold_value) ||
+          threshold_value < 0 || threshold_value > 100)) {
+    if (!.called_in_pipeline) {
+      util_message(
+        c(
+          "threshold_value should be a single number between 0 and 100.",
+          "The invalid threshold is ignored and grading rules are used."
+        ),
+        applicability_problem = TRUE
+      )
+    }
+    use_legacy_threshold <- FALSE
+  }
+  if (!use_legacy_threshold) {
+    threshold_value <- NA_real_
   }
 
   if (missing(color_gradient_direction)) {
-    if (!.called_in_pipeline) util_message(c(
-      "No specification of color gradient direction found.",
-      "The function interprets values above the threshold as violations."),
-      applicability_problem = TRUE)
     color_gradient_direction <- "above"
   }
 
@@ -156,7 +168,8 @@ com_segment_missingness <- function(study_data,
     util_error(
       "Parameter %s, if not missing, should be of length 1, but not %d.",
       dQuote("color_gradient_direction"), length(color_gradient_direction),
-      applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
 
   if (!all(color_gradient_direction %in% c("above", "below"))) {
@@ -180,11 +193,13 @@ com_segment_missingness <- function(study_data,
         )
       } else {
         util_warning("%s is deprecated.", dQuote("direction"),
-                     applicability_problem = FALSE)
+          applicability_problem = FALSE
+        )
       }
     } else {
       util_warning("%s is deprecated.", dQuote("direction"),
-                   applicability_problem = FALSE)
+        applicability_problem = FALSE
+      )
     }
   }
 
@@ -195,20 +210,25 @@ com_segment_missingness <- function(study_data,
 
   # map meta to study
   prep_prepare_dataframes()
-  ds1_labelled <- prep_prepare_dataframes(.apply_factor_metadata_inadm = TRUE,
-                                          .internal = FALSE)
+  ds1_labelled <- prep_prepare_dataframes(
+    .apply_factor_metadata_inadm = TRUE,
+    .internal = FALSE
+  )
 
   if (!expected_observations_missing && expected_observations != "ALL" &&
       !(PART_VAR %in% colnames(meta_data))) {
-    util_message(c("For %s = %s, a column %s is needed in %s. Falling",
-                   "back to %s = %s."),
-                 sQuote("expected_observations"),
-                 dQuote(expected_observations),
-                 dQuote(PART_VAR),
-                 sQuote("meta_data"),
-                 sQuote("expected_observations"),
-                 dQuote("ALL"),
-                 applicability_problem = TRUE
+    util_message(
+      c(
+        "For %s = %s, a column %s is needed in %s. Falling",
+        "back to %s = %s."
+      ),
+      sQuote("expected_observations"),
+      dQuote(expected_observations),
+      dQuote(PART_VAR),
+      sQuote("meta_data"),
+      sQuote("expected_observations"),
+      dQuote("ALL"),
+      applicability_problem = TRUE
     )
     expected_observations <- "ALL"
   }
@@ -224,12 +244,10 @@ com_segment_missingness <- function(study_data,
     need_type = "!float"
   )
 
-
-  # exclude_roles = c("process", "not")
+  # Historical `exclude_roles` default sketch removed here.
 
   # should some variables not be considered?
   if (VARIABLE_ROLE %in% names(meta_data)) {
-
     # a: not all roles specified found in metadata
     if (!(all(exclude_roles %in% meta_data[[VARIABLE_ROLE]]))) {
       if (any(exclude_roles %in% meta_data[[VARIABLE_ROLE]])) {
@@ -242,86 +260,112 @@ com_segment_missingness <- function(study_data,
         ), applicability_problem = TRUE)
 
         exclude_roles <- exclude_roles[exclude_roles %in%
-                                         meta_data[[VARIABLE_ROLE]]]
+            meta_data[[VARIABLE_ROLE]]]
 
         which_vars_not <-
           meta_data[[label_col]][meta_data[[VARIABLE_ROLE]] %in%
-                                   c(exclude_roles, VARIABLE_ROLES$SUPPRESS)]
+            c(exclude_roles, VARIABLE_ROLES$SUPPRESS)]
         if (missing(label_col)) {
           which_vars_not <-
             meta_data[[VAR_NAMES]][meta_data[[VARIABLE_ROLE]] %in%
-                                     c(exclude_roles, VARIABLE_ROLES$SUPPRESS)]
+              c(exclude_roles, VARIABLE_ROLES$SUPPRESS)]
         }
         which_vars_not <- setdiff(which_vars_not, strata_vars)
         which_vars_not <- setdiff(which_vars_not, group_vars)
         if (length(intersect(names(ds1), which_vars_not)) > 0) {
-          util_message(paste0(
-            "Study variables: ",
-            paste(dQuote(intersect(names(ds1), which_vars_not)),
-                  collapse = ", "),
-            " are not considered due to their VARIABLE_ROLE."
-          ), applicability_problem = TRUE,
-          intrinsic_applicability_problem = TRUE)
+          util_message(
+            paste0(
+              "Study variables: ",
+              paste(dQuote(intersect(names(ds1), which_vars_not)),
+                collapse = ", "
+              ),
+              " are not considered due to their VARIABLE_ROLE."
+            ),
+            applicability_problem = TRUE,
+            intrinsic_applicability_problem = TRUE
+          )
         }
-        ds1 <- ds1[, !(names(ds1) %in% which_vars_not)]
+        ds1 <- ds1[, !(names(ds1) %in% which_vars_not), drop = TRUE]
         ds1_labelled <- ds1_labelled[, !(names(ds1_labelled) %in%
-                                           which_vars_not)]
+              which_vars_not), drop = TRUE]
       } else {
         exclude_roles <- FALSE
         util_warning(
-          c("Specified VARIABLE_ROLE(s) were not found in metadata.",
-            "All variables are included here."),
-          applicability_problem = TRUE)
+          c(
+            "Specified VARIABLE_ROLE(s) were not found in metadata.",
+            "All variables are included here."
+          ),
+          applicability_problem = TRUE
+        )
       }
 
 
       # b: all roles are found in metadata
     } else {
       if (missing(exclude_roles)) {
-        if (!.called_in_pipeline) util_message(
-          c("Formal exclude_roles is used with default: all process variables",
-            "are not included here."), applicability_problem = TRUE)
+        if (!.called_in_pipeline) {
+          util_message(
+            c(
+              "Formal exclude_roles is used with default: all process variables", # nolint: line_length_linter.
+              "are not included here."
+            ),
+            applicability_problem = TRUE
+          )
+        }
       }
 
       which_vars_not <- meta_data[[label_col]][meta_data[[VARIABLE_ROLE]] %in%
-                                                 c(exclude_roles,
-                                                   VARIABLE_ROLES$SUPPRESS)]
+        c(
+          exclude_roles,
+          VARIABLE_ROLES$SUPPRESS
+        )]
       if (missing(label_col)) {
         which_vars_not <- meta_data[[VAR_NAMES]][meta_data[[VARIABLE_ROLE]] %in%
-                                                   c(exclude_roles,
-                                                     VARIABLE_ROLES$SUPPRESS)]
+          c(
+            exclude_roles,
+            VARIABLE_ROLES$SUPPRESS
+          )]
       }
       which_vars_not <- setdiff(which_vars_not, strata_vars)
       which_vars_not <- setdiff(which_vars_not, group_vars)
       if (length(intersect(names(ds1), which_vars_not)) > 0) {
-        util_message(paste0(
-          "Study variables: ", paste(dQuote(intersect(names(ds1),
-                                                      which_vars_not)),
-                                     collapse = ", "),
-          " are not considered due to their VARIABLE_ROLE."
-        ),
-        applicability_problem = TRUE,
-        intrinsic_applicability_problem = TRUE)
+        util_message(
+          paste0(
+            "Study variables: ", paste(
+              dQuote(intersect(
+                names(ds1),
+                which_vars_not
+              )),
+              collapse = ", "
+            ),
+            " are not considered due to their VARIABLE_ROLE."
+          ),
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       }
-      ds1 <- ds1[, !(names(ds1) %in% which_vars_not)]
+      ds1 <- ds1[, !(names(ds1) %in% which_vars_not), drop = TRUE]
       ds1_labelled <- ds1_labelled[, !(names(ds1_labelled) %in%
-                                         which_vars_not)]
-
+            which_vars_not), drop = TRUE]
     }
   } else {
     # since there are no roles defined exclusion is set to false
     exclude_roles <- FALSE
     util_message(
-      c("VARIABLE_ROLE has not been defined in the metadata,",
-        "therefore all variables within segments are used."),
+      c(
+        "VARIABLE_ROLE has not been defined in the metadata,",
+        "therefore all variables within segments are used."
+      ),
       applicability_problem = TRUE,
-      intrinsic_applicability_problem = TRUE) # TODO: PART_VAR or STUDY_SEGMENT
+      intrinsic_applicability_problem = TRUE
+    )
   }
 
   # Which segments?
   if (!(STUDY_SEGMENT %in% names(meta_data))) {
     util_error("Metadata do not contain the column STUDY_SEGMENT",
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
 
   meta_data[[STUDY_SEGMENT]][is.na(meta_data[[STUDY_SEGMENT]])] <- ""
@@ -330,32 +374,44 @@ com_segment_missingness <- function(study_data,
     seg_names <- meta_data[
       util_empty(meta_data[[VARIABLE_ROLE]]) |
         meta_data[[VARIABLE_ROLE]] !=
-        VARIABLE_ROLES$SUPPRESS, # omit segments added on-the-fly as dependencies
+          VARIABLE_ROLES$SUPPRESS, # omit segments added on-the-fly as dependencies # nolint: line_length_linter.
       STUDY_SEGMENT,
-      drop = TRUE] # meta_data[[LONG_LABEL]][meta_data$VAR_NAMES %in% part_vars]
+      drop = TRUE
+    ] # Historical LONG_LABEL segment-name fallback removed here.
   } else {
     seg_names <- meta_data[
       , STUDY_SEGMENT,
-      drop = TRUE] # meta_data[[LONG_LABEL]][meta_data$VAR_NAMES %in% part_vars]
+      drop = TRUE
+    ] # Historical LONG_LABEL segment-name fallback removed here.
   }
 
   if (!(PART_VAR %in% names(meta_data))) {
-    util_warning("Metadata do not contain the column PART_VAR",
-                 applicability_problem = TRUE)
+    if (expected_observations != "ALL") {
+      util_warning("Metadata do not contain the column PART_VAR",
+        applicability_problem = TRUE
+      )
+    }
     pv <- seg_names
     pv[!startsWith(pv, "PART_")] <-
       paste0("PART_", pv[!startsWith(pv, "PART_")])
-    while (any(pv %in% c(meta_data[[VAR_NAMES]],
-                         meta_data[[LABEL]],
-                         meta_data[[label_col]])
-    )) {
-      pv[pv %in% c(meta_data[[VAR_NAMES]],
-                   meta_data[[LABEL]],
-                   meta_data[[label_col]])] <-
-        paste0("_", pv[pv %in% c(meta_data[[VAR_NAMES]],
-                            meta_data[[LABEL]],
-                            meta_data[[label_col]])], "_")
+    while (any(pv %in% c(
+      meta_data[[VAR_NAMES]],
+      meta_data[[LABEL]],
+      meta_data[[label_col]]
+    ))) {
+      pv[pv %in% c(
+        meta_data[[VAR_NAMES]],
+        meta_data[[LABEL]],
+        meta_data[[label_col]]
+      )] <-
+        paste0("_", pv[pv %in% c(
+          meta_data[[VAR_NAMES]],
+          meta_data[[LABEL]],
+          meta_data[[label_col]]
+        )], "_")
     }
+    # remove part_vars referring to SSI
+    pv[pv == "PART_.COMPUTED__ssi"] <- NA_character_
     meta_data[[PART_VAR]] <- pv
   }
 
@@ -369,6 +425,7 @@ com_segment_missingness <- function(study_data,
   part_vars <- part_vars[!duplicated(part_vars)]
 
   sn <- seg_names[!is.na(seg_names)]
+  sn <- setdiff(sn, ".COMPUTED__ssi") #remove the SSI segment
   sn <- setNames(nm = unique(sn))
   .sn <- sn
 
@@ -385,7 +442,9 @@ com_segment_missingness <- function(study_data,
     auto <- meta_data_segment[nas, STUDY_SEGMENT, drop = TRUE]
     remove <- meta_data_segment[not_in_output, STUDY_SEGMENT, drop = TRUE]
     keep_in_segmiss <- meta_data_segment[must_in_output,
-                                         STUDY_SEGMENT, drop = TRUE]
+      STUDY_SEGMENT,
+      drop = TRUE
+    ]
     sn <- union(keep_in_segmiss, setdiff(sn, remove))
   }
 
@@ -396,14 +455,16 @@ com_segment_missingness <- function(study_data,
 
   if (length(sn) < 2 && length(keep_in_segmiss) == 0) {
     util_error("No segment missingness plot for fewer than two segments",
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
 
   # determine which vars per segment
   var_sets <- lapply(sn, util_get_vars_in_segment,
-               meta_data = meta_data,
-               label_col = label_col)
+    meta_data = meta_data,
+    label_col = label_col
+  )
 
   # remove all part_vars
   if (TRUE) {
@@ -411,23 +472,26 @@ com_segment_missingness <- function(study_data,
       v <- util_map_labels(vars, meta_data, to = VAR_NAMES, from = label_col)
       vars[!(v %in% part_vars)]
     }
-    var_sets <- lapply( var_sets, remove_part_vars,
-                        meta_data = meta_data,
-                        label_col = label_col)
+    var_sets <- lapply(var_sets, remove_part_vars,
+      meta_data = meta_data,
+      label_col = label_col
+    )
   }
 
   # remove variables excluded by roles
   if (!isFALSE(exclude_roles)) {
     remove_roles <- function(vars, meta_data, label_col) {
       roles <- util_map_labels(vars,
-                               meta_data = meta_data,
-                               to = VARIABLE_ROLE,
-                               from = label_col)
+        meta_data = meta_data,
+        to = VARIABLE_ROLE,
+        from = label_col
+      )
       vars[!(roles %in% exclude_roles)]
     }
-    var_sets <- lapply( var_sets, remove_roles,
-                        meta_data = meta_data,
-                        label_col = label_col)
+    var_sets <- lapply(var_sets, remove_roles,
+      meta_data = meta_data,
+      label_col = label_col
+    )
   }
 
   var_sets <- var_sets[vapply(var_sets, length, FUN.VALUE = integer(1)) > 0]
@@ -444,8 +508,8 @@ com_segment_missingness <- function(study_data,
     cvs <- c(group_vars, "Examinations")
 
     # missings in grouping variable?
-    ds1_labelled <- ds1_labelled[!is.na(ds1[[group_vars]]), ]
-    ds1 <- ds1[!is.na(ds1[[group_vars]]), ]
+    ds1_labelled <- ds1_labelled[!is.na(ds1[[group_vars]]), , drop = FALSE]
+    ds1 <- ds1[!is.na(ds1[[group_vars]]), , drop = FALSE]
   } else {
     is_grouped <- FALSE
     gr <- 1
@@ -456,12 +520,16 @@ com_segment_missingness <- function(study_data,
 
   if (length(strata_vars) > 0) {
     # No. of strata levels and labels
-    if (dim(ds1)[1] != dim(ds1[!is.na(ds1[[strata_vars]]), ])[1]) {
-      ds1_labelled <- ds1_labelled[!is.na(ds1[[strata_vars]]), ]
-      ds1 <- ds1[!is.na(ds1[[strata_vars]]), ]
-      util_message(paste0("Some observations in ", strata_vars,
-                          " are NA and were removed."),
-                   applicability_problem = FALSE)
+    if (dim(ds1)[1] != dim(ds1[!is.na(ds1[[strata_vars]]), , drop = FALSE])[1]) { # nolint: line_length_linter.
+      ds1_labelled <- ds1_labelled[!is.na(ds1[[strata_vars]]), , drop = FALSE]
+      ds1 <- ds1[!is.na(ds1[[strata_vars]]), , drop = FALSE]
+      util_message(
+        paste0(
+          "Some observations in ", strata_vars,
+          " are NA and were removed."
+        ),
+        applicability_problem = FALSE
+      )
     }
 
     ds1[, setdiff(strata_vars, part_vars)] <-
@@ -483,7 +551,7 @@ com_segment_missingness <- function(study_data,
       stringsAsFactors = TRUE
     )
     colnames(res_df) <- c(strata_vars, group_vars, "Examinations")
-    res_df <- res_df[order(res_df[[strata_vars]], res_df[[group_vars]]), ]
+    res_df <- res_df[order(res_df[[strata_vars]], res_df[[group_vars]]), , drop = FALSE] # nolint: line_length_linter.
   }
 
   ################
@@ -493,187 +561,414 @@ com_segment_missingness <- function(study_data,
   myfun <- function(x) {
     all(is.na(x))
   }
-  Ns <- c()
-  Ms <- c()
+  n_participants <- c()
+  n_missing_segments <- c()
 
   if (length(strata_vars) == 0) {
     for (j in seq_along(var_sets)) {
       for (i in seq_along(gr)) {
-        one_var_from_seg_w_r_o_g <- var_sets[[j]][[1]] # empty var set is impossible, since segments are read from item-level-metadata here. so, the first one could represent for expected observations the whole segment.
+        one_var_from_seg_w_r_o_g <- var_sets[[j]][[1]] # empty var set is impossible, since segments are read from item-level-metadata here. so, the first one could represent for expected observations the whole segment. # nolint: line_length_linter.
         check_df <- ds1[
-          util_observation_expected(rv = one_var_from_seg_w_r_o_g,
-                                    study_data = ds1,
-                                    meta_data = meta_data,
-                                    label_col = label_col,
-                                    expected_observations =
-                                      expected_observations) &
+          util_observation_expected(
+            rv = one_var_from_seg_w_r_o_g,
+            study_data = ds1,
+            meta_data = meta_data,
+            label_col = label_col,
+            expected_observations =
+              expected_observations
+          ) &
             ds1[[group_vars]] == gr[i],
           c(as.character(unlist(var_sets[j]))),
-          drop = FALSE]
-        Ns <- c(Ns, nrow(check_df))
-        Ms <- c(Ms, sum(apply(check_df, 1, myfun)))
+          drop = FALSE
+        ]
+        n_participants <- c(n_participants, nrow(check_df))
+        n_missing_segments <- c(
+          n_missing_segments,
+          sum(apply(check_df, 1, myfun))
+        )
       }
     }
   } else {
     for (i in seq_along(strata)) {
       for (j in seq_along(gr)) {
         for (k in seq_along(var_sets)) {
-          one_var_from_seg_w_r_o_g <- var_sets[[k]][[1]] # empty var set is impossible, since segments are read from item-level-metadata here. so, the first one could represent for expected observations the whole segment.
+          one_var_from_seg_w_r_o_g <- var_sets[[k]][[1]] # empty var set is impossible, since segments are read from item-level-metadata here. so, the first one could represent for expected observations the whole segment. # nolint: line_length_linter.
           check_df <-
-            ds1[util_observation_expected(rv = one_var_from_seg_w_r_o_g,
-                                      study_data = ds1,
-                                      meta_data = meta_data,
-                                      label_col = label_col,
-                                      expected_observations =
-                                        expected_observations) &
-            ds1[[strata_vars]] == strata[i] & ds1[[group_vars]] == gr[j],
-          c(as.character(unlist(var_sets[k])))
-          ]
-          Ns <- c(Ns, nrow(check_df))
-          Ms <- c(Ms, sum(apply(check_df, 1, myfun)))
+            ds1[
+              util_observation_expected(
+                rv = one_var_from_seg_w_r_o_g,
+                study_data = ds1,
+                meta_data = meta_data,
+                label_col = label_col,
+                expected_observations =
+                expected_observations
+              ) &
+              ds1[[strata_vars]] == strata[i] & ds1[[group_vars]] == gr[j],
+              c(as.character(unlist(var_sets[k])))
+            ]
+          n_participants <- c(n_participants, nrow(check_df))
+          n_missing_segments <- c(
+            n_missing_segments,
+            sum(apply(check_df, 1, myfun))
+          )
         }
       }
     }
   }
 
-  res_df$"No. Participants" <- Ns # TODO: Write an indicator for segments expected to be empty according to some intro variable
-  res_df$"No. missing segments" <- Ms
+  res_df$"No. Participants" <- n_participants
+  res_df$"No. missing segments" <- n_missing_segments
   res_df$"(%) of missing segments" <- round(res_df$`No. missing segments` /
-                                              res_df$`No. Participants` *
-                                              100, digits = 2)
+      res_df$`No. Participants` *
+      100, digits = 2)
   res_df$"(%) of missing segments" <-
     as.numeric(res_df$"(%) of missing segments")
-  res_df$threshold <- threshold_value
-  res_df$direction <- color_gradient_direction
+  if (use_legacy_threshold) {
+    res_df$threshold <- threshold_value
+    res_df$direction <- color_gradient_direction
+  }
 
   res_df$"(%) of missing segments"[
-    !is.finite(res_df$"(%) of missing segments")] <- NA_real_ # to avoid Inf %
+    !is.finite(res_df$"(%) of missing segments")
+  ] <- NA_real_ # to avoid Inf %
 
-  if (color_gradient_direction == "above") {
-    res_df$GRADING <- ifelse(res_df$"(%) of missing segments" >
-                               threshold_value, 1, 0) # FIXME: Update GRADING -> Standard Name
-  } else {
-    res_df$GRADING <- ifelse(res_df$"(%) of missing segments" <
-                               threshold_value, 1, 0) # FIXME: Update GRADING -> Standard Name
+  if (!use_legacy_threshold) {
+    res_df[[GRADING_RULESET]] <- util_segment_grading_rulesets(
+      segments = as.character(res_df$Examinations),
+      meta_data_segment = meta_data_segment
+    )
   }
-
-  # plot
-  inversion <- ifelse(color_gradient_direction == "below", 1, 0)
 
   # order result data frame by grouping variable
+  repsumtab <- NULL
   if (length(strata_vars) == 0) {
     # order result data frame by grouping variable
-    res_df <- res_df[order(res_df[[group_vars]]), ]
+    res_df <- res_df[order(res_df[[group_vars]]), , drop = FALSE]
     if (!is_grouped) {
-      repsumtab <- res_df[, c("Examinations",
-                              "No. missing segments",
-                              "No. Participants")]
-      colnames(repsumtab)[c(1,3)] <- c("Variables", "N")
-      attr(repsumtab, "higher_means") <- ifelse(
-        color_gradient_direction == "above",
-        "worse",
-        "")
-      repsumtab <- util_validate_report_summary_table(repsumtab,
-                                                  meta_data = meta_data,
-                                                  label_col = label_col)
-      p <- print(util_attach_attr(repsumtab, relative = FALSE),
-            view = FALSE)
-
-    } else { # TODO: Implemen t something useful in print.ReportSummaryTable
+      repsumtab <- util_segment_missingness_report_summary_table(
+        df = res_df,
+        meta_data = meta_data,
+        label_col = label_col,
+        use_legacy_threshold = use_legacy_threshold,
+        threshold_value = threshold_value,
+        color_gradient_direction = color_gradient_direction
+      )
+      if (use_legacy_threshold) {
+        p <- print(repsumtab, view = FALSE)
+        attr(p, "segment_missingness_colors") <- "legacy_threshold"
+      } else {
+        p <- util_create_lean_ggplot(
+          print(repsumtab, view = FALSE),
+          repsumtab = repsumtab,
+          .lazy = TRUE
+        )
+      }
+    } else if (use_legacy_threshold) {
       p <- util_heatmap_1th(
-       df = res_df, cat_vars = cvs, values = "(%) of missing segments",
-       right_intv = TRUE, threshold = threshold_value,
-       invert = inversion
+        df = res_df, cat_vars = cvs, values = "(%) of missing segments",
+        right_intv = TRUE, threshold = threshold_value,
+        invert = as.integer(color_gradient_direction == "below")
       )$SummaryPlot
-      repsumtab <- NULL
+    } else {
+      p <- util_create_lean_ggplot(
+        util_segment_missingness_grading_plot(
+          df = res_df,
+          cat_vars = cvs
+        ),
+        res_df = res_df,
+        cvs = cvs,
+        .lazy = TRUE
+      )
     }
-  } else { # TODO: Implemen t something useful in print.ReportSummaryTable
+  } else {
     # order result data frame by grouping variable
-    res_df <- res_df[order(res_df[[strata_vars]], res_df[[group_vars]]), ]
-    # repsumtab <- res_df[, c("Examinations",
-    #                         "No. of missing segments",
-    #                         "No. of Participants")]
-    # colnames(repsumtab)[c(1,3)] <- c("Variables", "N")
-    # attr(repsumtab, "higher_means") <- ifelse(
-    #   color_gradient_direction == "above",
-    #   "worse",
-    #   "")
-    # class(repsumtab) <- union("ReportSummaryTable", class(repsumtab))
-    # p <- print(repsumtab, view = FALSE))
-    p <- util_heatmap_1th( # TODO: Implemen t something useful in print.ReportSummaryTable
-      df = res_df, cat_vars = cvs[-1], values = "(%) of missing segments",
-      right_intv = TRUE, threshold = threshold_value,
-      invert = inversion, strata = strata_vars
-    )$SummaryPlot
-    repsumtab <- NULL
+    res_df <- res_df[order(res_df[[strata_vars]], res_df[[group_vars]]), , drop = FALSE] # nolint: line_length_linter.
+    if (use_legacy_threshold) {
+      p <- util_heatmap_1th(
+        df = res_df, cat_vars = cvs[-1],
+        values = "(%) of missing segments",
+        right_intv = TRUE, threshold = threshold_value,
+        invert = as.integer(color_gradient_direction == "below"),
+        strata = strata_vars
+      )$SummaryPlot
+    } else {
+      p <- util_create_lean_ggplot(
+        util_segment_missingness_grading_plot(
+          df = res_df,
+          cat_vars = cvs[-1],
+          strata = strata_vars
+        ),
+        res_df = res_df,
+        cvs = cvs,
+        strata_vars = strata_vars,
+        .lazy = TRUE
+      )
+    }
   }
-#
-#   suppressWarnings({
-#     # suppress wrong warnings: https://github.com/tidyverse/ggplot2/pull/4439/commits
-#     # find out size of the plot https://stackoverflow.com/a/51795017
-#     bp <- ggplot_build(p)
-#     w <- 2 * length(bp$layout$panel_params[[1]]$x$get_labels())
-#     if (w == 0) {
-#       w <- 10
-#     }
-#     w <- w + 2 +
-#       max(nchar(bp$layout$panel_params[[1]]$y$get_labels()),
-#           na.rm = TRUE)
-#     h <- 2 * length(bp$layout$panel_params[[1]]$y$get_labels())
-#     if (h == 0) {
-#       h <- 10
-#     }
-#     h <- h + 15
-#
-#     p <- util_set_size(p, width_em = w, height_em = h)
-#   })
+  # Historical segment-missingness plot-size prototype removed here. Inspect
+  # with `git show 214dd76a7d -- R/com_segment_missingness.R`.
 
   text_to_display <- util_get_hovertext("[com_segment_missingness_hover]")
   attr(res_df, "description") <- text_to_display
 
-  rst_atts <- util_init_respum_tab(repsumtab)
+  res_df <- res_df[, seq_along(res_df), drop = FALSE]
 
-  if (rst_atts$relative) {
-    v <- repsumtab$`No. of missing segments` / repsumtab$N  * 100
-  } else {
-    v <- repsumtab$`No. of missing segments`
-  }
-#  min_bar_height <- suppressWarnings(min(v, na.rm = TRUE))
-#  max_bar_height <- suppressWarnings(max(v, na.rm = TRUE))
-
-
-
-#  if(min_bar_height == Inf ||
- #    min_bar_height == -Inf ||
-#     max_bar_height == Inf ||
-#     max_bar_height == -Inf ) {
-#    range <- 400 #an intermediate size plot in height
-#  } else {
-#    range <- max_bar_height - min_bar_height
-#  }
-
-
-  res_df <- res_df[, !names(res_df) %in% c("GRADING")]
-
-
-  #Add new attribute to the columns of ResultData to define the datatype of each column
-  attr(res_df[[paste(colnames(res_df)[1])]], DATA_TYPE) <- DATA_TYPES$STRING #The column name depends on the presence of the argument group_vars, if not present is Group otherwise is the name of the variable in group_vars
+  # Add new attribute to the columns of ResultData to define the datatype of
+  # each column
+  attr(res_df[[paste(colnames(res_df)[1])]], DATA_TYPE) <- DATA_TYPES$STRING # The column name depends on the presence of the argument group_vars, if not present is Group otherwise is the name of the variable in group_vars # nolint: line_length_linter.
   attr(res_df$Examinations, DATA_TYPE) <- DATA_TYPES$STRING
   attr(res_df$`No. Participants`, DATA_TYPE) <- DATA_TYPES$INTEGER
   attr(res_df$`No. missing segments`, DATA_TYPE) <- DATA_TYPES$INTEGER
   attr(res_df$`(%) of missing segments`, DATA_TYPE) <- DATA_TYPES$FLOAT
-  attr(res_df$threshold, DATA_TYPE) <- DATA_TYPES$INTEGER
-  attr(res_df$direction, DATA_TYPE) <- DATA_TYPES$STRING
+  if (GRADING_RULESET %in% colnames(res_df)) {
+    attr(res_df[[GRADING_RULESET]], DATA_TYPE) <- DATA_TYPES$INTEGER
+  }
+  if (use_legacy_threshold) {
+    attr(res_df$threshold, DATA_TYPE) <- DATA_TYPES$INTEGER
+    attr(res_df$direction, DATA_TYPE) <- DATA_TYPES$STRING
+  }
 
 
-  return(util_attach_attr(list(ResultData = res_df,
-              ReportSummaryTable = repsumtab,
-              SummaryPlot = p)#,
-             # sizing_hints = list(
-            #    figure_type_id = "bar_chart",
-            #    rotated = FALSE,
-            #    number_of_bars = length(unique(repsumtab$Variables)),
-            #    range = range
-            #  )
+  result <- list(ResultData = res_df)
+  if (!is.null(repsumtab)) {
+    result$ReportSummaryTable <- repsumtab
+  }
+  result$SummaryPlot <- p
+
+  return(util_attach_attr(
+    result
+    # Historical sizing-hints prototype removed here. Inspect with
+    # `git show 214dd76a7d -- R/com_segment_missingness.R`.
   ))
+}
+
+#' Build the segment-missingness ReportSummaryTable
+#'
+#' @param df [data.frame] segment-missingness results.
+#' @inheritParams .template_function_developer
+#' @param use_legacy_threshold [logical] whether to use binary legacy colors.
+#' @param threshold_value [numeric] effective legacy threshold.
+#' @param color_gradient_direction [character] critical threshold direction.
+#'
+#' @return a `ReportSummaryTable` object.
+#' @noRd
+util_segment_missingness_report_summary_table <- function(df, meta_data,
+  label_col, use_legacy_threshold, threshold_value,
+  color_gradient_direction) {
+  repsumtab <- df[, c(
+    "Examinations",
+    "No. missing segments",
+    "No. Participants"
+  ), drop = TRUE]
+  colnames(repsumtab)[c(1, 3)] <- c("Variables", "N")
+  repsumtab <- util_new_report_summary_table(repsumtab,
+    meta_data = meta_data,
+    label_col = label_col
+  )
+  attr(repsumtab, "render_as_plot") <- TRUE
+  attr(repsumtab, "segment_missingness_bar") <- list(
+    value_column = "No. missing segments",
+    color_mode = if (use_legacy_threshold) {
+      "legacy_threshold"
+    } else {
+      "grading_rules"
+    }
+  )
+
+  if (use_legacy_threshold) {
+    relative_values <- df$`No. missing segments` / df$`No. Participants`
+    percentages <- 100 * relative_values
+    critical <- if (color_gradient_direction == "above") {
+      percentages > threshold_value
+    } else {
+      percentages < threshold_value
+    }
+    colors <- ifelse(critical, "#7f0000", "#2166AC")
+    classes <- ifelse(critical, "Critical", "Normal")
+    bar_context <- util_attr(
+      repsumtab,
+      "segment_missingness_bar",
+      exact = TRUE
+    )
+    bar_context$colors <- colors
+    bar_context$class_labels <- classes
+    bar_context$threshold_value <- threshold_value
+    bar_context$direction <- color_gradient_direction
+    attr(repsumtab, "segment_missingness_bar") <- bar_context
+
+    valid <- is.finite(relative_values)
+    observed_values <- sort(unique(relative_values[valid]))
+    value_keys <- as.character(observed_values)
+    first_rows <- match(observed_values, relative_values)
+    repsumtab <- util_set_report_summary_table_continuous(repsumtab, FALSE)
+    repsumtab <- util_set_report_summary_table_colcode(
+      repsumtab,
+      setNames(colors[first_rows], value_keys)
+    )
+    repsumtab <- util_set_report_summary_table_level_names(
+      repsumtab,
+      setNames(classes[first_rows], value_keys)
+    )
+  } else {
+    attr(repsumtab, "grading_context") <- list(
+      indicator_metric = "PCT_com_crm_mv",
+      entity = "SEGMENT",
+      values_raw = df$`(%) of missing segments`,
+      var_names = as.character(df$Examinations),
+      grading_rule_sets = as.character(df[[GRADING_RULESET]])
+    )
+  }
+  repsumtab <- util_set_report_summary_table_relative(repsumtab, TRUE)
+  repsumtab
+}
+
+#' Classify segment-missingness values using grading rules
+#'
+#' @param df [data.frame] segment-missingness results.
+#'
+#' @return a data frame with grading classes and colors.
+#' @noRd
+util_segment_missingness_grading <- function(df) {
+  segments <- unique(as.character(df$Examinations))
+  grading_meta_data <- data.frame(segments, stringsAsFactors = FALSE)
+  colnames(grading_meta_data) <- VAR_NAMES
+  grading_meta_data[[GRADING_RULESET]] <- as.character(
+    df[[GRADING_RULESET]][match(segments, as.character(df$Examinations))]
+  )
+
+  summary_values <- data.frame(
+    function_name = rep("com_segment_missingness", nrow(df)),
+    indicator_metric = rep("PCT_com_crm_mv", nrow(df)),
+    values_raw = df$`(%) of missing segments`,
+    call_names = rep("", nrow(df)),
+    stringsAsFactors = FALSE
+  )
+  summary_values[[VAR_NAMES]] <- as.character(df$Examinations)
+  summary_values$.row_id <- seq_len(nrow(summary_values))
+  classes <- suppressWarnings(util_metrics_to_classes(
+    summary_values,
+    grading_meta_data,
+    entity = "SEGMENT"
+  ))
+  classes <- classes[order(classes$.row_id), , drop = FALSE]
+
+  colors <- unname(util_get_colors()[as.character(classes$class)])
+  colors[is.na(colors)] <- "#888888"
+  data.frame(class = classes$class, color = colors)
+}
+
+#' Resolve grading rulesets for segment-level results
+#'
+#' @param segments [character] Segment names in result-row order.
+#' @param meta_data_segment [data.frame] Segment-level metadata.
+#'
+#' @return A character vector with one grading ruleset per result row.
+#' @noRd
+util_segment_grading_rulesets <- function(segments, meta_data_segment) {
+  rulesets <- rep("0", length(segments))
+  if (!(STUDY_SEGMENT %in% colnames(meta_data_segment))) {
+    return(rulesets)
+  }
+
+  for (segment in unique(segments)) {
+    segment_rulesets <- unique(meta_data_segment[
+      as.character(meta_data_segment[[STUDY_SEGMENT]]) == segment,
+      GRADING_RULESET,
+      drop = TRUE
+    ])
+    segment_rulesets <- segment_rulesets[!util_empty(segment_rulesets)]
+    if (length(segment_rulesets) > 1L) {
+      util_error(
+        "More than one %s is defined for segment %s: %s.",
+        sQuote(GRADING_RULESET),
+        dQuote(segment),
+        util_pretty_vector_string(dQuote(segment_rulesets)),
+        applicability_problem = TRUE
+      )
+    }
+    if (length(segment_rulesets) == 1L) {
+      rulesets[segments == segment] <- segment_rulesets
+    }
+  }
+
+  rulesets
+}
+
+#' Create a segment-missingness plot using grading rules
+#'
+#' @param df [data.frame] segment-missingness results.
+#' @param cat_vars [character] one or two categorical plot dimensions.
+#' @param strata [character] optional stratum variable.
+#'
+#' @return a [ggplot2::ggplot] object.
+#' @noRd
+util_segment_missingness_grading_plot <- function(df, cat_vars, strata) {
+  util_stop_if_not(length(cat_vars) %in% 1:2)
+
+  grading <- util_segment_missingness_grading(df)
+  df$.dq_grading_class <- grading$class
+  df$.dq_grading_color <- grading$color
+
+  if (length(cat_vars) == 1) {
+    y_limit <- max(c(1, 1.2 * df$`(%) of missing segments`), na.rm = TRUE)
+    p <- ggplot(df, aes(
+      x = .data[[cat_vars]],
+      y = .data[["(%) of missing segments"]],
+      fill = .data$.dq_grading_color
+    )) +
+      geom_bar(stat = "identity", na.rm = TRUE) +
+      geom_text(
+        label = util_paste0_with_na(
+          " ", df$`(%) of missing segments`, "%"
+        ),
+        hjust = 0, vjust = 0.5, show.legend = FALSE
+      ) +
+      util_scale_fill_dataquieR() +
+      theme_minimal() +
+      scale_x_discrete(name = cat_vars) +
+      scale_y_continuous(name = "(%)", limits = c(0, y_limit)) +
+      coord_flip()
+  } else {
+    df[[cat_vars[[1]]]] <- factor(df[[cat_vars[[1]]]])
+    df[[cat_vars[[2]]]] <- factor(df[[cat_vars[[2]]]])
+    if (nlevels(df[[cat_vars[[1]]]]) < nlevels(df[[cat_vars[[2]]]])) {
+      df$.dq_x <- df[[cat_vars[[1]]]]
+      df$.dq_y <- df[[cat_vars[[2]]]]
+      name_x <- cat_vars[[1]]
+      name_y <- cat_vars[[2]]
+    } else {
+      df$.dq_x <- df[[cat_vars[[2]]]]
+      df$.dq_y <- df[[cat_vars[[1]]]]
+      name_x <- cat_vars[[2]]
+      name_y <- cat_vars[[1]]
+    }
+
+    p <- ggplot(df, aes(
+      x = .data$.dq_x,
+      y = .data$.dq_y,
+      fill = .data$.dq_grading_color
+    )) +
+      geom_tile(colour = "white", linewidth = 0.8) +
+      geom_text(
+        label = util_paste0_with_na(
+          df$`(%) of missing segments`, "%"
+        ),
+        show.legend = FALSE
+      ) +
+      util_scale_fill_dataquieR() +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+      scale_x_discrete(name = name_x) +
+      scale_y_discrete(
+        expand = c(0, 0), name = name_y,
+        limits = rev(levels(df$.dq_y))
+      ) +
+      xlab("Study segments")
+    if (!missing(strata)) {
+      p <- p + facet_grid(.data[[strata]] ~ .)
+    }
+  }
+
+  attr(p, "segment_missingness_colors") <- "grading_rules"
+  p
 }

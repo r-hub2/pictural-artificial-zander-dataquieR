@@ -13,26 +13,30 @@
 #' @concept reporting
 #' @noRd
 util_translate <- function(
-    keys,
-    ns = "general",
-    lang = getOption("dataquieR.lang", dataquieR.lang_default),
-    as_this_translation = NULL,
-    reverse = FALSE) {
-
+  keys,
+  ns = "general",
+  lang = getOption("dataquieR.lang", dataquieR.lang_default),
+  as_this_translation = NULL,
+  reverse = FALSE
+) {
   if (!missing(as_this_translation)) {
     util_stop_if_not(inherits(as_this_translation, "dataquieR_translated"))
     if (!missing(ns) || !missing(lang)) {
       util_error(
-        c("%s can called with %s and/or %s *or* with %s, but not both.",
-        "this is an internal error, sorry. please report."),
+        c(
+          "%s can called with %s and/or %s *or* with %s, but not both.",
+          "this is an internal error, sorry. please report."
+        ),
         sQuote("util_translate"),
-        sQuote("ns"), sQuote("lang"), sQuote("as_this_translation"))
+        sQuote("ns"), sQuote("lang"), sQuote("as_this_translation")
+      )
     }
-    ns <- attr(as_this_translation, "ns")
-    lang <- attr(as_this_translation, "lang")
+    ns <- util_attr(as_this_translation, "ns", exact = TRUE)
+    lang <- util_attr(as_this_translation, "lang", exact = TRUE)
   }
 
-  # Hint: the language may differ at rendering time from the language at computation time.
+  # Hint: the language may differ at rendering time from the language at
+  # computation time.
   translations <-
     util_get_concept_info("translations")
   values <- vapply(keys, function(key) {
@@ -70,7 +74,8 @@ util_translate <- function(
         "Internal error, sorry, please report: >1 translation for %s:%s:%s",
         sQuote(key),
         sQuote(ns),
-        sQuote(lang))
+        sQuote(lang)
+      )
     } else if (sum(match) == 1) {
       if (reverse) {
         return(translations$key[match])
@@ -146,13 +151,15 @@ as.character.dataquieR_translated <- function(x, ...) {
 #' @return names of the underlying character vector
 #' @export
 `names<-.dataquieR_translated` <- function(x, value) {
-  if (identical(x, value)) { # enable setNames(nm = colnames(x)), if colnames(x) are translated
+  if (identical(x, value)) { # enable setNames(nm = colnames(x)), if colnames(x) are translated # nolint: line_length_linter.
     x <- as.character(unclass(x))
     attr(x, "names") <- value
     return(x)
   }
-  util_error("You cannot change the language keys of an %s object",
-             sQuote("dataquieR_translated"))
+  util_error(
+    "You cannot change the language keys of an %s object",
+    sQuote("dataquieR_translated")
+  )
 }
 
 #' Detect if an object is a `dataquieR_translated` object
@@ -165,6 +172,9 @@ prep_is_translated <- function(x) {
   inherits(x, "dataquieR_translated")
 }
 
+#' Set translated column names on a table-like object
+#'
+#' @noRd
 `util_translated_colnames<-` <- function(x, value) {
   util_stop_if_not(is.data.frame(x) || is.matrix(x))
   util_stop_if_not(inherits(value, "dataquieR_translated"))
@@ -179,9 +189,12 @@ prep_is_translated <- function(x) {
   x
 }
 
+#' Internal helper: untranslated colnames
+#'
+#' @noRd
 util_untranslated_colnames <- function(x) {
   util_stop_if_not(inherits(cn <- colnames(x), "dataquieR_translated"))
-  attr(cn, "names")
+  util_attr(cn, "names", exact = TRUE)
 }
 
 #' JSON representation for translated dataquieR objects
@@ -192,20 +205,29 @@ util_untranslated_colnames <- function(x) {
 #' @noRd
 asJSON.dataquieR_translated <- function(x, ...) {
   if (util_ensure_suggested("jsonlite", err = FALSE)) {
-   jsonlite::toJSON(unname(as.character(unclass(x))))
+    jsonlite::toJSON(unname(as.character(unclass(x))))
   } else {
     util_error(
-      "Should not be reached in asJSON, internal error, sorry, please report.")
+      "Should not be reached in asJSON, internal error, sorry, please report."
+    )
   }
 }
 
+#' Internal helper: with orig names
+#'
+#' @noRd
 util_with_orig_names <- function(x) {
-  if (inherits(attr(x, "names"), "dataquieR_translated")) {
-    names(x) <- names(attr(x, "names"))
+  x_names <- util_attr(x, "names", exact = TRUE)
+  if (inherits(x_names, "dataquieR_translated")) {
+    names(x) <- names(x_names)
   }
   x
 }
 
-translation_version <- as.numeric_version(attr(readRDS(system.file("translations.rds",
-                                                      package = packageName())),
-                                  "version"))
+translation_version <- as.numeric_version(util_attr(
+  readRDS(system.file("translations.rds",
+      package = packageName()
+    )),
+  "version",
+  exact = TRUE
+))

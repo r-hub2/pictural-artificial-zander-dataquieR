@@ -32,6 +32,15 @@ code is assumed shared among all variables.
 For v1.0 metadata, you need to refer to
 \code{VAR_NAMES} here.
 }
+
+Item-level metadata columns such as \code{CODE_LIST_TABLE} and
+\code{MISSING_LIST_TABLE} refer to such tables by their data-frame cache names.
+If the complete metadata workbook is loaded with
+\code{\link[=prep_load_workbook_like_file]{prep_load_workbook_like_file()}} or passed as \code{meta_data_v2}, the sheet name
+alone is sufficient, e.g., \code{"tab1"}. If only the item-level metadata sheet is
+supplied and the referenced table is loaded separately, use the exact cached
+table name. For workbook sheets this is commonly a qualified
+workbook/sheet name such as \code{"meta_data_v2.xlsx|tab1"}.
 }
 \seealso{
 \href{https://dataquality.qihs.uni-greifswald.de/VIN_Item_Level_Metadata.html#MISSING_LIST_TABLE}{Online}

@@ -97,28 +97,29 @@
 #' @concept robustness
 #' @noRd
 util_correct_variable_use <- function(arg_name,
-                                      allow_na,
-                                      allow_more_than_one,
-                                      allow_null,
-                                      allow_all_obs_na,
-                                      allow_any_obs_na,
-                                      min_distinct_values,
-                                      need_type,
-                                      need_scale,
-                                      need_role,
-                                      need_computed_role,
-                                      role = "",
-                                      overwrite = TRUE,
-                                      do_not_stop = FALSE,
-                                      remove_not_found = FALSE) {
+  allow_na,
+  allow_more_than_one,
+  allow_null,
+  allow_all_obs_na,
+  allow_any_obs_na,
+  min_distinct_values,
+  need_type,
+  need_scale,
+  need_role,
+  need_computed_role,
+  role = "",
+  overwrite = TRUE,
+  do_not_stop = FALSE,
+  remove_not_found = FALSE) {
   re_check <- TRUE
   while (re_check) {
     re_check <- FALSE
     # interpret the arg_name argument
-    try({
-      arg_name <- as.character(substitute(arg_name))
-    }, # if called with a symbol, get that symbol as a character,
-    silent = TRUE # if called with a character, do nothing
+    try(
+      {
+        arg_name <- as.character(substitute(arg_name))
+      }, # if called with a symbol, get that symbol as a character,
+      silent = TRUE # if called with a character, do nothing
     )
     if (!all(is.character(arg_name))) { # nocov start
       # if we did not get a character up to here, there is an error in
@@ -126,14 +127,16 @@ util_correct_variable_use <- function(arg_name,
       # this should never happen anyway, so cannot test this
       util_error(c(
         "argument arg_name must be either one character or one symbol,",
-        "wrong use of util_correct_variable_use?"))
+        "wrong use of util_correct_variable_use?"
+      ))
     } # nocov end
     if (length(arg_name) != 1) {
       # if we have 0 or more than one argument name, this is also an
       # error in calling util_correct_variable_use
       util_error(c(
         "argument arg_name must be of length 1,",
-        "wrong use of util_correct_variable_use?"))
+        "wrong use of util_correct_variable_use?"
+      ))
     }
 
     # verify the "roles" argument
@@ -141,51 +144,73 @@ util_correct_variable_use <- function(arg_name,
       # if `role` is a known variable-argument role
       if (missing(allow_na)) { # if missing the allow_na argument
         allow_na <- subset(.variable_arg_roles, get("name") == role,
-                           "allow_na", drop = TRUE)
+          "allow_na",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
       if (missing(allow_more_than_one)) {
         # if missing the allow_more_than_one argument
         allow_more_than_one <- subset(.variable_arg_roles, get("name") == role,
-                                      "allow_more_than_one", drop = TRUE)
+          "allow_more_than_one",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
       if (missing(allow_null)) { # if missing the allow_null argument
         allow_null <- subset(.variable_arg_roles, get("name") == role,
-                             "allow_null", drop = TRUE)
+          "allow_null",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
-      if (missing(allow_all_obs_na)) { # if missing the allow_all_obs_na argument
+      if (missing(allow_all_obs_na)) { # if missing the allow_all_obs_na argument # nolint: line_length_linter.
         allow_all_obs_na <- subset(.variable_arg_roles, get("name") == role,
-                                   "allow_all_obs_na", drop = TRUE)
+          "allow_all_obs_na",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
-      if (missing(allow_any_obs_na)) { # if missing the allow_any_obs_na argument
+      if (missing(allow_any_obs_na)) { # if missing the allow_any_obs_na argument # nolint: line_length_linter.
         allow_any_obs_na <- subset(.variable_arg_roles, get("name") == role,
-                                   "allow_any_obs_na", drop = TRUE)
+          "allow_any_obs_na",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
       if (missing(min_distinct_values)) {
         # if missing the min_distinct_values argument
         min_distinct_values <- subset(.variable_arg_roles, get("name") == role,
-                                      "min_distinct_values", drop = TRUE)
+          "min_distinct_values",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
       if (missing(need_type)) { # if missing the need_type argument
         need_type <- subset(.variable_arg_roles, get("name") == role,
-                            "need_type", drop = TRUE)
+          "need_type",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
       if (missing(need_scale)) { # if missing the need_scale argument
         need_scale <- subset(.variable_arg_roles, get("name") == role,
-                             "need_scale", drop = TRUE)
+          "need_scale",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
       if (missing(need_role)) { # if missing the need_role argument
         need_role <- subset(.variable_arg_roles, get("name") == role,
-                             "need_role", drop = TRUE)
+          "need_role",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
-      if (missing(need_computed_role)) { # if missing the need_computed_role argument
+      if (missing(need_computed_role)) { # if missing the need_computed_role argument # nolint: line_length_linter.
         need_computed_role <- subset(.variable_arg_roles, get("name") == role,
-                             "need_computed_role", drop = TRUE)
+          "need_computed_role",
+          drop = TRUE
+        )
       } # fetch it from the role's defaults
     } else { # no known variable-argument in argument `role`
       if (role != "") { # if role is not empty
         util_error(
-          c("Unknown variable-argument role: %s for argument %s,",
-            "wrong use of util_correct_variable_use?"),
+          c(
+            "Unknown variable-argument role: %s for argument %s,",
+            "wrong use of util_correct_variable_use?"
+          ),
           role, arg_name
         ) # this is again a wrong use of this function.
       }
@@ -235,9 +260,12 @@ util_correct_variable_use <- function(arg_name,
     if (!exists(arg_name, envir = p)) {
       # check, if the function argument exists in the calling function.
       util_error(
-        c("Unknown function argument %s checked,",
-          "wrong use of util_correct_variable_use?"),
-        arg_name)
+        c(
+          "Unknown function argument %s checked,",
+          "wrong use of util_correct_variable_use?"
+        ),
+        arg_name
+      )
     }
 
     # if we have a label col, use it
@@ -261,16 +289,23 @@ util_correct_variable_use <- function(arg_name,
     if (inherits(variable, "try-error")) {
       if (missing_in_parent) {
         util_warning(
-          c("Missing argument %s without default value. Setting to NULL. As",
+          c(
+            "Missing argument %s without default value. Setting to NULL. As",
             "a dataquieR developer, please add a default value for %s to",
-            "remove this warning."),
+            "remove this warning."
+          ),
           dQuote(arg_name), dQuote(arg_name),
-          applicability_problem = TRUE)
+          applicability_problem = TRUE
+        )
       } else {
         util_warning(
-          c("Could not get value of argument %s for unexpected reasons. Setting",
-            "to NULL."), arg_name, applicability_problem = TRUE)
-        util_warning(variable, applicability_problem = TRUE)
+          c(
+            "Could not get value of argument %s for unexpected reasons. Setting", # nolint: line_length_linter.
+            "to NULL."
+          ), arg_name,
+          applicability_problem = TRUE
+        )
+        util_warning("%s", variable, applicability_problem = TRUE)
       }
       variable <- NULL
     }
@@ -280,14 +315,17 @@ util_correct_variable_use <- function(arg_name,
       # util_correct_variable_use
       util_error(c(
         "Did not find merged study data and metadata ds1.",
-        "Wrong use of util_correct_variable_use?"))
+        "Wrong use of util_correct_variable_use?"
+      ))
     }
 
     if (!exists("meta_data", envir = p)) {
-      # if the calling function does not have a meta_data, this is a wrong use of
+      # if the calling function does not have a meta_data, this is a wrong use
+      # of
       # util_correct_variable_use
       util_error(
-        "Did not find metadata. Wrong use of util_correct_variable_use?")
+        "Did not find metadata. Wrong use of util_correct_variable_use?"
+      )
     }
 
     ds1 <- try(get("ds1", envir = p), silent = TRUE)
@@ -295,8 +333,11 @@ util_correct_variable_use <- function(arg_name,
     if (!is.data.frame(ds1)) { # it this is not a data frame, this is again a
       # wrong use of util_correct_variable_use
       util_error(
-        c("ds1 does not provide merged study data and metadata.",
-          "Wrong use of util_correct_variable_use?"))
+        c(
+          "ds1 does not provide merged study data and metadata.",
+          "Wrong use of util_correct_variable_use?"
+        )
+      )
     }
 
     meta_data <- try(get("meta_data", envir = p), silent = TRUE)
@@ -305,14 +346,18 @@ util_correct_variable_use <- function(arg_name,
       # it this is not a data frame, this is again a wrong use of
       # util_correct_variable_use
       util_error(
-        c("meta_data does not provide a metadata data frame.",
-          "Wrong use of util_correct_variable_use?"))
+        c(
+          "meta_data does not provide a metadata data frame.",
+          "Wrong use of util_correct_variable_use?"
+        )
+      )
     }
 
     if (!allow_null && is.null(variable)) {
       # if we need the argument in arg_name, but the user provided NULL
       util_error("Argument %s is NULL", arg_name,
-                 applicability_problem = TRUE) # this is an error
+        applicability_problem = TRUE
+      ) # this is an error
     }
 
     if (allow_more_than_one) {
@@ -321,7 +366,8 @@ util_correct_variable_use <- function(arg_name,
         # and we do need at least one variable name here, but the user did not
         # provide any
         util_error("Need at least one element in argument %s, got 0", arg_name,
-                   applicability_problem = TRUE)
+          applicability_problem = TRUE
+        )
         # this is an error
       }
     } else { # if we expect one value in the argument arg_name at most
@@ -330,20 +376,22 @@ util_correct_variable_use <- function(arg_name,
         # but the user gave more than one or none although
         # allow_null prohibits this
         util_error("Need exactly one element in argument %s, got %d: [%s]",
-                   arg_name, length(variable), paste0(variable, collapse = ", "),
-                   applicability_problem = TRUE)
+          arg_name, length(variable), paste0(variable, collapse = ", "),
+          applicability_problem = TRUE
+        )
         # this is an error
       }
     }
     if (length(variable) > 0) { # if we have at least one variable name
       if (!all(is.character(variable) |
-               is.na(variable))) { # and one name is not a character string
+            is.na(variable))) { # and one name is not a character string
         util_error("Need character variable names in argument %s", arg_name,
-                   applicability_problem = TRUE)
+          applicability_problem = TRUE
+        )
         # this is (at least up to now, may allow symbols here similar
         # to subset or with) an error
       }
-      variable[trimws(variable) == ""] <- NA # replace all variable names that are
+      variable[trimws(variable) == ""] <- NA # replace all variable names that are # nolint: line_length_linter.
       # empty characters by NA.
     }
     assign(arg_name, variable, envir = p) # re-assign the possibly modified
@@ -352,15 +400,19 @@ util_correct_variable_use <- function(arg_name,
       # if we have NAs in the list of variable names in `arg_name`
       # and this is not allowed
       util_error("Missing entries not allowed in argument %s", arg_name,
-                 applicability_problem = TRUE)
+        applicability_problem = TRUE
+      )
       # then this is an error.
     }
 
-    # Check whether variables can be found in the data (using all possible label columns).
-    possible_vars <- unique(c(meta_data[[VAR_NAMES]], # TODO this corresponds with TODO POSSIBLE_VARS in prep_prepare_dataframes
-                              meta_data[[LABEL]],
-                              meta_data[[LONG_LABEL]],
-                              meta_data[[label_col]]))
+    # Check whether variables can be found in the data (using all possible
+    # label columns).
+    possible_vars <- unique(c(
+      meta_data[[VAR_NAMES]],
+      meta_data[[LABEL]],
+      meta_data[[LONG_LABEL]],
+      meta_data[[label_col]]
+    ))
     if (!all(na.omit(variable) %in% possible_vars)) {
       # if we have variable names in the caller's variable argument `arg_name`
       # missing in the data
@@ -368,10 +420,13 @@ util_correct_variable_use <- function(arg_name,
         na.omit(variable)[!(na.omit(variable) %in% possible_vars)] # find them
 
       only_in_sd <-
-        try({
-          n <- colnames(get("study_data", envir = p))
-          n[na.omit(match(tolower(non_matching_vars), tolower(n)))]
-        }, silent = TRUE)
+        try(
+          {
+            n <- colnames(get("study_data", envir = p))
+            n[na.omit(match(tolower(non_matching_vars), tolower(n)))]
+          },
+          silent = TRUE
+        )
 
       if (util_is_try_error(only_in_sd)) {
         only_in_sd <- character(0)
@@ -379,8 +434,10 @@ util_correct_variable_use <- function(arg_name,
 
       if (length(only_in_sd) > 0) {
         hint_maybe_miss_in_meta <- sprintf(
-        paste("\nHINT: I've found the following variables in %s not covered",
-          "by %s: %s, so, maybe, your metadata is incomplete?"),
+          paste(
+            "\nHINT: I've found the following variables in %s not covered",
+            "by %s: %s, so, maybe, your metadata is incomplete?"
+          ),
           "study data",
           "metadata",
           util_pretty_vector_string(only_in_sd)
@@ -389,7 +446,7 @@ util_correct_variable_use <- function(arg_name,
         hint_maybe_miss_in_meta <- ""
       }
 
-      fuzzy_match <- vapply( # and try to guess what the user wanted to put there
+      fuzzy_match <- vapply( # and try to guess what the user wanted to put there # nolint: line_length_linter.
         non_matching_vars,
         function(v) {
           unique(possible_vars)[which.min(adist(
@@ -398,7 +455,8 @@ util_correct_variable_use <- function(arg_name,
             ignore.case = TRUE,
             fixed = TRUE
           ))]
-        }, "")
+        }, ""
+      )
       if (remove_not_found) {
         cnd_f <- util_message
       } else {
@@ -417,15 +475,19 @@ util_correct_variable_use <- function(arg_name,
       variable <- setdiff(non_matching_vars, non_matching_vars)
       re_check <- TRUE
       if (overwrite) {
-        # Pass the 'variable' vector to the environment to use it within the calling function.
+        # Pass the 'variable' vector to the environment to use it within the
+        # calling function.
         assign(arg_name, variable, envir = parent.frame())
       }
     } else {
-      # If users mix VAR_NAMES and LABELs (and maybe also LONG_LABELs), we need to
+      # If users mix VAR_NAMES and LABELs (and maybe also LONG_LABELs), we need
+      # to
       # map the variable names to the column names of ds1.
       if (!all(na.omit(variable) %in% colnames(ds1))) {
-        non_matching_ind <- intersect(which(!(variable %in% colnames(ds1))),
-                                      which(!is.na(variable)))
+        non_matching_ind <- intersect(
+          which(!(variable %in% colnames(ds1))),
+          which(!is.na(variable))
+        )
         non_matching_vars <- variable[non_matching_ind]
         other_col <- setdiff(c(VAR_NAMES, LABEL, LONG_LABEL), label_col)
         other_col <- intersect(other_col, colnames(meta_data))
@@ -442,50 +504,59 @@ util_correct_variable_use <- function(arg_name,
           )
         })
         map_res <- as.data.frame(map_res)
-        # check whether the user-specified variable could not be found in any of the other columns:
-        map_res_NA <- vapply(
-          1:nrow(map_res),
+        # check whether the user-specified variable could not be found in any
+        # of the other columns:
+        map_res_na <- vapply(
+          seq_len(nrow(map_res)),
           FUN.VALUE = logical(1),
           FUN = function(i) {
-            all(is.na(map_res[i, ]))
+            all(is.na(map_res[i, , drop = FALSE]))
           }
         )
-        if (any(map_res_NA)) { # may be dead code?
+        if (any(map_res_na)) { # may be dead code?
           util_error("Variable '%s' (%s) not found in the metadata.",
-                     paste0(non_matching_vars[map_res_NA],
-                            collapse = ", "),
-                     arg_name,
-                     applicability_problem = TRUE)
+            paste0(non_matching_vars[map_res_na],
+              collapse = ", "
+            ),
+            arg_name,
+            applicability_problem = TRUE
+          )
         }
-        # check whether the user-specified variable was found in different label columns and maps to different variables (= ambiguity)
+        # check whether the user-specified variable was found in different
+        # label columns and maps to different variables (= ambiguity)
         map_res_ambiguous <- vapply(
-          1:nrow(map_res),
+          seq_len(nrow(map_res)),
           FUN.VALUE = logical(1),
           FUN = function(i) {
-            length(unique(na.omit(as.character(map_res[i, ])))) > 1
+            length(unique(na.omit(as.character(map_res[i, , drop = FALSE])))) > 1 # nolint: line_length_linter.
           }
         )
         if (any(map_res_ambiguous)) {
           util_warning("Variable '%s' (%s) is ambiguous in the metadata.",
-                       paste0(non_matching_vars[map_res_ambiguous],
-                              collapse = ", "),
-                       arg_name,
-                       applicability_problem = TRUE)
+            paste0(non_matching_vars[map_res_ambiguous],
+              collapse = ", "
+            ),
+            arg_name,
+            applicability_problem = TRUE
+          )
         }
 
         variable[non_matching_ind] <- vapply(
-          1:nrow(map_res),
+          seq_len(nrow(map_res)),
           FUN.VALUE = character(1),
           FUN = function(i) {
-            unique(na.omit(as.character(map_res[i, ])))[1]
+            unique(na.omit(as.character(map_res[i, , drop = FALSE])))[1]
             # We select here the first element, such that in case of ambiguities
-            # VAR_NAME is preferred over LABEL and LONG_LABEL, and LABEL over LONG_LABEL.
+            # VAR_NAME is preferred over LABEL and LONG_LABEL, and LABEL over
+            # LONG_LABEL.
             # If there are no ambiguities, this works as well.
           }
         )
-        # The 'variable' vector contains now all variable names according to label_col.
+        # The 'variable' vector contains now all variable names according to
+        # label_col.
         if (overwrite) {
-          # Pass the 'variable' vector to the environment to use it within the calling function.
+          # Pass the 'variable' vector to the environment to use it within the
+          # calling function.
           assign(arg_name, variable, envir = parent.frame())
         }
       }
@@ -500,28 +571,31 @@ util_correct_variable_use <- function(arg_name,
         if (is.na(v)) {
           # if all observations are NA and this is prohibited
           record_problem("There are NAs in the variable names passed in %s",
-                         arg_name,
-                         applicability_problem = applicability_problem,
-                         intrinsic_applicability_problem =
-                           intrinsic_applicability_problem)
-        } else{
+            arg_name,
+            applicability_problem = applicability_problem,
+            intrinsic_applicability_problem =
+              intrinsic_applicability_problem
+          )
+        } else {
           # if all observations are NA and this is prohibited
           record_problem("Variable '%s' (%s) has only NA observations",
-                         na.omit(v)[na.omit(v) %in% colnames(ds1)], arg_name,
-                         applicability_problem = applicability_problem,
-                         intrinsic_applicability_problem =
-                           intrinsic_applicability_problem)
+            na.omit(v)[na.omit(v) %in% colnames(ds1)], arg_name,
+            applicability_problem = applicability_problem,
+            intrinsic_applicability_problem =
+              intrinsic_applicability_problem
+          )
         }
         data_problem_container[[v]] <- TRUE
       }
       # names(empty_containter) gibt die geflaggten Variablen
       if (!allow_any_obs_na && any(is.na(ds1[[v]]))) {
         # if no NAs are allowed at all, but we have some
-        record_problem("Variable '%s' (%s) has NA observations, which is not allowed",
-                       na.omit(v)[na.omit(v) %in% colnames(ds1)], arg_name,
-                       applicability_problem = applicability_problem,
-                       intrinsic_applicability_problem =
-                         intrinsic_applicability_problem)
+        record_problem("Variable '%s' (%s) has NA observations, which is not allowed", # nolint: line_length_linter.
+          na.omit(v)[na.omit(v) %in% colnames(ds1)], arg_name,
+          applicability_problem = applicability_problem,
+          intrinsic_applicability_problem =
+            intrinsic_applicability_problem
+        )
         data_problem_container[[v]] <- TRUE
       }
 
@@ -531,14 +605,18 @@ util_correct_variable_use <- function(arg_name,
         n_distinct_values <- length(uniq_rv)
         if (n_distinct_values < min_distinct_values) {
           # if we have fewer distinct values than required
-          record_problem(c("Variable '%s' (%s) has fewer distinct values than required",
-                           "for the argument %s of %s"),
-                         na.omit(v)[na.omit(v) %in% colnames(ds1)], arg_name,
-                         sQuote(arg_name),
-                         sQuote(rlang::caller_call()[[1]]),
-                         applicability_problem = applicability_problem,
-                         intrinsic_applicability_problem =
-                           intrinsic_applicability_problem)
+          record_problem(
+            c(
+              "Variable '%s' (%s) has fewer distinct values than required",
+              "for the argument %s of %s"
+            ),
+            na.omit(v)[na.omit(v) %in% colnames(ds1)], arg_name,
+            sQuote(arg_name),
+            sQuote(rlang::caller_call()[[1]]),
+            applicability_problem = applicability_problem,
+            intrinsic_applicability_problem =
+              intrinsic_applicability_problem
+          )
           data_problem_container[[v]] <- TRUE
         }
       }
@@ -569,9 +647,9 @@ util_correct_variable_use <- function(arg_name,
 
     # data type given in metadata? (similar to util_get_meta_from_var ...)
     if (DATA_TYPE %in% colnames(meta_data)) {
-      types <- meta_data[meta_data[[label_col]] %in% variable, DATA_TYPE]
+      types <- meta_data[meta_data[[label_col]] %in% variable, DATA_TYPE, drop = TRUE] # nolint: line_length_linter.
       # try to fetch the types from the metadata.
-      names(types) <- meta_data[meta_data[[label_col]] %in% variable, label_col]
+      names(types) <- meta_data[meta_data[[label_col]] %in% variable, label_col, drop = TRUE] # nolint: line_length_linter.
       types <- types[!is.na(types) & !is.na(names(types))]
     } else {
       types <- NULL
@@ -582,9 +660,9 @@ util_correct_variable_use <- function(arg_name,
 
     # data type given in metadata? (similar to util_get_meta_from_var ...)
     if (SCALE_LEVEL %in% colnames(meta_data)) {
-      scales <- meta_data[meta_data[[label_col]] %in% variable, SCALE_LEVEL]
+      scales <- meta_data[meta_data[[label_col]] %in% variable, SCALE_LEVEL, drop = TRUE] # nolint: line_length_linter.
       # try to fetch the scales from the metadata.
-      names(scales) <- meta_data[meta_data[[label_col]] %in% variable, label_col]
+      names(scales) <- meta_data[meta_data[[label_col]] %in% variable, label_col, drop = TRUE] # nolint: line_length_linter.
       scales <- scales[!is.na(scales) & !is.na(names(scales))]
     } else {
       scales <- NULL
@@ -595,9 +673,9 @@ util_correct_variable_use <- function(arg_name,
 
     # variable role given in metadata? (similar to util_get_meta_from_var ...)
     if (VARIABLE_ROLE %in% colnames(meta_data)) {
-      roles <- meta_data[meta_data[[label_col]] %in% variable, VARIABLE_ROLE]
+      roles <- meta_data[meta_data[[label_col]] %in% variable, VARIABLE_ROLE, drop = TRUE] # nolint: line_length_linter.
       # try to fetch the roles from the metadata.
-      names(roles) <- meta_data[meta_data[[label_col]] %in% variable, label_col]
+      names(roles) <- meta_data[meta_data[[label_col]] %in% variable, label_col, drop = TRUE] # nolint: line_length_linter.
       roles <- roles[!is.na(roles) & !is.na(names(roles))]
     } else {
       roles <- NULL
@@ -606,14 +684,18 @@ util_correct_variable_use <- function(arg_name,
 
     data_computed_role_problem_container <- new.env(parent = emptyenv())
 
-    # computed variable role given in metadata? (similar to util_get_meta_from_var ...)
+    # computed variable role given in metadata? (similar to
+    # util_get_meta_from_var ...)
     if (!COMPUTED_VARIABLE_ROLE %in% colnames(meta_data)) {
       meta_data[[COMPUTED_VARIABLE_ROLE]] <- rep("na", nrow(meta_data))
     }
     meta_data[[COMPUTED_VARIABLE_ROLE]][
-      is.na(meta_data[[COMPUTED_VARIABLE_ROLE]])] <- "na"
-    computed_roles <- meta_data[meta_data[[label_col]] %in% variable,
-                                COMPUTED_VARIABLE_ROLE]
+      is.na(meta_data[[COMPUTED_VARIABLE_ROLE]])
+    ] <- "na"
+    computed_roles <- meta_data[
+      meta_data[[label_col]] %in% variable,
+      COMPUTED_VARIABLE_ROLE
+      , drop = TRUE]
     # try to fetch the computed roles from the metadata.
     names(computed_roles) <-
       meta_data[meta_data[[label_col]] %in% variable, label_col]
@@ -623,9 +705,11 @@ util_correct_variable_use <- function(arg_name,
     if (!all(is.na(need_type)) && length(types) <
         length(unique(variable[!is.na(variable)]))) {
       util_warning(
-        c("In %s, variables with types matching %s should be specified, but not",
+        c(
+          "In %s, variables with types matching %s should be specified, but not", # nolint: line_length_linter.
           "all variables have a type assigned in the metadata.",
-          "I have %d variables but only %d types."),
+          "I have %d variables but only %d types."
+        ),
         dQuote(arg_name),
         dQuote(need_type),
         length(unique(variable[!is.na(variable)])),
@@ -641,62 +725,68 @@ util_correct_variable_use <- function(arg_name,
       if (!is.null(type) && !is.na(type) && !is.na(need_type)) {
         # if we have a needed type and a variable type for the currently checked
         # variable,
-        need_type. <- tolower(trimws(unlist(strsplit(need_type, "|",
-                                                     fixed = TRUE),
-                                            recursive = TRUE)))
+        need_type_parts <- tolower(trimws(unlist(
+          strsplit(need_type, "|",
+            fixed = TRUE
+          ),
+          recursive = TRUE
+        )))
         # parse the type (split at pipes |)
         not_type <-
-          tolower(trimws(substring(need_type.[startsWith(need_type., "!")], 2)))
+          tolower(trimws(substring(need_type_parts[startsWith(need_type_parts, "!")], 2))) # nolint: line_length_linter.
         # and parse the type for negation (e.g. *not* INTEGER)
         well_type <-
-          tolower(trimws(need_type.[!startsWith(need_type., "!")]))
+          tolower(trimws(need_type_parts[!startsWith(need_type_parts, "!")]))
         # and parse the type for no negation resp. (e.g. INTEGER)
 
         if ((length(well_type) > 0) &&
             (!all(well_type %in%
                   tolower(trimws(names(DATA_TYPES)))))) {
-          util_error(c(
-            "Internal error:",
-            "%s's %s contains invalid type names %s (allowed are %s).",
-            "As a dataquieR developer, you should fix your call of %s."
-          ),
-          sQuote(arg_name),
-          sQuote("need_type"),
-          paste(dQuote(
-            well_type[!(well_type %in%
-                          tolower(trimws(names(DATA_TYPES))))]
-          ), collapse = ", "),
-          paste(dQuote(tolower(trimws(names(DATA_TYPES)))), collapse = ", "),
-          sQuote(rlang::caller_call()[[1]])
+          util_error(
+            c(
+              "Internal error:",
+              "%s's %s contains invalid type names %s (allowed are %s).",
+              "As a dataquieR developer, you should fix your call of %s."
+            ),
+            sQuote(arg_name),
+            sQuote("need_type"),
+            paste(dQuote(
+              well_type[!(well_type %in%
+                    tolower(trimws(names(DATA_TYPES))))]
+            ), collapse = ", "),
+            paste(dQuote(tolower(trimws(names(DATA_TYPES)))), collapse = ", "),
+            sQuote(rlang::caller_call()[[1]])
           )
         }
 
         if ((length(not_type) > 0) &&
             (!all(not_type %in%
                   tolower(trimws(names(DATA_TYPES)))))) {
-          util_error(c(
-            "Internal error:",
-            "%s's %s contains invalid !type names %s (allowed are %s).",
-            "As a dataquieR developer, you should fix your call of %s."
-          ),
-          sQuote(arg_name),
-          sQuote("need_type"),
-          paste(dQuote(
-            not_type[!(not_type %in%
-                         tolower(trimws(names(DATA_TYPES))))]
-          ), collapse = ", "),
-          paste(dQuote(tolower(trimws(names(DATA_TYPES)))), collapse = ", "),
-          sQuote(rlang::caller_call()[[1]])
+          util_error(
+            c(
+              "Internal error:",
+              "%s's %s contains invalid !type names %s (allowed are %s).",
+              "As a dataquieR developer, you should fix your call of %s."
+            ),
+            sQuote(arg_name),
+            sQuote("need_type"),
+            paste(dQuote(
+              not_type[!(not_type %in%
+                    tolower(trimws(names(DATA_TYPES))))]
+            ), collapse = ", "),
+            paste(dQuote(tolower(trimws(names(DATA_TYPES)))), collapse = ", "),
+            sQuote(rlang::caller_call()[[1]])
           )
         }
 
-        if ((length(well_type) > 0) && (!tolower(trimws(type)) %in% well_type)) {
+        if ((length(well_type) > 0) && (!tolower(trimws(type)) %in% well_type)) { # nolint: line_length_linter.
           # now check for the allowed types
           record_problem(
-            "Argument %s: Variable '%s' (%s) does not have an allowed type (%s)",
+            "Argument %s: Variable '%s' (%s) does not have an allowed type (%s)", # nolint: line_length_linter.
             dQuote(arg_name), ..vname, tolower(trimws(type)), need_type,
             applicability_problem = TRUE,
-            intrinsic_applicability_problem = TRUE)
+            intrinsic_applicability_problem = TRUE
+          )
           data_type_problem_container[[..vname]] <- TRUE
         }
         if ((length(not_type) > 0) && (tolower(trimws(type)) %in% not_type)) {
@@ -706,7 +796,8 @@ util_correct_variable_use <- function(arg_name,
             dQuote(arg_name), ..vname, tolower(trimws(type)),
             util_pretty_vector_string(not_type),
             applicability_problem = TRUE,
-            intrinsic_applicability_problem = TRUE)
+            intrinsic_applicability_problem = TRUE
+          )
           data_type_problem_container[[..vname]] <- TRUE
         }
         # Check, if variable is really of declared data type.
@@ -714,11 +805,14 @@ util_correct_variable_use <- function(arg_name,
         if (!is.na(sd_type) && sd_type != type) {
           if (sd_type != DATA_TYPES$INTEGER || type != DATA_TYPES$FLOAT) {
             util_message(
-              c("Argument %s: Variable '%s' (%s) does not have matching",
-                "data type in the study data (%s)"),
+              c(
+                "Argument %s: Variable '%s' (%s) does not have matching",
+                "data type in the study data (%s)"
+              ),
               dQuote(arg_name), ..vname, tolower(trimws(type)),
-              prep_dq_data_type_of(ds1[, ..vname, TRUE]),
-              applicability_problem = TRUE)
+              prep_dq_data_type_of(ds1[, ..vname, drop = TRUE]),
+              applicability_problem = TRUE
+            )
           }
         }
       } else { # nocov start
@@ -727,9 +821,12 @@ util_correct_variable_use <- function(arg_name,
         # "types <- types[!is.na(types) & !is.na(names(types))]" above).
         if (!is.na(need_type)) {
           util_warning(
-            c("Argument %s: No data type found for '%s' in the",
-              "metadata, cannot check type"), dQuote(arg_name), variable,
-            applicability_problem = TRUE)
+            c(
+              "Argument %s: No data type found for '%s' in the",
+              "metadata, cannot check type"
+            ), dQuote(arg_name), variable,
+            applicability_problem = TRUE
+          )
         }
       } # nocov end
     }
@@ -753,17 +850,14 @@ util_correct_variable_use <- function(arg_name,
         assign(arg_name, variable, envir = p)
       }
     }
-    # TODO EK: Should we support hierarchy of sclae levels here, i.e.,
-    # util_correct_variable_use(resp_vars, need_scale = SCALE_LEVELS$ORDINAL)
-    # would pass, if SBP_0 is ratio so even "better" than ordinal? But maybe,
-    # we want to explicitly break the hierarchy for certain descriptors, e.g., run
-    # a function only for ordinal variables but not for ratio ones.
     if (!all(is.na(need_scale)) && length(scales) <
         length(unique(variable[!is.na(variable)]))) {
       util_warning(
-        c("In %s, variables with scale levels matching %s should be specified, but not",
+        c(
+          "In %s, variables with scale levels matching %s should be specified, but not", # nolint: line_length_linter.
           "all variables have a scale level assigned in the metadata.",
-          "I have %d variables but only %d scale levels"),
+          "I have %d variables but only %d scale levels"
+        ),
         dQuote(arg_name),
         dQuote(need_scale),
         length(unique(variable[!is.na(variable)])),
@@ -779,94 +873,93 @@ util_correct_variable_use <- function(arg_name,
       if (!is.null(scale) && !is.na(scale) && !is.na(need_scale)) {
         # if we have a needed scale level and a variable scale leve for the
         # currently checked variable,
-        need_scale. <- tolower(trimws(unlist(strsplit(need_scale, "|",
-                                                      fixed = TRUE),
-                                             recursive = TRUE)))
+        need_scale_parts <- tolower(trimws(unlist(
+          strsplit(need_scale, "|",
+            fixed = TRUE
+          ),
+          recursive = TRUE
+        )))
         # parse the scale level (split at pipes |)
         not_scale <-
-          tolower(trimws(substring(need_scale.[startsWith(need_scale., "!")], 2)))
+          tolower(trimws(substring(need_scale_parts[startsWith(need_scale_parts, "!")], 2))) # nolint: line_length_linter.
         # and parse the scale level for negation (e.g. *not* NOMINAL)
         well_scale <-
-          tolower(trimws(need_scale.[!startsWith(need_scale., "!")]))
+          tolower(trimws(need_scale_parts[!startsWith(need_scale_parts, "!")]))
         # and parse the scale level for no negation resp. (e.g. NOMINAL)
 
         if ((length(well_scale) > 0) &&
             (!all(well_scale %in%
                   tolower(trimws(names(SCALE_LEVELS)))))) {
-          util_error(c( # TODO EK This should not happen outside pipelines, then it should be a warning only.
-            "Internal error:",
-            "%s's %s contains invalid scale-level names %s (allowed are %s).",
-            "As a dataquieR developer, you should fix your call of %s."
-          ),
-          sQuote(arg_name),
-          sQuote("need_scale"),
-          paste(dQuote(
-            well_scale[!(well_scale %in%
-                           tolower(trimws(names(SCALE_LEVELS))))]
-          ), collapse = ", "),
-          paste(dQuote(tolower(trimws(names(SCALE_LEVELS)))), collapse = ", "),
-          sQuote(rlang::caller_call()[[1]])
+          util_error(
+            c(
+              "Internal error:",
+              "%s's %s contains invalid scale-level names %s (allowed are %s).",
+              "As a dataquieR developer, you should fix your call of %s."
+            ),
+            sQuote(arg_name),
+            sQuote("need_scale"),
+            paste(dQuote(
+              well_scale[!(well_scale %in%
+                    tolower(trimws(names(SCALE_LEVELS))))]
+            ), collapse = ", "),
+            paste(dQuote(tolower(trimws(names(SCALE_LEVELS)))), collapse = ", "), # nolint: line_length_linter.
+            sQuote(rlang::caller_call()[[1]])
           )
         }
 
         if ((length(not_scale) > 0) &&
             (!all(not_scale %in%
                   tolower(trimws(names(SCALE_LEVELS)))))) {
-          util_error(c(
-            "Internal error:",
-            "%s's %s contains invalid !scale-level names %s (allowed are %s).",
-            "As a dataquieR developer, you should fix your call of %s."
-          ),
-          sQuote(arg_name),
-          sQuote("need_scale"),
-          paste(dQuote(
-            not_scale[!(not_scale %in%
-                          tolower(trimws(names(SCALE_LEVELS))))]
-          ), collapse = ", "),
-          paste(dQuote(tolower(trimws(names(SCALE_LEVELS)))), collapse = ", "),
-          sQuote(rlang::caller_call()[[1]])
+          util_error(
+            c(
+              "Internal error:",
+              "%s's %s contains invalid !scale-level names %s (allowed are %s).", # nolint: line_length_linter.
+              "As a dataquieR developer, you should fix your call of %s."
+            ),
+            sQuote(arg_name),
+            sQuote("need_scale"),
+            paste(dQuote(
+              not_scale[!(not_scale %in%
+                    tolower(trimws(names(SCALE_LEVELS))))]
+            ), collapse = ", "),
+            paste(dQuote(tolower(trimws(names(SCALE_LEVELS)))), collapse = ", "), # nolint: line_length_linter.
+            sQuote(rlang::caller_call()[[1]])
           )
         }
 
-        if ((length(well_scale) > 0) && (!tolower(trimws(scale)) %in% well_scale)) {
+        if ((length(well_scale) > 0) && (!tolower(trimws(scale)) %in% well_scale)) { # nolint: line_length_linter.
           # now check for the allowed scale levels
           record_problem(
-            "Argument %s: Variable '%s' (%s) does not have an allowed scale level (%s)",
+            "Argument %s: Variable '%s' (%s) does not have an allowed scale level (%s)", # nolint: line_length_linter.
             dQuote(arg_name), ..vname, tolower(trimws(scale)), need_scale,
             applicability_problem = TRUE,
-            intrinsic_applicability_problem = TRUE)
+            intrinsic_applicability_problem = TRUE
+          )
           data_scale_problem_container[[..vname]] <- TRUE
         }
-        if ((length(not_scale) > 0) && (tolower(trimws(scale)) %in% not_scale)) {
+        if ((length(not_scale) > 0) && (tolower(trimws(scale)) %in% not_scale)) { # nolint: line_length_linter.
           # and for the disallowed scale levels
           record_problem(
             "Argument %s: Variable '%s' (%s) has a disallowed scale level (%s)",
             dQuote(arg_name), ..vname, tolower(trimws(scale)),
             util_pretty_vector_string(not_scale),
             applicability_problem = TRUE,
-            intrinsic_applicability_problem = TRUE)
+            intrinsic_applicability_problem = TRUE
+          )
           data_scale_problem_container[[..vname]] <- TRUE
         }
-        # TODO: Implement this check also for scale levels
-        # # Check, if variable is really of declared scale level.
-        # sd_scale <- prep_scale_level_from_data(..vname, ds1)
-        # if (!is.na(sd_scale) && sd_scale != scale) {
-        #   util_message(
-        #     c("Argument %s: Variable '%s' (%s) does not have matching",
-        #       "scale level in the study data (%s)"),
-        #     dQuote(arg_name), ..vname, tolower(trimws(scale)),
-        #     prep_scale_level_from_data(ds1[, ..vname, TRUE]),
-        #     applicability_problem = TRUE)
-        # }
       } else { # nocov start
         # if the scale is NA, it is not part of the scales vector
         # so this is dead code, likely (see
         # "types <- types[!is.na(types) & !is.na(names(types))]" above).
         if (!is.na(need_scale)) {
           util_warning(
-            c("Argument %s: No scale level found for '%s' in the",
-              "metadata, cannot check scale level"), dQuote(arg_name), variable,
-            applicability_problem = TRUE)
+            c(
+              "Argument %s: No scale level found for '%s' in the",
+              "metadata, cannot check scale level"
+            ), dQuote(arg_name), variable,
+            applicability_problem = TRUE
+          )
         }
       } # nocov end
     }
@@ -894,9 +987,11 @@ util_correct_variable_use <- function(arg_name,
     if (!all(is.na(need_role)) && length(roles) <
         length(unique(variable[!is.na(variable)]))) {
       util_warning(
-        c("In %s, variables with roles matching %s should be specified, but not",
+        c(
+          "In %s, variables with roles matching %s should be specified, but not", # nolint: line_length_linter.
           "all variables have a role assigned in the metadata.",
-          "I have %d variables but only %d roles"),
+          "I have %d variables but only %d roles"
+        ),
         dQuote(arg_name),
         dQuote(need_role),
         length(unique(variable[!is.na(variable)])),
@@ -912,80 +1007,90 @@ util_correct_variable_use <- function(arg_name,
       if (!is.null(role) && !is.na(role) && !is.na(need_role)) {
         # if we have a needed variable role and a variable role for the
         # currently checked variable,
-        need_role. <- tolower(trimws(unlist(strsplit(need_role, "|",
-                                                     fixed = TRUE),
-                                            recursive = TRUE)))
+        need_role_parts <- tolower(trimws(unlist(
+          strsplit(need_role, "|",
+            fixed = TRUE
+          ),
+          recursive = TRUE
+        )))
         # parse the variable role (split at pipes |)
         not_role <-
-          tolower(trimws(substring(need_role.[startsWith(need_role., "!")], 2)))
+          tolower(trimws(substring(need_role_parts[startsWith(need_role_parts, "!")], 2))) # nolint: line_length_linter.
         # and parse the variable role for negation (e.g. *not* CONTEXT)
         well_role <-
-          tolower(trimws(need_role.[!startsWith(need_role., "!")]))
+          tolower(trimws(need_role_parts[!startsWith(need_role_parts, "!")]))
         # and parse the variable role for no negation resp. (e.g. ANALYSIS)
 
         if ((length(well_role) > 0) &&
             (!all(well_role %in%
                   tolower(trimws(names(VARIABLE_ROLES)))))) {
-          util_error(c(
-            "Internal error:",
-            "%s's %s contains invalid variable role names %s (allowed are %s).",
-            "As a dataquieR developer, you should fix your call of %s."
-          ),
-          sQuote(arg_name),
-          sQuote("need_role"),
-          paste(dQuote(
-            well_role[!(well_role %in%
-                          tolower(trimws(names(VARIABLE_ROLES))))]
-          ), collapse = ", "),
-          paste(dQuote(tolower(trimws(names(VARIABLE_ROLES)))), collapse = ", "),
-          sQuote(rlang::caller_call()[[1]])
+          util_error(
+            c(
+              "Internal error:",
+              "%s's %s contains invalid variable role names %s (allowed are %s).", # nolint: line_length_linter.
+              "As a dataquieR developer, you should fix your call of %s."
+            ),
+            sQuote(arg_name),
+            sQuote("need_role"),
+            paste(dQuote(
+              well_role[!(well_role %in%
+                    tolower(trimws(names(VARIABLE_ROLES))))]
+            ), collapse = ", "),
+            paste(dQuote(tolower(trimws(names(VARIABLE_ROLES)))), collapse = ", "), # nolint: line_length_linter.
+            sQuote(rlang::caller_call()[[1]])
           )
         }
 
         if ((length(not_role) > 0) &&
             (!all(not_role %in%
                   tolower(trimws(names(VARIABLE_ROLES)))))) {
-          util_error(c(
-            "Internal error:",
-            "%s's %s contains invalid !variable role names %s (allowed are %s).",
-            "As a dataquieR developer, you should fix your call of %s."
-          ),
-          sQuote(arg_name),
-          sQuote("need_role"),
-          paste(dQuote(
-            not_role[!(not_role %in%
-                         tolower(trimws(names(VARIABLE_ROLES))))]
-          ), collapse = ", "),
-          paste(dQuote(tolower(trimws(names(VARIABLE_ROLES)))), collapse = ", "),
-          sQuote(rlang::caller_call()[[1]])
+          util_error(
+            c(
+              "Internal error:",
+              "%s's %s contains invalid !variable role names %s (allowed are %s).", # nolint: line_length_linter.
+              "As a dataquieR developer, you should fix your call of %s."
+            ),
+            sQuote(arg_name),
+            sQuote("need_role"),
+            paste(dQuote(
+              not_role[!(not_role %in%
+                    tolower(trimws(names(VARIABLE_ROLES))))]
+            ), collapse = ", "),
+            paste(dQuote(tolower(trimws(names(VARIABLE_ROLES)))), collapse = ", "), # nolint: line_length_linter.
+            sQuote(rlang::caller_call()[[1]])
           )
         }
 
-        if ((length(well_role) > 0) && (!tolower(trimws(role)) %in% well_role)) {
+        if ((length(well_role) > 0) && (!tolower(trimws(role)) %in% well_role)) { # nolint: line_length_linter.
           # now check for the allowed variable roles
           record_problem(
-            "Argument %s: Variable '%s' (%s) does not have an allowed variable role (%s)",
+            "Argument %s: Variable '%s' (%s) does not have an allowed variable role (%s)", # nolint: line_length_linter.
             dQuote(arg_name), ..vname, tolower(trimws(role)), need_role,
             applicability_problem = TRUE,
-            intrinsic_applicability_problem = TRUE)
+            intrinsic_applicability_problem = TRUE
+          )
           data_role_problem_container[[..vname]] <- TRUE
         }
         if ((length(not_role) > 0) && (tolower(trimws(role)) %in% not_role)) {
           # and for the disallowed variable roles
           record_problem(
-            "Argument %s: Variable '%s' (%s) has a disallowed variable role (%s)",
+            "Argument %s: Variable '%s' (%s) has a disallowed variable role (%s)", # nolint: line_length_linter.
             dQuote(arg_name), ..vname, tolower(trimws(role)),
             util_pretty_vector_string(not_role),
             applicability_problem = TRUE,
-            intrinsic_applicability_problem = TRUE)
+            intrinsic_applicability_problem = TRUE
+          )
           data_role_problem_container[[..vname]] <- TRUE
         }
       } else { # nocov start
         if (!is.na(need_role)) {
           util_warning(
-            c("Argument %s: No variable role found for '%s' in the",
-              "metadata, cannot check variable role"), dQuote(arg_name), variable,
-            applicability_problem = TRUE)
+            c(
+              "Argument %s: No variable role found for '%s' in the",
+              "metadata, cannot check variable role"
+            ), dQuote(arg_name), variable,
+            applicability_problem = TRUE
+          )
         }
       } # nocov end
     }
@@ -1013,9 +1118,11 @@ util_correct_variable_use <- function(arg_name,
     if (!all(is.na(need_computed_role)) && length(computed_roles) <
         length(unique(variable[!is.na(variable)]))) {
       util_warning(
-        c("In %s, variables with computed roles matching %s should be specified, but not",
+        c(
+          "In %s, variables with computed roles matching %s should be specified, but not", # nolint: line_length_linter.
           "all variables have a computed role assigned in the metadata.",
-          "I have %d variables but only %d computed roles"),
+          "I have %d variables but only %d computed roles"
+        ),
         dQuote(arg_name),
         dQuote(need_computed_role),
         length(unique(variable[!is.na(variable)])),
@@ -1025,62 +1132,70 @@ util_correct_variable_use <- function(arg_name,
     }
 
     for (..vname in names(computed_roles)) {
-      # for all variables that have a computed variable role assigned in the metadata
+      # for all variables that have a computed variable role assigned in the
+      # metadata
       computed_role <- computed_roles[[..vname]]
       # fetch the computed variable role of the currently checked variable
       if (!is.null(computed_role) && !is.na(computed_role) &&
           !is.na(need_computed_role)) {
         # if we have a needed computed variable role and a computed variable
         # role for the currently checked variable,
-        need_computed_role. <-
-          tolower(trimws(unlist(strsplit(need_computed_role, "|",
-                                         fixed = TRUE),
-                                recursive = TRUE)))
+        need_computed_role_parts <-
+          tolower(trimws(unlist(
+            strsplit(need_computed_role, "|",
+              fixed = TRUE
+            ),
+            recursive = TRUE
+          )))
         # parse the computed variable role (split at pipes |)
         not_computed_role <-
           tolower(trimws(substring(
-            need_computed_role.[startsWith(need_computed_role., "!")], 2)))
+            need_computed_role_parts[startsWith(need_computed_role_parts, "!")], 2 # nolint: line_length_linter.
+          )))
         # and parse the computed variable role for negation
         well_computed_role <-
           tolower(trimws(
-            need_computed_role.[!startsWith(need_computed_role., "!")]))
+            need_computed_role_parts[!startsWith(need_computed_role_parts, "!")]
+          ))
         # and parse the computed variable role for no negation
 
         if ((length(well_computed_role) > 0) &&
             (!all(well_computed_role %in%
                   tolower(trimws(names(COMPUTED_VARIABLE_ROLES)))))) {
-          util_error(c(
-            "Internal error:",
-            "%s's %s contains invalid computed variable role names %s (allowed are %s).",
-            "As a dataquieR developer, you should fix your call of %s."
-          ),
-          sQuote(arg_name),
-          sQuote("need_computed_role"),
-          paste(dQuote(
-            well_computed_role[!(well_computed_role %in%
-                                   tolower(trimws(names(COMPUTED_VARIABLE_ROLES))))]
-          ), collapse = ", "),
-          paste(dQuote(tolower(trimws(names(COMPUTED_VARIABLE_ROLES)))), collapse = ", "),
-          sQuote(rlang::caller_call()[[1]])
+          util_error(
+            c(
+              "Internal error:",
+              "%s's %s contains invalid computed variable role names %s (allowed are %s).", # nolint: line_length_linter.
+              "As a dataquieR developer, you should fix your call of %s."
+            ),
+            sQuote(arg_name),
+            sQuote("need_computed_role"),
+            paste(dQuote(
+              well_computed_role[!(well_computed_role %in%
+                    tolower(trimws(names(COMPUTED_VARIABLE_ROLES))))]
+            ), collapse = ", "),
+            paste(dQuote(tolower(trimws(names(COMPUTED_VARIABLE_ROLES)))), collapse = ", "), # nolint: line_length_linter.
+            sQuote(rlang::caller_call()[[1]])
           )
         }
 
         if ((length(not_computed_role) > 0) &&
             (!all(not_computed_role %in%
                   tolower(trimws(names(COMPUTED_VARIABLE_ROLES)))))) {
-          util_error(c(
-            "Internal error:",
-            "%s's %s contains invalid !computed variable role names %s (allowed are %s).",
-            "As a dataquieR developer, you should fix your call of %s."
-          ),
-          sQuote(arg_name),
-          sQuote("need_computed_role"),
-          paste(dQuote(
-            not_computed_role[!(not_computed_role %in%
-                                  tolower(trimws(names(COMPUTED_VARIABLE_ROLES))))]
-          ), collapse = ", "),
-          paste(dQuote(tolower(trimws(names(COMPUTED_VARIABLE_ROLES)))), collapse = ", "),
-          sQuote(rlang::caller_call()[[1]])
+          util_error(
+            c(
+              "Internal error:",
+              "%s's %s contains invalid !computed variable role names %s (allowed are %s).", # nolint: line_length_linter.
+              "As a dataquieR developer, you should fix your call of %s."
+            ),
+            sQuote(arg_name),
+            sQuote("need_computed_role"),
+            paste(dQuote(
+              not_computed_role[!(not_computed_role %in%
+                    tolower(trimws(names(COMPUTED_VARIABLE_ROLES))))]
+            ), collapse = ", "),
+            paste(dQuote(tolower(trimws(names(COMPUTED_VARIABLE_ROLES)))), collapse = ", "), # nolint: line_length_linter.
+            sQuote(rlang::caller_call()[[1]])
           )
         }
 
@@ -1088,31 +1203,36 @@ util_correct_variable_use <- function(arg_name,
             (!tolower(trimws(computed_role)) %in% well_computed_role)) {
           # now check for the allowed computed variable roles
           record_problem(
-            "Argument %s: Variable '%s' (%s) does not have an allowed computed variable role (%s)",
+            "Argument %s: Variable '%s' (%s) does not have an allowed computed variable role (%s)", # nolint: line_length_linter.
             dQuote(arg_name), ..vname, tolower(trimws(computed_role)),
             need_computed_role,
             applicability_problem = TRUE,
-            intrinsic_applicability_problem = TRUE)
+            intrinsic_applicability_problem = TRUE
+          )
           data_computed_role_problem_container[[..vname]] <- TRUE
         }
         if ((length(not_computed_role) > 0) &&
             (tolower(trimws(computed_role)) %in% not_computed_role)) {
           # and for the disallowed computed variable roles
           record_problem(
-            "Argument %s: Variable '%s' (%s) has a disallowed computed variable role (%s)",
+            "Argument %s: Variable '%s' (%s) has a disallowed computed variable role (%s)", # nolint: line_length_linter.
             dQuote(arg_name), ..vname, tolower(trimws(computed_role)),
             util_pretty_vector_string(not_computed_role),
             applicability_problem = TRUE,
-            intrinsic_applicability_problem = TRUE)
+            intrinsic_applicability_problem = TRUE
+          )
           data_computed_role_problem_container[[..vname]] <- TRUE
         }
       } else { # nocov start
         if (!is.na(need_computed_role)) {
           util_warning(
-            c("Argument %s: No computed variable role found for '%s' in the",
-              "metadata, cannot check computed variable role"),
+            c(
+              "Argument %s: No computed variable role found for '%s' in the",
+              "metadata, cannot check computed variable role"
+            ),
             dQuote(arg_name), variable,
-            applicability_problem = TRUE)
+            applicability_problem = TRUE
+          )
         }
       } # nocov end
     }
@@ -1130,7 +1250,8 @@ util_correct_variable_use <- function(arg_name,
           c("In %s, variables %s were excluded."),
           dQuote(arg_name),
           paste(dQuote(names(data_computed_role_problem_container)),
-                collapse = ", "),
+            collapse = ", "
+          ),
           applicability_problem = TRUE,
           intrinsic_applicability_problem = TRUE
         )
@@ -1162,17 +1283,9 @@ util_correct_variable_use <- function(arg_name,
     ~name, ~allow_na, ~allow_more_than_one, ~allow_null, ~allow_all_obs_na,
     ~allow_any_obs_na, ~min_distinct_values, ~need_type, ~need_scale,
     ~need_role, ~need_computed_role,
-    "resp_var", FALSE, FALSE, FALSE, FALSE, TRUE, 0, NA, NA, NA, NA,
-    "response_var", FALSE, FALSE, FALSE, FALSE, TRUE, 0, NA, NA, NA, NA,
     "resp_vars", FALSE, TRUE, FALSE, FALSE, TRUE, 0, NA, NA, NA, NA,
-    "response_vars", FALSE, TRUE, FALSE, FALSE, TRUE, 0, NA, NA, NA, NA,
-    "control_vars", TRUE, TRUE, TRUE, FALSE, TRUE, 0, NA, NA, NA, NA,
     "co_vars", TRUE, TRUE, TRUE, FALSE, TRUE, 0, NA, NA, NA, NA,
-    "cluster_vars", FALSE, TRUE, FALSE, FALSE, FALSE, 0, NA, NA, NA, NA,
     "group_vars", FALSE, TRUE, FALSE, FALSE, FALSE, 0, NA, NA, NA, NA,
-    "level_vars", FALSE, TRUE, FALSE, FALSE, FALSE, 0, NA, NA, NA, NA,
-    "cluster_var", FALSE, FALSE, TRUE, FALSE, TRUE, 0, NA, NA, NA, NA,
-    "level_var", FALSE, FALSE, TRUE, FALSE, TRUE, 0, NA, NA, NA, NA,
     "strata_vars", FALSE, FALSE, TRUE, FALSE, TRUE, 0, NA, NA, NA, NA,
     "time_vars", FALSE, FALSE, FALSE, FALSE, FALSE, 0, NA, NA, NA, NA,
     "id_vars", FALSE, FALSE, FALSE, FALSE, FALSE, 0, NA, NA, NA, NA

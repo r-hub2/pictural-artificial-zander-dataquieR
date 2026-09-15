@@ -10,7 +10,7 @@
 #' @concept summary
 #' @noRd
 util_fix_merge_dups <- function(dfr,
-                                stop_if_incompatible = TRUE) {
+  stop_if_incompatible = TRUE) {
   if (nrow(dfr) == 0) {
     return(dfr)
   }
@@ -22,8 +22,10 @@ util_fix_merge_dups <- function(dfr,
       urw <- unique(rw)
       urw <- urw[!is.na(urw)]
       if (length(urw) > 1) {
-        util_warning(c("Internal error: could not fix merge result, results are",
-                       "incompatible. Sorry, please report"))
+        util_warning(c(
+          "Internal error: could not fix merge result, results are",
+          "incompatible. Sorry, please report"
+        ))
         return(rw)
       }
       if (length(urw) == 0) {
@@ -35,17 +37,19 @@ util_fix_merge_dups <- function(dfr,
       return(rw)
     })
     fix_nas[] <- do.call(rbind, xx)
-    # all(fix_nas[[1]] == fix_nas[[2]])
+    # Compare the first two fix_nas columns locally when debugging duplicates.
     fix_nas <- t(unique(t(fix_nas)))
-    if(stop_if_incompatible) {
+    if (stop_if_incompatible) {
       util_stop_if_not(
         `Internal error, sorry, please report: fix_merge_dups failed` =
-          ncol(fix_nas) == 1)
+          ncol(fix_nas) == 1
+      )
     } else {
       # if we have incompatible cases, try to fix them (!stop_if_incompatible)
       if (ncol(fix_nas) > 1) {
         colnames(dfr)[tail(cur, -1)] <-
-          paste0(colnames(dfr)[tail(cur, -1)], ".", seq_len(length(cur)-1))  #TODO: check if there is not already a column with that name in all data, not just dfr
+          paste0(colnames(dfr)[tail(cur, -1)], ".", seq_len(length(cur) - 1))
+        next
       }
     }
 

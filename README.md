@@ -6,13 +6,13 @@
 <!-- badges: start -->
 
 [![minimal R
-version](https://img.shields.io/badge/R%3E%3D-3.6.0-6666ff.svg)](https://cran.r-project.org/)
+version](https://img.shields.io/badge/R%3E%3D-4.1.0-6666ff.svg)](https://cran.r-project.org/)
 [![Pipeline
 Status](https://gitlab.com/libreumg/dataquier/badges/master/pipeline.svg?ignore_skipped=true)](https://libreumg.gitlab.io/dataquier/)
 [![Coverage](https://codecov.io/gl/libreumg/dataquier/branch/master/graph/badge.svg?token=79TK6GQTMG)](https://app.codecov.io/gl/libreumg/dataquier)
 [![CRAN-Version](https://www.r-pkg.org/badges/version/dataquieR)](https://cran.r-project.org/package=dataquieR)
 ![Latest
-Release](https://gitlab.com/libreumg/dataquier/-/badges/release.svg)
+Release](https://gitlab.com/libreumg/dataquier/-/badges/release.svg?value_width=100)
 [![DOI](https://img.shields.io/badge/DOI-10.32614%2FCRAN.package.dataquieR-00be00.svg)](https://doi.org/10.32614/CRAN.package.dataquieR)
 [![CRAN-Downloads](https://cranlogs.r-pkg.org/badges/dataquieR)](https://www.r-pkg.org/pkg/dataquieR)
 [![Project Status: Active – The project has reached a stable, usable
@@ -65,11 +65,21 @@ remotes::install_gitlab("libreumg/dataquier")
 For examples and additional documentation, please refer to our
 [website](https://dataquality.qihs.uni-greifswald.de).
 
+## Developer workflow
+
+Internal development happens in the upstream
+`libreumg/internal/QualityIndicatorFunctions` project. Use branches
+named `issueXXX_short_description`, for example
+`issue810_selenium_dt_dt2_reports`. The internal project protects the
+`issue*_*` branch pattern; protected runners and protected CI variables
+are only available on correctly named issue branches.
+
 ## dataquieR usage questionnaire
 
 To help us improve `dataquieR`, we invite you to provide your feedback
-by completing this short survey ([English](https://3x7.de/kd4l6) or
-[German](https://3x7.de/4f884) version).
+by completing this short survey
+([English](https://t1p.de/dataquieRsurvey_en) or
+[German](https://t1p.de/dataquieRsurvey_de) version).
 
 ## Suggested packages
 
@@ -93,6 +103,21 @@ our own server, so not from `CRAN`:
 
 ``` r
 prep_check_for_dataquieR_updates(beta = TRUE)
+```
+
+By default, `dataquieR` is kept small for CRAN installation. The
+convenience update helper installs `dataquieR` from source with
+byte-compiled R code:
+
+``` r
+prep_check_for_dataquieR_updates()
+```
+
+If you want to keep the installed package smaller by installing without
+byte compilation, use:
+
+``` r
+prep_check_for_dataquieR_updates(byte_compile = FALSE)
 ```
 
 ***Hint*** If you are running `dataquieR` in an un-trusted setting,
@@ -125,6 +150,82 @@ and trusting our files loaded from
 - <https://dataquality.qihs.uni-greifswald.de/extdata/ship_subset3.RDS>
 - <https://dataquality.qihs.uni-greifswald.de/extdata/ship.RDS>
 
+## Cluster use
+
+`dq_report2()` and friends can compute indicator calls in parallel. The
+`cores` argument accepts:
+
+- an integer – the number of workers for a local `PSOCK` cluster spawned
+  by `dataquieR` itself,
+- a named list of arguments forwarded to the internal backend
+  (`util_parallel_start`),
+- a pre-built `parallel` cluster object of any type (`PSOCK`, `FORK`,
+  `MPI` via `Rmpi`, …).
+
+If you have already registered a cluster via
+`parallel::setDefaultCluster()`, `dataquieR` reuses it instead of
+spawning a new one and leaves its lifecycle to you.
+
+### Local multicore (default)
+
+For local multicore work the default (`PSOCK` socket cluster) is usually
+fine:
+
+``` r
+dq_report2(study_data, meta_data, ..., cores = 4)
+```
+
+### `MPI` clusters (`Rmpi` / `snow`)
+
+Any cluster created through `parallel::makeCluster(..., type = "MPI")`
+(or via the [`snow`](https://cran.r-project.org/package=snow) /
+[`Rmpi`](https://cran.r-project.org/package=Rmpi) chain) plugs in like
+any other `parallel` cluster. Either pass it as `cores =`:
+
+``` r
+library(Rmpi)
+cl <- parallel::makeCluster(mpi.universe.size() - 1L, type = "MPI")
+withr::defer(parallel::stopCluster(cl))
+
+dq_report2(study_data, meta_data, ..., cores = cl)
+```
+
+or register it as the default cluster up front and pass `cores = NULL`
+to `dq_report2()` so that it uses the registered cluster:
+
+``` r
+cl <- parallel::makeCluster(8, type = "MPI")
+parallel::setDefaultCluster(cl)
+withr::defer({ parallel::setDefaultCluster(NULL); parallel::stopCluster(cl) })
+
+dq_report2(study_data, meta_data, ..., cores = NULL)
+```
+
+The same pattern works for any other `makeCluster()`-style backend
+(`PSOCK` to remote hosts, `FORK` on Unix, etc.).
+
+### `HPC` schedulers (`SLURM`, `SGE`, `Torque`/`PBS`, `LSF`, …)
+
+For batch schedulers, use `mode = "futures"` together with a
+[`future`](https://cran.r-project.org/package=future) plan from
+[`future.batchtools`](https://cran.r-project.org/package=future.batchtools):
+
+``` r
+install.packages(c("future", "future.batchtools"))
+library(future)
+library(future.batchtools)
+
+plan(batchtools_slurm, template = "slurm.tmpl")   # or batchtools_sge / _torque / _lsf
+
+dq_report2(study_data, meta_data, ..., mode = "futures")
+```
+
+Earlier versions reached the same schedulers through
+`options(parallelMap.mode = "BatchJobs")` (or `"batchtools"`). That
+dispatch path is no longer wired up; the labels are still accepted by
+the new backend for source-level compatibility but degrade to sequential
+execution. `mode = "futures"` is the supported replacement.
+
 ## References
 
 - [Software Paper](https://doi.org/10.21105/joss.06581) [![JOSS
@@ -151,8 +252,8 @@ and trusting our files loaded from
   [Square2](https://pubmed.ncbi.nlm.nih.gov/28423853/) web application.
 
 - [National Research Data Infrastructure for Personal Health
-  Data](https://www.nfdi4health.de/en/): `NFDI 13/1` – extension based
-  on revised metadata concept, ongoing.
+  Data](https://www.nfdi4health.de/): `NFDI 13/1` – extension based on
+  revised metadata concept, ongoing.
 
 - German National Cohort (NAKO Gesundheitsstudie) NAKO
   (`https://nako.de/`): `BMBF` (`https://www.bmbf.de/`): `01ER1301A` and

@@ -15,7 +15,10 @@
   disable_plotly = FALSE,
   hierarchy,
   folder_of_report = NULL,
-  var_uniquenames = NULL
+  var_uniquenames = NULL,
+  summary_title = NULL,
+  summary_subtitle = NULL,
+  summary_unit_label = NULL
 )
 }
 \arguments{
@@ -33,9 +36,9 @@ object derived from \code{x}}
 
 \item{stratify_by}{column to stratify the summary, may be one string.}
 
-\item{vars_to_include}{\link{character} study | \code{ssi}. variables are study
-variables or computed social science
-indicator variables.}
+\item{vars_to_include}{\link{character} \code{"study"}, \code{"ssi"}, or
+\code{"variable_group"}. The latter includes all results emitted as variable
+group tables, including non-scale assessments.}
 
 \item{disable_plotly}{\link{logical} do not use \code{plotly}, even if installed}
 
@@ -50,6 +53,13 @@ can be used a the hierarchy.}
 unique names in case of reports created with dq_report_by
 containing the same variable in several reports
 (e.g., creation of reports by sex)}
+
+\item{summary_title}{optional scalar title for the summary chart. The default
+is derived from the displayed assessment units.}
+
+\item{summary_subtitle}{optional scalar subtitle for the summary chart.}
+
+\item{summary_unit_label}{optional plural label for counted chart units.}
 }
 \value{
 invisible html object

@@ -15,12 +15,15 @@
 #' @seealso [pro_applicability_matrix]
 #' @noRd
 
-util_app_con_contradictions_redcap <- function(x, dta) { # TODO: would need meta_data_cross_item
+util_app_con_contradictions_redcap <- function(x, dta) {
   c1 <- rep(1, times = dim(x)[1])
 
+  dta <- as.numeric(dta)
   aa <- paste0(dta, c1)
-  score <- as.numeric(recode(as.factor(aa), "00" = 0, "01"
-                             = 1, "10" = 2, "11" = 3))
+  score <- as.numeric(recode(as.factor(aa),
+      "00" = 0,
+      "01" = 1, "10" = 2, "11" = 3
+    ))
   score <- as.factor(score)
   return(score)
 }

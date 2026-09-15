@@ -11,7 +11,6 @@
 #' @concept process
 #' @noRd
 util_set_sQuoteString <- function(string) {
-  old <- options(useFancyQuotes = FALSE)
-  on.exit(options(old))
+  withr::local_options(list(useFancyQuotes = FALSE))
   sQuote(string)
 }

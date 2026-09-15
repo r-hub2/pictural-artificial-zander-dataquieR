@@ -11,12 +11,13 @@
 #' @concept process
 #' @noRd
 util_gg_var_label <- function(...,
-                              meta_data = get("meta_data", parent.frame()),
-                              label_col = get("label_col", parent.frame())) { # nocov start
+  meta_data = get("meta_data", parent.frame()),
+  label_col = get("label_col", parent.frame())) { # nocov start
 
   lp <- ggplot2::last_plot()
 
-  # ggplot_build kann (je nach Version) S7-Objekte liefern, daher später util_gg_get
+  # ggplot_build kann (je nach Version) S7-Objekte liefern, daher später
+  # util_gg_get
   p <- ggplot2::ggplot_build(lp)
 
   l <- list(...)
@@ -26,7 +27,8 @@ util_gg_var_label <- function(...,
 
   if (!is.null(labels_obj)) {
     yy <- unlist(labels_obj[trimws(labels_obj) != ""],
-                 recursive = FALSE)
+      recursive = FALSE
+    )
     xx <- prep_map_labels(
       yy,
       meta_data   = meta_data,
@@ -40,13 +42,16 @@ util_gg_var_label <- function(...,
 
   # ----- Mappings aus dem ggplot_build-Objekt holen --------------------------
   plot_obj <- util_gg_get(p, "plot")
-  mapping  <- if (!is.null(plot_obj)) util_gg_get(plot_obj, "mapping") else NULL
+  mapping <- if (!is.null(plot_obj)) util_gg_get(plot_obj, "mapping") else NULL
 
   if (!is.null(mapping)) {
     for (n in names(mapping)) {
-      r <- try({
-        rlang::quo_name(mapping[[n]])
-      }, silent = TRUE)
+      r <- try(
+        {
+          rlang::quo_name(mapping[[n]])
+        },
+        silent = TRUE
+      )
 
       if (!inherits(r, "try-error") &&
           length(r) == 1 &&
@@ -62,9 +67,9 @@ util_gg_var_label <- function(...,
 
   l[] <- prep_map_labels(
     unlist(l, recursive = FALSE),
-    meta_data   = meta_data,
-    to          = label_col,
-    ifnotfound  = setNames(nm = unlist(l, recursive = FALSE))
+    meta_data = meta_data,
+    to = label_col,
+    ifnotfound = setNames(nm = unlist(l, recursive = FALSE))
   )
 
   do.call(ggplot2::labs, l)

@@ -32,13 +32,12 @@ acc_margins(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable} the name of the measurement variable}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
-\item{group_vars}{\link{variable list} len=1-1. the name of the observer, device
-or reader variable}
+\item{group_vars}{\link{variable list} the names of the grouping variables}
 
-\item{co_vars}{\link{variable list} a vector of covariables, e.g. age and sex for
-adjustment}
+\item{co_vars}{\link{variable list} the names of covariables for adjustment}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 

@@ -8,10 +8,10 @@
 #' @family missing_functions
 #' @concept robustness
 #' @noRd
-util_is_na_0_empty_or_false <- function(x) { # TODO: generic?
+util_is_na_0_empty_or_false <- function(x) {
   cs <- paste0("util_is_na_0_empty_or_false.", rlang::hash(x))
-  if (exists(cs, envir = .study_data_cache)) { # TODO: maybe RAM intensive?
-    return(get(cs, envir = .study_data_cache))
+  if (exists(cs, envir = .falsish_value_cache, inherits = FALSE)) {
+    return(get(cs, envir = .falsish_value_cache, inherits = FALSE))
   }
   if (inherits(x, "hms")) { # maybe more general: !is.vector(x)
     x <- util_as_character(x)
@@ -26,7 +26,18 @@ util_is_na_0_empty_or_false <- function(x) { # TODO: generic?
   idx[is.na(idx)] <- FALSE
   y[idx] <- TRUE
   y <- as.logical(y)
-  assign(cs, y, envir = .study_data_cache)
+  assign(cs, y, envir = .falsish_value_cache)
   return(y)
 }
 
+.falsish_value_cache <- new.env(parent = emptyenv())
+
+#' Internal helper: purge falsish value cache
+#'
+#' @noRd
+util_purge_falsish_value_cache <- function() {
+  rm(
+    list = ls(.falsish_value_cache, all.names = TRUE),
+    envir = .falsish_value_cache
+  )
+}

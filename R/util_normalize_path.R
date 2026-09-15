@@ -131,10 +131,7 @@ util_normalize_path <- function(path, winslash = "/", mustWork = FALSE) {
       util_error("path[%d]=\"%s\": No such file or directory", 1L, p)
     }
     if (is.na(mustWork) && !exists_out) {
-      warning(
-        sprintf("path[%d]=\"%s\": No such file or directory", 1L, p),
-        call. = FALSE
-      )
+      util_warning("path[%d]=\"%s\": No such file or directory", 1L, p)
     }
 
     out

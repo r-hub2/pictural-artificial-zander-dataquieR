@@ -2,6 +2,14 @@
   position: relative;
 }
 
+.dt-column-title .colheader {
+  width: 100%;
+}
+
+.dt-column-title .colheader span {
+  float: right;
+}
+
 .colheader span {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
@@ -17,8 +25,42 @@ table.ReportSummaryTable > thead > tr > th {
   padding-bottom: 0px;
 }
 
+table.ReportSummaryTable > thead > tr > th:not(:first-child) .colheader {
+  text-align: right !important;
+}
+
 table.ReportSummaryTable > tbody > tr > td {
   padding: 0;
+}
+
+.dq-matrix-fill-container .dt-scroll,
+.dq-matrix-fill-container .dataTables_scroll,
+.dq-matrix-fill-container .dt-scroll-head,
+.dq-matrix-fill-container .dataTables_scrollHead,
+.dq-matrix-fill-container .dt-scroll-body,
+.dq-matrix-fill-container .dataTables_scrollBody,
+.dq-matrix-fill-container .dt-scroll-headInner,
+.dq-matrix-fill-container .dataTables_scrollHeadInner {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.dq-matrix-fill-container table.ReportSummaryTable,
+.dq-matrix-fill-container .dt-scroll table,
+.dq-matrix-fill-container .dataTables_scroll table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+}
+
+.dq-matrix-fill-container col {
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.dq-matrix-fill-container table.ReportSummaryTable th,
+.dq-matrix-fill-container table.ReportSummaryTable td {
+  min-width: 0 !important;
 }
 
 /* https://stackoverflow.com/a/50406895 */

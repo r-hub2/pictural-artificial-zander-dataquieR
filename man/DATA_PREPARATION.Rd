@@ -15,9 +15,9 @@ variables
 LABEL LIMITS MISSING_NA MISSING_LABEL MISSING_INTERPRET
 }
 \seealso{
-\link{meta_data_cross}
+\link{meta_data_cross_item}
 
-Other meta_data_cross:
+Other meta_data_cross_item:
 \code{\link{ASSOCIATION_DIRECTION}},
 \code{\link{ASSOCIATION_FORM}},
 \code{\link{ASSOCIATION_METRIC}},
@@ -27,7 +27,6 @@ Other meta_data_cross:
 \code{\link{COMPUTED_VARIABLE_ROLES}},
 \code{\link{CONTRADICTION_TERM}},
 \code{\link{CONTRADICTION_TYPE}},
-\code{\link{GOLDSTANDARD}},
 \code{\link{IRV}},
 \code{\link{MAHALANOBIS_RATIO}},
 \code{\link{MAHALANOBIS_THRESHOLD}},
@@ -35,15 +34,20 @@ Other meta_data_cross:
 \code{\link{MISS_RESP}},
 \code{\link{MULTIVARIATE_OUTLIER_CHECK}},
 \code{\link{MULTIVARIATE_OUTLIER_CHECKTYPE}},
+\code{\link{PSYCHOMETRIC_ANT}},
+\code{\link{PSYCHOMETRIC_SYN}},
 \code{\link{RELCOMPL_SPEED}},
-\code{\link{REL_VAL}},
+\code{\link{REPEATED_MEASURES_METRIC}},
+\code{\link{REPEATED_MEASURES_METRIC_SETTING}},
+\code{\link{REPEATED_MEASURES_REFERENCE}},
 \code{\link{RESPT_PER_ITEM}},
 \code{\link{SCALE_ACRONYM}},
 \code{\link{SCALE_NAME}},
+\code{\link{SUM_ATTENTION_CHECK_ITEMS}},
 \code{\link{TOTRESPT}},
 \code{\link{VARIABLE_LIST}},
 \code{\link{VARIABLE_LIST_ORDER}},
 \code{\link{meta_data_computation}},
-\code{\link{meta_data_cross}}
+\code{\link{meta_data_cross_item}}
 }
-\concept{meta_data_cross}
+\concept{meta_data_cross_item}

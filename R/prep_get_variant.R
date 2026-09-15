@@ -5,10 +5,6 @@
 #' @keywords internal
 #' @export
 prep_get_variant <- function() {
-  v <- paste0("R", getRversion()[, 1:2])
-#  if (v == "R4.4") { # current developer version
-#    return(NULL)
-#  } else {
-    return(v)
-#  }
+  v <- sub("^([0-9]+[.][0-9]+).*", "R\\1", as.character(getRversion()))
+  return(v)
 }

@@ -15,8 +15,8 @@ acc_end_digits(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable} the names of the measurement variables,
-mandatory}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -52,7 +52,8 @@ idea of rootograms (Tukey (1977)) which is also applicable for count data
 }
 \section{ALGORITHM OF THIS IMPLEMENTATION:}{
 \itemize{
-\item This implementation is restricted to data of type float or integer.
+\item \code{resp_vars} identifies one interval or ratio scaled measurement variable
+of type float or integer.
 \item Missing codes are removed from resp_vars (if defined in the metadata)
 \item The user must specify the column of the metadata containing probability
 distribution (currently only: normal, uniform, gamma)

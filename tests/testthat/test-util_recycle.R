@@ -1,3 +1,5 @@
+skip_on_cran()
+
 test_that("util_recycle() returns empty list for no inputs", {
   expect_identical(util_recycle(), list())
 })
@@ -46,7 +48,7 @@ test_that("util_recycle() respects explicit .size", {
   expect_identical(res[[2L]], c(9, 9, 9, 9))
 })
 
-test_that("util_recycle() supports zero-length vectors if target size is zero", {
+test_that("util_recycle() supports zero-length vectors if target size is zero", { # nolint: line_length_linter.
   x <- integer()
   y <- character()
 
@@ -56,6 +58,16 @@ test_that("util_recycle() supports zero-length vectors if target size is zero", 
   expect_identical(res[[1L]], integer())
   expect_identical(res[[2L]], character())
 })
+
+test_that(
+  "util_recycle() recycles zero-length vectors to typed missing values",
+  {
+    res <- util_recycle(integer(), .size = 3)
+
+    expect_length(res, 1L)
+    expect_identical(res[[1L]], rep(NA_integer_, 3))
+  }
+)
 
 test_that("util_recycle() errors for incompatible lengths", {
   expect_error(
@@ -93,6 +105,25 @@ test_that("util_recycle() errors for invalid .size", {
 test_that("util_recycle() errors for unsupported inputs", {
   expect_error(
     util_recycle(environment()),
+    "unsupported class"
+  )
+})
+
+test_that("util_recycle() handles list and expression inputs", {
+  skip_on_cran()
+
+  res <- util_recycle(list("x"), expression(a + b), .size = 2)
+
+  expect_equal(res[[1L]], list("x", "x"))
+  expect_equal(length(res[[2L]]), 2L)
+  expect_identical(res[[2L]][[1L]], quote(a + b))
+})
+
+test_that("util_recycle() rejects function inputs", {
+  skip_on_cran()
+
+  expect_error(
+    util_recycle(function() NULL),
     "unsupported class"
   )
 })

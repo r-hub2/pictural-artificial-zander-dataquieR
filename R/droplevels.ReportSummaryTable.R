@@ -9,7 +9,7 @@
 droplevels.ReportSummaryTable <- function(x, ...) {
   util_stop_if_not(inherits(x, "ReportSummaryTable"))
   cols_to_change <- setdiff(colnames(x), c("Variables", "N"))
-  we_can_be_dropped <- vapply(x[, cols_to_change], function(cl) {
+  we_can_be_dropped <- vapply(x[, cols_to_change, drop = TRUE], function(cl) {
     all(is.na(cl) | 0 == cl)
   }, FUN.VALUE = logical(1))
   x[, names(which(we_can_be_dropped))] <- NULL

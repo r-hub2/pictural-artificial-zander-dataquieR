@@ -18,14 +18,16 @@
 util_app_sm <- function(x, dta) {
   if (all(c(PART_VAR, STUDY_SEGMENT) %in% names(x))) {
     c1 <- ifelse(is.na(x[[STUDY_SEGMENT]]) |
-                   is.na(x[[PART_VAR]]), 0, 1)
+        is.na(x[[PART_VAR]]), 0, 1)
   } else {
     c1 <- rep(0, times = dim(x)[1])
   }
 
   aa <- paste0(dta, c1)
-  score <- as.numeric(recode(as.factor(aa), "00" = 0, "01" = 1,
-                             "10" = 2, "11" = 3))
+  score <- as.numeric(recode(as.factor(aa),
+      "00" = 0, "01" = 1,
+      "10" = 2, "11" = 3
+    ))
   score <- as.factor(score)
   return(score)
 }

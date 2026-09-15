@@ -1,4 +1,9 @@
-without_testthat <- function(code) {
-  withr::with_envvar(new = c(TESTTHAT = "false"),
-                     code = code)
+with_interactive_dataquieR_wrapper <- function(code) {
+  withr::with_options(
+    list(
+      dataquieR.test_decorator = TRUE,
+      dataquieR.test_interactive_wrapper = TRUE
+    ),
+    code = code
+  )
 }

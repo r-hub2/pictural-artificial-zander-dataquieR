@@ -21,18 +21,20 @@
 
 util_looks_like_missing <- function(x, n_rules = 1) {
   if (any(prep_dq_data_type_of(x) %in%
-          tolower(c(DATA_TYPES$INTEGER, DATA_TYPES$FLOAT)))) {
+        tolower(c(DATA_TYPES$INTEGER, DATA_TYPES$FLOAT)))) {
     x <- as.numeric(x)
   }
   if (!is.numeric(x)) {
-    util_error("%s works only on numeric vectors",
-               dQuote("util_looks_like_missing"))
+    util_error(
+      "%s works only on numeric vectors",
+      dQuote("util_looks_like_missing")
+    )
   }
   sysmiss <- !is.finite(x)
   if (all(sysmiss)) {
     return(!logical(length = length(x)))
   }
-#  x[sysmiss] <- mean(x[!sysmiss], na.rm = TRUE)
+  # Earlier experiments imputed system missing values before scoring.
   TYPICAL_MISSINGCODES <- c(
     99, 999, 9999, 99999, 999999, 9999999, 999999999,
     99990:99999, 999990:999999, 9999990:9999999, 999999990:999999999
@@ -54,10 +56,10 @@ util_looks_like_missing <- function(x, n_rules = 1) {
   sigg <- util_sigmagap(x)
   sigg[sysmiss] <- 0
   r <- sysmiss | (r &
-                    (tuk +
-                       ssig +
-                       hub +
-                       sigg >= n_rules)
+      (tuk +
+          ssig +
+          hub +
+          sigg >= n_rules)
   )
   # only, if there is no number > these numbers not being one of them
   repeat {
@@ -69,7 +71,7 @@ util_looks_like_missing <- function(x, n_rules = 1) {
         done <- FALSE
       }
     }
-    if (done) break ;
+    if (done) break
   }
   return(r)
 }

@@ -1,6 +1,6 @@
 locale_available <- function(locale, category = "LC_TIME") {
   old <- Sys.getlocale(category)
-  on.exit(suppressWarnings(Sys.setlocale(category, old)), add = TRUE)
+  withr::defer(suppressWarnings(Sys.setlocale(category, old)))
 
   res <- suppressWarnings(
     tryCatch(
@@ -18,14 +18,14 @@ tz_available <- function(tz) {
 }
 
 has_valid_system_tz <- function() {
-  tz <- attr(Sys.time(), "tzone")
+  tz <- util_attr(Sys.time(), "tzone", exact = TRUE)
   !is.null(tz) && nzchar(tz) && all(tz %in% OlsonNames())
 }
 
 require_english_locale_and_berlin_tz <- function(
-    locale_candidates = c("en_US.UTF-8", "English.UTF-8"),
-    tz = "Europe/Berlin",
-    skip_on_cran = TRUE
+  locale_candidates = c("en_US.UTF-8", "English.UTF-8"),
+  tz = "Europe/Berlin",
+  skip_on_cran = TRUE
 ) {
   if (isTRUE(skip_on_cran)) {
     testthat::skip_on_cran()

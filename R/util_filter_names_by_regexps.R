@@ -9,7 +9,8 @@
 #' @return `collection` reduced to entries, that's names match at least any
 #'         expression from `regexps`
 #' @examples
-#' \dontrun{ # internal function
+#' \dontrun{
+#' # internal function
 #' util_filter_names_by_regexps(iris, c("epa", "eta"))
 #' }
 #'
@@ -17,17 +18,17 @@
 #' @concept process
 #' @noRd
 util_filter_names_by_regexps <- function(collection,
-                                         regexps,
-                                         negate = FALSE) {
-
+  regexps,
+  negate = FALSE) {
   if (is.null(names(collection))) {
     util_error("Need names in argument %s", sQuote("collection"))
   }
 
   util_expect_scalar(regexps,
-                     allow_more_than_one = TRUE,
-                     allow_null = TRUE,
-                     check_type = is.character)
+    allow_more_than_one = TRUE,
+    allow_null = TRUE,
+    check_type = is.character
+  )
 
   util_expect_scalar(negate, check_type = is.logical)
 
@@ -45,9 +46,10 @@ util_filter_names_by_regexps <- function(collection,
         logical(length(collection))
     ), nrow = length(collection), ncol = length(regexps))
 
-  if (is.null(dim(matches_mat))) { # TODO: is this ever executed?
+  # nocov start
+  if (is.null(dim(matches_mat))) {
     util_stop_if_not(length(regexps) == 1 && length(collection) == 1)
-    if (length(regexps) > 1) { # TODO: ever executed?
+    if (length(regexps) > 1) {
       # only one long row of match?(T/F)-entries
       #             RE1 RE2 RE3 RE4 RE5
       # acc_margins T   F   F   T   T
@@ -75,12 +77,12 @@ util_filter_names_by_regexps <- function(collection,
       # com_item_miss F
       # con_limit_dev F
       if (negate) {
-        matches_mat <- ! matches_mat
+        matches_mat <- !matches_mat
       }
       r <- collection[matches_mat]
       nm <- names(collection[matches_mat])
     }
-  } else {
+  } else { # nocov end
     if (negate) {
       r <- collection[rowSums(matches_mat) == 0]
       nm <- names(collection[rowSums(matches_mat) == 0])

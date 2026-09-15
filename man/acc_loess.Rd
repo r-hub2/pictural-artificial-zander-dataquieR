@@ -39,17 +39,15 @@ acc_loess(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable} the name of the continuous measurement variable}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
-\item{group_vars}{\link{variable} the name of the observer, device or reader
-variable}
+\item{group_vars}{\link{variable list} the names of the grouping variables}
 
-\item{time_vars}{\link{variable} the name of the variable giving the time
-of measurement}
+\item{time_vars}{\link{variable} the name of the variable giving the time of
+measurement}
 
-\item{co_vars}{\link{variable list} a vector of covariables for adjustment, for
-example age and sex. Can be NULL (default) for no
-adjustment.}
+\item{co_vars}{\link{variable list} the names of covariables for adjustment}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 

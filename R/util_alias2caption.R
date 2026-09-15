@@ -11,7 +11,6 @@
 #' @concept html
 #' @noRd
 util_alias2caption <- function(alias, long = FALSE) {
-
   util_expect_scalar(long, check_type = is.logical)
 
   if (length(alias) != 1 ||
@@ -22,7 +21,8 @@ util_alias2caption <- function(alias, long = FALSE) {
 
   fname <- util_map_by_largest_prefix(
     alias,
-    haystack = names(.manual$titles))
+    haystack = names(.manual$titles)
+  )
 
   if (is.na(fname)) {
     fname <- alias
@@ -31,62 +31,61 @@ util_alias2caption <- function(alias, long = FALSE) {
   if (long) {
     ftitle <-
       util_map_labels(fname,
-                      util_get_concept_info("implementations"),
-                      to = "menu_title_report",
-                      from = "function_R",
-                      ifnotfound = NA_character_)
+        util_get_concept_info("implementations"),
+        to = "menu_title_report",
+        from = "function_R",
+        ifnotfound = NA_character_
+      )
     if (util_empty(ftitle)) {
       ftitle <-
         util_map_labels(fname,
-                        util_get_concept_info("implementations"),
-                        to = "Implementationform",
-                        from = "function_R",
-                        ifnotfound = NA_character_)
+          util_get_concept_info("implementations"),
+          to = "Implementationform",
+          from = "function_R",
+          ifnotfound = NA_character_
+        )
     }
   } else {
     ftitle <-
       util_map_labels(fname,
-                      util_get_concept_info("implementations"),
-                      to = "matrix_column_title_report",
-                      from = "function_R",
-                      ifnotfound = NA_character_)
+        util_get_concept_info("implementations"),
+        to = "matrix_column_title_report",
+        from = "function_R",
+        ifnotfound = NA_character_
+      )
     if (util_empty(ftitle)) {
       ftitle <-
         util_map_labels(fname,
-                        util_get_concept_info("implementations"),
-                        to = "dq_report2_short_title",
-                        from = "function_R",
-                        ifnotfound = NA_character_)
+          util_get_concept_info("implementations"),
+          to = "dq_report2_short_title",
+          from = "function_R",
+          ifnotfound = NA_character_
+        )
     }
   }
 
   if (is.na(ftitle)) {
     ftitle <-
-      r <- .manual$titles[[fname]];
-    if (length(r) != 1 || is.na(r)) ftitle <- r <- alias;
+      r <- .manual$titles[[fname]]
+    if (length(r) != 1 || is.na(r)) ftitle <- r <- alias
   }
 
   if (startsWith(alias, fname)) {
-    suffix <- substr(alias, nchar(fname) + 1 + 1, nchar(alias)) # name + "_" (first +1), start is the next character (second +1)
+    suffix <- substr(alias, nchar(fname) + 1 + 1, nchar(alias)) # name + "_" (first +1), start is the next character (second +1) # nolint: line_length_linter.
   } else {
     suffix <- alias
   }
 
-  # acronyms <-
-  #   util_map_labels(fnames,
-  #                   util_get_concept_info("implementations"),
-  #                   to = "dq_report2_short_title",
-  #                   from = "function_R",
-  #                   ifnotfound = util_abbreviate(fnames))
+  # Historical acronym lookup variant removed here.
 
   suffix <- gsub("_", " ", suffix)
-  if (!util_empty(suffix))
+  if (!util_empty(suffix)) {
     suffix <- paste0(" ", suffix)
+  }
 
-  r  <- paste0(ftitle, suffix)
+  r <- paste0(ftitle, suffix)
 
   names(r) <- alias
 
   r
-
 }

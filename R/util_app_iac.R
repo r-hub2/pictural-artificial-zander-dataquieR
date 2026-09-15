@@ -33,17 +33,22 @@ util_app_iac <- function(x, dta) {
 
   if (DATA_TYPE %in% names(x)) {
     c2 <- ifelse(!is.na(x[[DATA_TYPE]]) &
-                   (x[[DATA_TYPE]] %in% c(DATA_TYPES$INTEGER,
-                                          DATA_TYPES$STRING))
-                 , 1, 0)
+      (x[[DATA_TYPE]] %in% c(
+        DATA_TYPES$INTEGER,
+        DATA_TYPES$STRING
+      )),
+    1, 0
+    )
   } else {
     c2 <- rep(0, times = dim(x)[1])
   }
 
 
   aa <- paste0(dta, as.integer(c1))
-  score <- as.numeric(recode(as.factor(aa), "00" = 0, "01" = 1,
-                             "10" = 2, "11" = 3))
+  score <- as.numeric(recode(as.factor(aa),
+      "00" = 0, "01" = 1,
+      "10" = 2, "11" = 3
+    ))
   score[c2 == 0] <- 4
   score <- as.factor(score)
   return(score)

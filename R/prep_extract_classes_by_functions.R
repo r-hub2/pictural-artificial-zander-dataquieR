@@ -9,19 +9,25 @@
 prep_extract_classes_by_functions <- function(r) {
   te <- topenv(parent.frame(1)) # see https://stackoverflow.com/a/27870803
   if (!(isNamespace(te) && getNamespaceName(te) == "dataquieR")) {
-    lifecycle::deprecate_soft("2.1.0.9007",
-                              "prep_combine_report_summaries()")
+    lifecycle::deprecate_stop(
+      "2.8.10.9001.1",
+      what = "prep_extract_classes_by_functions()",
+      details = "This legacy summary conversion has no supported replacement."
+    )
   }
 
   res <-
     prep_summary_to_classes(
-      prep_extract_summary(r))
+      prep_extract_summary(r)
+    )
 
   res$function_name <-
-    vapply(FUN.VALUE = character(1),
-           setNames(nm = res$call_names),
-           util_cll_nm2fkt_nm,
-           report = r)
+    vapply(
+      FUN.VALUE = character(1),
+      setNames(nm = res$call_names),
+      util_cll_nm2fkt_nm,
+      report = r
+    )
 
   if (!"class" %in% colnames(res)) {
     res$class <- rep(util_as_cat(NA), nrow(res))
@@ -47,8 +53,9 @@ prep_extract_classes_by_functions <- function(r) {
     res$call_names <- rep(NA_character_, nrow(res))
   }
 
-  res[, c("VAR_NAMES", "class", "indicator_metric", "value", "values_raw",
-          "n_classes",
-          "STUDY_SEGMENT", "call_names", "function_name"), drop = FALSE]
-
+  res[, c(
+    "VAR_NAMES", "class", "indicator_metric", "value", "values_raw",
+    "n_classes",
+    "STUDY_SEGMENT", "call_names", "function_name"
+  ), drop = FALSE]
 }

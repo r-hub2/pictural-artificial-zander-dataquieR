@@ -14,7 +14,8 @@ util_warn_unordered <- function(x, varname) {
   if (missing(varname)) varname <- as.character(substitute(x))
   if (sum(dim(x) != 1) > 1) {
     util_error(
-      "util_warn_unordered only works on effectively one-dimensional input")
+      "util_warn_unordered only works on effectively one-dimensional input"
+    )
   }
   warn <- FALSE
   if (is.factor(x)) {
@@ -22,8 +23,10 @@ util_warn_unordered <- function(x, varname) {
       warn <- TRUE
     }
   } else if (!is.numeric(x)) {
-    if (!identical(prep_dq_data_type_of(x),
-        tolower(DATA_TYPES$DATETIME))) {
+    if (!identical(
+      prep_dq_data_type_of(x),
+      tolower(DATA_TYPES$DATETIME)
+    )) {
       warn <- TRUE
     }
   }

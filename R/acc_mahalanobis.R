@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Calculate and plot `Mahalanobis` distances
 #'
 #' @description
@@ -25,23 +26,6 @@
 #'
 #' @param variable_group [variable list] the names of the variables used to
 #'                                        calculate the `Mahalanobis` distance
-#' @param study_data [data.frame] the data frame that contains the measurements
-#'
-#' @param item_level [data.frame] the data frame that contains metadata
-#'                               attributes of study data
-#' @param meta_data [data.frame] old name for `item_level`
-#' @param meta_data_cross_item [data.frame] -- Cross-item level metadata
-#' @param label_col [variable attribute] the name of the column in the
-#'                                       metadata containing the labels of
-#'                                       the variables
-#' @param cross_item_level [data.frame] alias for `meta_data_cross_item`
-#' @param `cross-item_level` [data.frame] alias for `meta_data_cross_item`
-#' @param meta_data_v2 [character] path or file name of the workbook like
-#'                                 metadata file, see
-#'                                 [`prep_load_workbook_like_file`] for details.
-#'                                 **ALL LOADED DATAFRAMES WILL BE PURGED**,
-#'                                 using [`prep_purge_data_frame_cache`],
-#'                                 if you specify `meta_data_v2`
 #' @param mahalanobis_threshold [numeric] the confidence level to use to define
 #'                                        `outliers`, if not stated it is by default
 #'                                        0.975.
@@ -71,24 +55,30 @@
 #' [Online Documentation](
 #' https://dataquality.qihs.uni-greifswald.de/VIN_acc_impl_multivariate_outlier.html
 #' )
+# nolint end
 acc_mahalanobis <- function(variable_group = NULL,
-                            study_data,
-                            item_level = "item_level",
-                            meta_data = item_level,
-                            meta_data_cross_item = "cross-item_level",
-                            label_col = VAR_NAMES,
-                            meta_data_v2,
-                            cross_item_level,
-                            `cross-item_level`,
-                            mahalanobis_threshold =
-                              suppressWarnings(
-                                as.numeric(
-                                  getOption("dataquieR.MAHALANOBIS_THRESHOLD",
-                                            dataquieR.MAHALANOBIS_THRESHOLD_default)))) {
-  #Preps------
-  if(.called_in_pipeline) {
-    util_error(m = "This function is not meant to run in the pipeline",
-               intrinsic_applicability_problem = TRUE
+  study_data,
+  item_level = "item_level",
+  meta_data = item_level,
+  meta_data_cross_item = "cross-item_level",
+  label_col = VAR_NAMES,
+  meta_data_v2,
+  cross_item_level,
+  `cross-item_level`,
+  mahalanobis_threshold =
+    suppressWarnings(
+      as.numeric(
+        getOption(
+          "dataquieR.MAHALANOBIS_THRESHOLD",
+          dataquieR.MAHALANOBIS_THRESHOLD_default
+        )
+      )
+    )) {
+  # Preps------
+  if (.called_in_pipeline) {
+    util_error(
+      m = "This function is not meant to run in the pipeline",
+      intrinsic_applicability_problem = TRUE
     )
   }
 
@@ -100,11 +90,15 @@ acc_mahalanobis <- function(variable_group = NULL,
     orig_label_col <- force(label_col)
   }
 
-  label_col <- attr(prep_get_labels("",
-                                    item_level = meta_data,
-                                    label_class = "SHORT",
-                                    label_col = label_col),
-                    "label_col")
+  label_col <- util_attr(
+    prep_get_labels("",
+      item_level = meta_data,
+      label_class = "SHORT",
+      label_col = label_col
+    ),
+    "label_col",
+    exact = TRUE
+  )
   # Load cross-item_level metadata and normalize it ----
   # check if there is a cross item metadata and if it is a data frame
   # in case is not present, create an empty data frame for cross item metadata
@@ -112,9 +106,12 @@ acc_mahalanobis <- function(variable_group = NULL,
   if (!is.data.frame(meta_data_cross_item)) {
     util_message(sprintf(
       "No cross-item level metadata %s found",
-      dQuote(meta_data_cross_item)))
-    meta_data_cross_item <- data.frame(VARIABLE_LIST = character(0),
-                                       CHECK_LABEL = character(0))
+      dQuote(meta_data_cross_item)
+    ))
+    meta_data_cross_item <- data.frame(
+      VARIABLE_LIST = character(0),
+      CHECK_LABEL = character(0)
+    )
   }
 
   # First normalize input for meta_data_cross_item from the user
@@ -127,68 +124,80 @@ acc_mahalanobis <- function(variable_group = NULL,
   prep_prepare_dataframes(.replace_hard_limits = TRUE)
 
 
-  #Define variable groups
+  # Define variable groups
   vars <- NULL
-  if(!is.null(variable_group)) {
+  if (!is.null(variable_group)) {
     util_correct_variable_use("variable_group",
-                              allow_more_than_one = TRUE,
-                              allow_any_obs_na = TRUE,
-                              need_type = "integer | float",
-                              need_scale = "interval | ratio | ordinal" #ES: should I leave only ordinal?
+      allow_more_than_one = TRUE,
+      allow_any_obs_na = TRUE,
+      need_type = "integer | float",
+      need_scale = "interval | ratio | ordinal" # ES: should I leave only ordinal? # nolint: line_length_linter.
     )
 
     if (length(variable_group) == 1) {
       util_error("Need at least two variables for Mahalanobis distance.",
-                 applicability_problem = TRUE)
+        applicability_problem = TRUE
+      )
     }
 
-    vars <- setNames(list(variable_group[!is.na(variable_group)]), "variable_group")
+    vars <- setNames(list(variable_group[!is.na(variable_group)]), "variable_group") # nolint: line_length_linter.
 
 
+    mahalanobis_threshold <- util_normalize_mahalanobis_threshold(
+      mahalanobis_threshold,
+      context = dQuote("mahalanobis_threshold")
+    )
 
-    if (length(mahalanobis_threshold) != 1 ||
-        !is.numeric(mahalanobis_threshold) ||
-        !is.finite(mahalanobis_threshold)) {
-      util_message(
-        c("The mahalanobis_threshold argument is not correct",
-          "default (%g) is used."),
-        dataquieR.MAHALANOBIS_THRESHOLD_default,
-        applicability_problem = TRUE)
-      mahalanobis_threshold <- dataquieR.MAHALANOBIS_THRESHOLD_default
-    }
-
-    mahalanobis_threshold <- setNames(list(mahalanobis_threshold), "variable_group")
+    mahalanobis_threshold <- setNames(list(mahalanobis_threshold), "variable_group") # nolint: line_length_linter.
   } else {
-
-    given_mahal_cols <- intersect(c("MAHALANOBIS_THRESHOLD", "MAHALANOBIS_RATIO"),
-                                  colnames(meta_data_cross_item))
-    if (!all(util_empty(as.vector(meta_data_cross_item[, given_mahal_cols,
-                                                       FALSE])))) {
-      #reduce the cross-item_level content to only the rows that contains mahal. info
+    given_mahal_cols <- intersect(
+      MAHALANOBIS_THRESHOLD,
+      colnames(meta_data_cross_item)
+    )
+    if (!all(util_empty(as.vector(meta_data_cross_item[
+      , given_mahal_cols,
+      drop = FALSE
+    ])))) {
+      # reduce the cross-item_level content to only the rows that contains
+      # mahal. info
       cur_cross <-
-        meta_data_cross_item[!util_empty(meta_data_cross_item[[MAHALANOBIS_THRESHOLD]]),
-                             , FALSE]
+        meta_data_cross_item[
+          !util_empty(meta_data_cross_item[[MAHALANOBIS_THRESHOLD]]), ,
+          FALSE
+        ]
       if (nrow(cur_cross) == 0) {
         vars <- NULL
       } else {
-        #Select only the column of interest
-        cur_cross <- cur_cross[, intersect(c(VARIABLE_LIST,
-                                             CHECK_ID,
-                                             CHECK_LABEL,
-                                             DATA_PREPARATION,
-                                             MAHALANOBIS_THRESHOLD,
-                                             MAHALANOBIS_RATIO),
-                                           colnames(cur_cross)
-        ),
-        FALSE]
+        # Select only the column of interest
+        cur_cross <- cur_cross[
+          , intersect(
+            c(
+              VARIABLE_LIST,
+              CHECK_ID,
+              CHECK_LABEL,
+              DATA_PREPARATION,
+              MAHALANOBIS_THRESHOLD,
+              MAHALANOBIS_RATIO
+            ),
+            colnames(cur_cross)
+          ),
+          drop = FALSE
+        ]
 
-        cur_cross$MAHALANOBIS_THRESHOLD <- ifelse(
-          tolower(as.character(cur_cross$MAHALANOBIS_THRESHOLD)) %in%
-            c("true", "1", "t", "+") |
-            is.na(suppressWarnings(as.numeric(
-              as.character(cur_cross$MAHALANOBIS_THRESHOLD)))),
-          dataquieR.MAHALANOBIS_THRESHOLD_default,
-          as.numeric(as.character(cur_cross$MAHALANOBIS_THRESHOLD))
+        cur_cross[[MAHALANOBIS_THRESHOLD]] <- mapply(
+          x = cur_cross[[MAHALANOBIS_THRESHOLD]],
+          label = cur_cross[[CHECK_LABEL]],
+          SIMPLIFY = TRUE,
+          FUN = function(x, label) {
+            util_normalize_mahalanobis_threshold(
+              x,
+              context = sprintf(
+                "%s for check %s",
+                dQuote(MAHALANOBIS_THRESHOLD),
+                dQuote(label)
+              )
+            )
+          }
         )
 
 
@@ -204,163 +213,77 @@ acc_mahalanobis <- function(variable_group = NULL,
     }
   }
 
-  #vars is a list
+  # vars is a list
   if (is.null(vars)) {
-    util_error(util_error("No variables provided to calculate Mahalanobis distance",
-                          applicability_problem = TRUE))
+    util_error("No variables provided to calculate Mahalanobis distance",
+      applicability_problem = TRUE
+    )
   }
 
-  plot_list <- lapply(setNames(nm = names(vars), vars), function(rv) {
-    #Filter to only keep the columns in the variable_group
-    ds1_group <- ds1[, rv, drop = FALSE]
-    check_label_rv <- names(vars)[sapply(vars, function(x) identical(x, rv))]
-    MD_res <- util_generate_mahalanobis_dist(ds1_group,
-                                             rv,
-                                             check_label_rv)
+  mahalanobis_results <- Map(
+    f = function(rv, check_label) {
+      util_mahalanobis_group_result(
+        study_data = ds1,
+        rv = rv,
+        check_label = check_label,
+        mahalanobis_threshold = mahalanobis_threshold[[check_label]]
+      )
+    },
+    rv = vars,
+    check_label = names(vars)
+  )
+  names(mahalanobis_results) <- names(vars)
 
-    ds1_group <- MD_res$x_with_MD
-    degree_freedom <- MD_res$df
-    rm(MD_res)
-    ds1plot <- ds1_group[rowSums(is.na(ds1_group[, rv, drop = FALSE])) == 0, ,
-                         drop = FALSE]
-
-    # Threshold to identify multivariate outliers (argument mahalanobis_threshold)
-    # is by default 0.975 (Mayrhofer and Filzmoser, 2023) or set by the user
-    MD_outliers_threshold <- unname(stats::qchisq(mahalanobis_threshold[[check_label_rv]],
-                                                  df = degree_freedom))
-
-    #TODO: Check! This differs from careless function mahad that calculates MD even if there are missing values.
-
-    #create a column with outliers
-    ds1plot[[paste0("MD_outliers_", check_label_rv)]] <- NA
-    ds1plot[[paste0("MD_outliers_", check_label_rv)]] <-
-      ifelse(ds1plot[[paste0("MD_", check_label_rv)]] > MD_outliers_threshold, 1, 0)
-    n_non_ol <- sum(ds1plot[[paste0("MD_outliers_", check_label_rv)]] == 0)
-    n_devs <- sum(ds1plot[[paste0("MD_outliers_", check_label_rv)]] == 1)
-
-
-    # Q-Q plot ----
-    p_df <- length(ds1plot[[paste0("MD_", check_label_rv)]])
-    probabilities <- stats::ppoints(p_df)
-
-    theoretical_quantiles <- stats::qchisq(probabilities,
-                                           df = degree_freedom) #fixed, df is not the no. rows, but it is the no. columns
-    ds1plot <- ds1plot[order(ds1plot[[paste0("MD_", check_label_rv)]]), ]
-    ds1plot$MD_ratio <- ds1plot[[paste0("MD_", check_label_rv)]]/MD_outliers_threshold
-
-
-    #Utility function to create the plot
-    res_MD <- util_create_mahalanobis_ggplot(MD_ratio = ds1plot$MD_ratio,
-                                             mahalanobis_threshold = mahalanobis_threshold[[check_label_rv]],
-                                             df = degree_freedom)
-    p1 <- res_MD$plot_MD
-
-    return(p1)
-
-
-  })
-  ################
-
-  sumdat <- do.call(rbind.data.frame,
-                    lapply(setNames(nm = names(vars), vars), function(rv) {
-                      #Filter to only keep the columns in the variable_group
-                      ds1_group <- ds1[, rv, drop = FALSE]
-                      check_label_rv <- names(vars)[sapply(vars,
-                                                           function(x) identical(x, rv))]
-                      MD_res <- util_generate_mahalanobis_dist(ds1_group,
-                                                               rv,
-                                                               check_label_rv)
-                      ds1_group <- MD_res$x_with_MD
-                      degree_freedom <- MD_res$df
-                      rm(MD_res)
-
-
-                      # Threshold to identify multivariate outliers (argument mahalanobis_threshold)
-                      # is by default 0.975 (Mayrhofer and Filzmoser, 2023) or set by the user
-                      MD_outliers_threshold <-
-                        unname(stats::qchisq(mahalanobis_threshold[[check_label_rv]],
-                                             df = degree_freedom))
-
-                      #TODO: Check! This differs from careless function mahad that calculates MD even if there are missing values.
-                      #create a column with outliers
-                      ds1_group[[paste0("MD_outliers_", check_label_rv)]] <- NA
-                      ds1_group[[paste0("MD_outliers_", check_label_rv)]] <-
-                        ifelse(ds1_group[[paste0("MD_", check_label_rv)]] > MD_outliers_threshold, 1, 0)
-                      n_non_ol <- sum(ds1_group[[paste0("MD_outliers_",
-                                                        check_label_rv)]] == 0,
-                                      na.rm = TRUE)
-                      n_devs <- sum(ds1_group[[paste0("MD_outliers_",
-                                                      check_label_rv)]] == 1,
-                                    na.rm = TRUE)
-                      nas_obs_units <- sum(rowSums(is.na(ds1_group)) > 0)
-                      nrows_completecases <- nrow(ds1_group)-nas_obs_units
-                      # create summary table
-                      st1 <- data.frame(Variables = check_label_rv)
-                      st1$"MD_outliers (N)" <- n_devs
-                      st1$"MD_outliers (%)" <- round(n_devs/nrows_completecases*100,
-                                                     digits = 2)
-                      st1$"N" <- nrows_completecases
-                      st1$"observational_units_removed" <- nrow(ds1_group) -
-                        nrows_completecases
-                      st1$"mahalanobis_threshold" <-
-                        mahalanobis_threshold[[check_label_rv]]
-                      SummaryData <- st1
-                    }))
+  plot_list <- lapply(mahalanobis_results, `[[`, "SummaryPlot")
+  sumdat <- do.call(
+    rbind.data.frame,
+    lapply(mahalanobis_results, `[[`, "SummaryData")
+  )
 
   SummaryTable <- sumdat
   names(SummaryTable)[names(SummaryTable) == "MD_outliers (N)"] <- "NUM_ssc_mah"
   names(SummaryTable)[names(SummaryTable) == "MD_outliers (%)"] <- "PCT_ssc_mah"
+  attr(SummaryTable$Variables, DATA_TYPE) <- DATA_TYPES$STRING
+  attr(SummaryTable$NUM_ssc_mah, DATA_TYPE) <- DATA_TYPES$INTEGER
+  attr(SummaryTable$PCT_ssc_mah, DATA_TYPE) <- DATA_TYPES$FLOAT
+  attr(SummaryTable$N, DATA_TYPE) <- DATA_TYPES$INTEGER
+  attr(SummaryTable$observational_units_removed, DATA_TYPE) <-
+    DATA_TYPES$INTEGER
+  attr(SummaryTable$mahalanobis_threshold, DATA_TYPE) <- DATA_TYPES$FLOAT
+
+  attr(sumdat$Variables, DATA_TYPE) <- DATA_TYPES$STRING
+  attr(sumdat$`MD_outliers (N)`, DATA_TYPE) <- DATA_TYPES$INTEGER
+  attr(sumdat$`MD_outliers (%)`, DATA_TYPE) <- DATA_TYPES$FLOAT
+  attr(sumdat$N, DATA_TYPE) <- DATA_TYPES$INTEGER
+  attr(sumdat$observational_units_removed, DATA_TYPE) <- DATA_TYPES$INTEGER
+  attr(sumdat$mahalanobis_threshold, DATA_TYPE) <- DATA_TYPES$FLOAT
 
 
-  FlaggedStudyData <- lapply(setNames(nm = names(vars), vars), function(rv) {
-    #Filter to only keep the columns in the variable_group
-    ds1_group <- ds1[, rv, drop = FALSE]
-    check_label_rv <- names(vars)[sapply(vars, function(x) identical(x, rv))]
-    MD_res <- util_generate_mahalanobis_dist(ds1_group,
-                                             rv,
-                                             check_label_rv)
-    ds1_group <- MD_res$x_with_MD
-    degree_freedom <- MD_res$df
-    rm(MD_res)
-
-    # Threshold to identify multivariate outliers (argument mahalanobis_threshold)
-    # is by default 0.975 (Mayrhofer and Filzmoser, 2023) or set by the user
-    MD_outliers_threshold <- unname(stats::qchisq(mahalanobis_threshold[[check_label_rv]],
-                                                  df = degree_freedom))
-    #create a column with outliers
-    ds1_group[[paste0("MD_outliers_", check_label_rv)]] <- NA
-    ds1_group[[paste0("MD_outliers_", check_label_rv)]] <-
-      ifelse(ds1_group[[paste0("MD_", check_label_rv)]] > MD_outliers_threshold, 1, 0)
-    ds1_group$row_n <- c(1:nrow(ds1_group))
-
-    return(ds1_group)
-  })
+  FlaggedStudyData <- lapply(mahalanobis_results, `[[`, "FlaggedStudyData")
 
   if (length(FlaggedStudyData) == 1) {
-    print("The list has exactly one element.")
     FlaggedStudyData_all <- FlaggedStudyData[[1]]
     FlaggedStudyData_all <-
       FlaggedStudyData_all[, names(FlaggedStudyData_all) != "row_n"]
-
   } else {
     row_counts <- sapply(FlaggedStudyData, nrow)
     if (length(unique(row_counts)) != 1) {
-      util_error("Internal error, sorry: The original data frame should have the same number of rows. Please report")
+      util_error("Internal error, sorry: The original data frame should have the same number of rows. Please report") # nolint: line_length_linter.
     }
-    FlaggedStudyData_all <-  Reduce(function(x, y) {
+    FlaggedStudyData_all <- Reduce(function(x, y) {
       extra_cols <- c("row_n", setdiff(colnames(y), colnames(x)))
-      merge(x, y[, extra_cols], by = "row_n", all = TRUE)
+      merge(x, y[, extra_cols, drop = TRUE], by = "row_n", all = TRUE)
     }, FlaggedStudyData)
 
 
     FlaggedStudyData_all <-
       FlaggedStudyData_all[, names(FlaggedStudyData_all) != "row_n"]
-
   }
 
-  return(list(SummaryTable = SummaryTable,
-              SummaryData = sumdat,
-              SummaryPlotList = plot_list,
-              FlaggedStudyData = FlaggedStudyData_all
+  return(list(
+    SummaryTable = SummaryTable,
+    SummaryData = sumdat,
+    SummaryPlotList = plot_list,
+    FlaggedStudyData = FlaggedStudyData_all
   ))
 }

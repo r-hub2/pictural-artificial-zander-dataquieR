@@ -26,8 +26,10 @@ Load a report from a back-end
 }
 \examples{
 \dontrun{
-r <- dataquieR::dq_report2("study_data", meta_data_v2 = "meta_data_v2",
-                           dimensions = NULL)
+r <- dataquieR::dq_report2("study_data",
+  meta_data_v2 = "meta_data_v2",
+  dimensions = NULL
+)
 storr_factory <- prep_create_storr_factory()
 r_storr <- prep_set_backend(r, storr_factory)
 r_restorr <- prep_set_backend(r_storr, NULL)

@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Utility Function Heatmap with 1 Threshold
 #'
 #' Function to create heatmap-like plot given one threshold -- works for
@@ -28,28 +29,33 @@
 #' @family figure_functions
 #' @concept summary
 #' @noRd
+# nolint end
 util_heatmap_1th <- function(df, cat_vars, values, threshold, right_intv,
-                             invert, cols, strata
-                             # , flip_mode # TODO: pass through from all usages of this function
-                             ) {
-
+  invert, cols, strata
+) {
   # STOPs
   if (!(length(cat_vars) %in% c(1, 2))) {
     util_error(paste0(
       "Argument cat_vars can have 1 or 2 elements. You specified ",
-      length(cat_vars), "elements."), applicability_problem = TRUE)
+      length(cat_vars), "elements."
+    ), applicability_problem = TRUE)
   }
 
   if (!(is.numeric(df[[values]]))) {
-    util_error(paste0("The variable you specified under ",
-                      values, " must be numeric."),
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+    util_error(
+      paste0(
+        "The variable you specified under ",
+        values, " must be numeric."
+      ),
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
 
   if (missing(threshold)) {
     util_error(paste0("No threshold has been specified"),
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
 
   # Preps
@@ -92,8 +98,10 @@ util_heatmap_1th <- function(df, cat_vars, values, threshold, right_intv,
   midrange <- unique(round(midrange, 2))
 
   # Categorize values
-  df[[values]] <- cut(df[[values]], breaks = c(-Inf, midrange, Inf),
-                      right = right_intv)
+  df[[values]] <- cut(df[[values]],
+    breaks = c(-Inf, midrange, Inf),
+    right = right_intv
+  )
 
   if (invert == 0) {
     disc_cols <- rev(warn_cols)
@@ -125,26 +133,30 @@ util_heatmap_1th <- function(df, cat_vars, values, threshold, right_intv,
 
     if (!missing(strata)) {
       p <- ggplot(df, aes(x, y, fill = .data[[values]])) +
-        facet_grid(.data[[strata]] ~ .) + # TODO: test ~
-        geom_tile(colour = "white", linewidth = 0.8) + # https://github.com/tidyverse/ggplot2/issues/5051
+        facet_grid(.data[[strata]] ~ .) +
+        geom_tile(colour = "white", linewidth = 0.8) + # https://github.com/tidyverse/ggplot2/issues/5051 # nolint: line_length_linter.
         geom_text(label = paste0(round(df$z2, 2), " %")) +
         scale_fill_manual(values = disc_cols, name = " ") +
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
         scale_x_discrete(name = namex) +
-        scale_y_discrete(expand = c(0, 0), name = namey,
-                         limits = rev(levels(df$y))) +
+        scale_y_discrete(
+          expand = c(0, 0), name = namey,
+          limits = rev(levels(df$y))
+        ) +
         xlab("Study segments")
     } else {
       p <- ggplot(df, aes(x, y, fill = .data[[values]])) +
-        geom_tile(colour = "white", linewidth = 0.8) + # https://github.com/tidyverse/ggplot2/issues/5051
+        geom_tile(colour = "white", linewidth = 0.8) + # https://github.com/tidyverse/ggplot2/issues/5051 # nolint: line_length_linter.
         geom_text(label = paste0(round(df$z2, 2), " %")) +
         scale_fill_manual(values = disc_cols, name = " ") +
         theme_minimal() +
         theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
         scale_x_discrete(name = namex) +
-        scale_y_discrete(expand = c(0, 0), name = namey,
-                         limits = rev(levels(df$y))) +
+        scale_y_discrete(
+          expand = c(0, 0), name = namey,
+          limits = rev(levels(df$y))
+        ) +
         xlab("Study segments")
     }
   } else {
@@ -152,14 +164,18 @@ util_heatmap_1th <- function(df, cat_vars, values, threshold, right_intv,
 
     p <- ggplot(df, aes(.data[[cat_vars]], y = z2, fill = .data[[values]])) +
       geom_bar(stat = "identity", na.rm = TRUE) +
-      geom_text(label = paste0(" ", round(df$z2, digits = 2), "%"),
-                hjust = 0, vjust = 0.5) +
+      geom_text(
+        label = paste0(" ", round(df$z2, digits = 2), "%"),
+        hjust = 0, vjust = 0.5
+      ) +
       scale_fill_manual(values = disc_cols, name = " ") +
       theme_minimal() +
       scale_x_discrete(name = namex) +
-      scale_y_continuous(name = "(%)",
-                         limits = c(0, 1.2 * max(df$z2))) +
-      coord_flip() # TODO: use util_coord_flip util_lazy_add_coord(p, fli)
+      scale_y_continuous(
+        name = "(%)",
+        limits = c(0, 1.2 * max(df$z2))
+      ) +
+      coord_flip()
   }
 
   return(list(SummaryPlot = p))

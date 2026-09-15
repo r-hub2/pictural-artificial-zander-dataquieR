@@ -7,7 +7,6 @@
 #'
 #' @noRd
 util_really_rstudio <- function() {
-
   is_shiny <- suppressWarnings(util_ensure_suggested("shiny", err = FALSE)) &&
     (!is.null(shiny::getDefaultReactiveDomain()))
 
@@ -20,5 +19,4 @@ util_really_rstudio <- function() {
     !exists(".jetbrains", globalenv(), mode = "environment")
 
   is_rstudio && is_not_jetbrains
-
 }

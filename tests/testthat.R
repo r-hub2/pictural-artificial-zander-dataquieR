@@ -1,4 +1,4 @@
-# options("testthat.default_reporter" = testthat::RStudioReporter)
+# Use testthat.default_reporter locally to select the RStudio reporter.
 
 library(dataquieR)
 

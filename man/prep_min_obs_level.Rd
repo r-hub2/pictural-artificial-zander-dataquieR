@@ -10,7 +10,7 @@ prep_min_obs_level(study_data, group_vars, min_obs_in_subgroup)
 \arguments{
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
-\item{group_vars}{\link{variable list} the name grouping variable}
+\item{group_vars}{\link{variable list} the names of the grouping variables}
 
 \item{min_obs_in_subgroup}{\link{integer} optional argument if a "group_var" is
 used. This argument specifies the

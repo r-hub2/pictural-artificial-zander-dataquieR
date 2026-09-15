@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Verify and normalize metadata on data frame level
 #'
 #' if possible, mismatching data types are converted (`"true"` becomes `TRUE`)
@@ -31,28 +32,32 @@
 #' mds1$DF_UNIQUE_ID[[2]] <- 12
 #' # print(prep_check_meta_data_dataframe(mds1)) # fail
 #' }
+# nolint end
 prep_check_meta_data_dataframe <- function(meta_data_dataframe =
-                                             "dataframe_level",
-                                           meta_data_v2,
-                                           dataframe_level) {
+    "dataframe_level",
+  meta_data_v2,
+  dataframe_level) {
   util_maybe_load_meta_data_v2()
   util_ck_arg_aliases()
   util_expect_data_frame(meta_data_dataframe)
+  meta_data_dataframe <- util_ensure_grading_ruleset_metadata(
+    meta_data_dataframe
+  )
 
   if (!(DF_ELEMENT_COUNT %in% colnames(meta_data_dataframe))) {
-    meta_data_dataframe[[DF_ELEMENT_COUNT]] <- rep(NA_integer_, nrow(meta_data_dataframe))
+    meta_data_dataframe[[DF_ELEMENT_COUNT]] <- rep(NA_integer_, nrow(meta_data_dataframe)) # nolint: line_length_linter.
   }
   if (!(DF_RECORD_COUNT %in% colnames(meta_data_dataframe))) {
-    meta_data_dataframe[[DF_RECORD_COUNT]] <- rep(NA_integer_, nrow(meta_data_dataframe))
+    meta_data_dataframe[[DF_RECORD_COUNT]] <- rep(NA_integer_, nrow(meta_data_dataframe)) # nolint: line_length_linter.
   }
   if (!(DF_ID_REF_TABLE %in% colnames(meta_data_dataframe))) {
-    meta_data_dataframe[[DF_ID_REF_TABLE]] <- rep(NA_character_, nrow(meta_data_dataframe))
+    meta_data_dataframe[[DF_ID_REF_TABLE]] <- rep(NA_character_, nrow(meta_data_dataframe)) # nolint: line_length_linter.
   }
   if (!(DF_RECORD_CHECK %in% colnames(meta_data_dataframe))) {
-    meta_data_dataframe[[DF_RECORD_CHECK]] <- rep(NA_character_, nrow(meta_data_dataframe))
+    meta_data_dataframe[[DF_RECORD_CHECK]] <- rep(NA_character_, nrow(meta_data_dataframe)) # nolint: line_length_linter.
   }
   if (!(DF_ID_VARS %in% colnames(meta_data_dataframe))) {
-    meta_data_dataframe[[DF_ID_VARS]] <- rep(NA_character_, nrow(meta_data_dataframe))
+    meta_data_dataframe[[DF_ID_VARS]] <- rep(NA_character_, nrow(meta_data_dataframe)) # nolint: line_length_linter.
   }
   if (!(DF_UNIQUE_ID %in% colnames(meta_data_dataframe))) {
     meta_data_dataframe[[DF_UNIQUE_ID]] <- rep(NA, nrow(meta_data_dataframe))
@@ -72,13 +77,14 @@ prep_check_meta_data_dataframe <- function(meta_data_dataframe =
       DF_RECORD_COUNT = "Column DF_RECORD_COUNT must be integer",
       DF_ELEMENT_COUNT = "Column DF_ELEMENT_COUNT must be integer",
       DF_ID_REF_TABLE = "Column DF_ID_REF_TABLE must be character",
-      DF_RECORD_CHECK = "Column DF_RECORD_CHECK must be subset, superset or exact",
+      DF_RECORD_CHECK = "Column DF_RECORD_CHECK must be subset, superset or exact", # nolint: line_length_linter.
       DF_UNIQUE_ROWS = "Column DF_UNIQUE_ROWS must be true, false, or no_id",
-      DF_UNIQUE_ID = "Column DF_UNIQUE_ID must be integer"
+      DF_UNIQUE_ID = "Column DF_UNIQUE_ID must be integer",
+      GRADING_RULESET = "Column GRADING_RULESET must be character"
     ),
     meta_data_dataframe,
     list(
-      DF_ID_VARS = is.character, # TODO: Write utility functions for converting data types with proper warnings
+      DF_ID_VARS = is.character,
       DF_NAME = is.character,
       DF_CODE = is.character,
       DF_RECORD_COUNT = util_all_is_integer,
@@ -89,10 +95,11 @@ prep_check_meta_data_dataframe <- function(meta_data_dataframe =
       },
       DF_UNIQUE_ROWS = function(x) {
         all(util_empty(x) | tolower(trimws(x)) %in%
-              c("f", "t", "true", "false", "no_id"))
+            c("f", "t", "true", "false", "no_id"))
       },
-      DF_UNIQUE_ID = util_all_is_integer
-    ), # TODO: We have DF_ID_REF_TABLE but DF_ID_TABLE. Could you add a todo for this?
+      DF_UNIQUE_ID = util_all_is_integer,
+      GRADING_RULESET = is.character
+    ),
     list(
       DF_ID_VARS = as.character,
       DF_NAME = as.character,
@@ -103,11 +110,13 @@ prep_check_meta_data_dataframe <- function(meta_data_dataframe =
       DF_RECORD_CHECK = function(x) {
         r <-
           factor(tolower(trimws(as.character(x))),
-                 levels = c(c("superset", "subset", "exact")))
+            levels = c(c("superset", "subset", "exact"))
+          )
         levels(r)[as.numeric(r)]
       },
       DF_UNIQUE_ROWS = as.character,
-      DF_UNIQUE_ID = as.integer
+      DF_UNIQUE_ID = as.integer,
+      GRADING_RULESET = as.character
     )
   )
 
@@ -116,11 +125,11 @@ prep_check_meta_data_dataframe <- function(meta_data_dataframe =
 
   if (sum_no_key) {
     util_message("Removing %d rows from %s, because %s is empty.",
-                 sum_no_key,
-                 dQuote("meta_data_dataframe"),
-                 sQuote(DF_NAME),
-                 applicability_problem = TRUE
-                 )
+      sum_no_key,
+      dQuote("meta_data_dataframe"),
+      sQuote(DF_NAME),
+      applicability_problem = TRUE
+    )
   }
 
   r <- r[!no_key, , drop = FALSE]
@@ -128,11 +137,13 @@ prep_check_meta_data_dataframe <- function(meta_data_dataframe =
   # Check each DF_CODE and DF_NAME not used more than once
   if (any(duplicated(r[[DF_NAME]], incomparables = NA))) {
     util_error("Found duplicated dataframes in dataframe level metadata: %s",
-               util_pretty_vector_string(
-                 sQuote(r[[DF_NAME]][
-                   duplicated(r[[DF_NAME]], incomparables = NA)])
-               ),
-               applicability_problem = TRUE)
+      util_pretty_vector_string(
+        sQuote(r[[DF_NAME]][
+          duplicated(r[[DF_NAME]], incomparables = NA)
+        ])
+      ),
+      applicability_problem = TRUE
+    )
   }
 
   if (any(duplicated(r[[DF_CODE]], incomparables = NA))) {
@@ -140,9 +151,11 @@ prep_check_meta_data_dataframe <- function(meta_data_dataframe =
       "Found duplicated dataframe codes in dataframe level metadata: %s",
       util_pretty_vector_string(
         sQuote(r[[DF_CODE]][
-          duplicated(r[[DF_CODE]], incomparables = NA)])
+          duplicated(r[[DF_CODE]], incomparables = NA)
+        ])
       ),
-      applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
 
   r

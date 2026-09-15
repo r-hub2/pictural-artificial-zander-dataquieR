@@ -11,7 +11,8 @@ test_that("prep_create_meta works", {
       level = l,
       character.only = TRUE
     ),
-    regexp = sprintf("(%s)",
+    regexp = sprintf(
+      "(%s)",
       "The following variable attributes are NULL, will ignore these: .+XYZ.+"
     ),
     perl = TRUE
@@ -53,11 +54,24 @@ test_that("prep_create_meta works", {
       XYZ = 1:3,
       MISSING_LIST = "999|998"
     ),
-    regexp = paste("The given variable attributes have different lengths and",
-                   "cannot be equalized by repeating the shorter ones to",
-                   "create a data frame with as 26 rows .the longest variable",
-                   "attribute vector provided.. R would say:",
-                   "arguments imply differing number of rows: 1, 3, 26"),
+    regexp = paste(
+      "The given variable attributes have different lengths and",
+      "cannot be equalized by repeating the shorter ones to",
+      "create a data frame with as 26 rows .the longest variable",
+      "attribute vector provided.. R would say:",
+      "arguments imply differing number of rows: 1, 3, 26"
+    ),
     perl = TRUE
+  )
+
+  expect_error(
+    prep_create_meta(
+      VAR_NAMES = "x",
+      DATA_TYPE = DATA_TYPES$INTEGER,
+      MISSING_LIST = NA_character_,
+      level = "NOT_A_LEVEL",
+      character.only = TRUE
+    ),
+    regexp = "Error regarding argument"
   )
 })

@@ -1,3 +1,87 @@
+# dataquieR 2.8.11
+
+## Major new features
+
+* Added `dq_questionnaire()` as a direct SSI/questionnaire analysis entry
+  point. SSI reports now provide dedicated scale and metric pages, linked
+  summaries, grading overviews, and section navigation.
+* Integrated variable-group and scale results throughout HTML reports, including
+  dedicated detail pages, summary tables, dashboards, and hierarchy charts.
+  Contradictions are separated from other group checks in summary pies and can
+  be viewed separately or together in the interactive hierarchy chart.
+* Redesigned assessment-scope reporting for item- and variable-group results.
+  Reports distinguish possible, requested, computed, and classified
+  assessments, use entity- and datatype-specific DQ_OBS denominators, and
+  represent joint assessments such as shape and scale without duplicating
+  result metrics.
+* Made `dq_report_by()` results printable as report bundles while keeping its
+  existing interfaces compatible. Results written to an output directory remain
+  lightweight and can be rendered again from their saved `.dq2` files;
+  `dir` and `output_dir` are accepted consistently by `dq_report2()`,
+  `dq_report_by()`, and their print methods.
+* Added grading-ruleset assignments and render-time grading for cross-item,
+  segment-, and dataframe-level results. Segment missingness uses segment-level
+  rulesets with a deterministic fallback. Explicitly supplied legacy thresholds
+  remain supported and take precedence for that call.
+* Extended cross-item metadata patterns with `[ALL]`, segment and dataframe
+  selectors, and `[WHERE {<REDCap-like rule>}]`. Individual contradiction
+  rules can select their grading ruleset explicitly.
+* Added experimental `dq_shiny_panel_*()` helpers for embedding existing
+  results or report directories in Shiny applications.
+
+## Important changes and improvements
+
+* Interactive report tables now use DataTables 2 through `DT2` by default.
+  When both `DT2` and `DT` are installed, the automatic backend selection
+  prefers `DT2`; it falls back to `DT` when `DT2` is unavailable. Sorting,
+  filtering, hover information, column visibility, SearchBuilder, and exports
+  remain available.
+* Added machine-readable counts and percentages for uncertain and
+  specified-reason item missingness.
+* Without an explicit legacy threshold, segment-missingness results retain raw
+  metrics and receive classes and colors from the effective grading rules only
+  when rendered. Ineffective threshold and direction columns are no longer
+  returned.
+* Continuous `acc_loess()` group curves now use non-robust LOWESS iterations
+  (`iter = 0`), matching the binary path. This may change computed curves
+  compared with earlier releases.
+
+## Installation and compatibility
+
+* Reduced installation dependencies by moving `MASS` to `Suggests` and
+  replacing its required shape/scale parameter estimation with base-R
+  implementations.
+
+# dataquieR 2.8.10
+
+## Major new features
+
+* Added the first cross-item repeated-measurement assessment through
+  `acc_repeated_measurements()`, including configurable statistical settings,
+  internal ICC computation, and linked settings in HTML reports.
+* Replaced the `parallelMap` dependency with an in-package backend based on
+  base R's `parallel` package. Existing `parallel` and MPI clusters remain
+  supported, as do the relevant legacy `parallelMap.*` options.
+
+## Breaking and important compatibility changes
+
+* Raised the minimum supported R version to R 4.1.0.
+* Scheduler modes named `BatchJobs` or `batchtools` no longer dispatch to
+  these packages and fall back to sequential execution. Scheduler-backed
+  execution should use `dq_report2(..., mode = "futures")` with an appropriate
+  `future` plan.
+* Standardized cross-item metadata on the `meta_data_cross_item` attribute
+  while retaining `meta_data_cross` as a compatibility fallback.
+* Added the option `dataquieR.min_group_var_levels` as the package-wide default
+  for the minimum number of observed grouping-variable levels used by
+  variance-component and margins analyses. This threshold could previously be
+  changed only through function arguments or `specific_args`; the usual
+  defaults were 5 (and 4 in one ordinal-margins path). The new default is 2.
+  Ordinal mixed models still require at least 3 levels and raise smaller values
+  accordingly.
+* The preliminary exported constants `REL_VAL` and `GOLDSTANDARD` were replaced
+  by `REPEATED_MEASURES_METRIC` and `REPEATED_MEASURES_REFERENCE`, respectively.
+
 # dataquieR 2.8.9
 
 * Try to avoid spurious CRAN `winbuilder` fails.

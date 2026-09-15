@@ -1,10 +1,7 @@
+# nolint start: line_length_linter.
 #' Utility function to create a margins plot for binary variables
 #'
-#' @param resp_vars  [variable] the name of the binary measurement variable
-#' @param group_vars [variable] the name of the observer, device or
-#'                              reader variable
-#' @param co_vars [variable list] a vector of covariables, e.g. age and sex for
-#'                              adjustment
+#' @inheritParams .template_function_indicator
 #' @param min_obs_in_subgroup [integer] from=0. This optional argument specifies
 #'                       the minimum number of observations that is required to
 #'                       include a subgroup (level) of the `group_var` in the
@@ -17,8 +14,6 @@
 #'                       replacing missing value codes by `NA`, excluding
 #'                       inadmissible values and transforming categorical
 #'                       variables to factors.
-#' @param label_col [variable attribute] the name of the column in the metadata
-#'                       with labels of variables
 #' @param threshold_type [enum] empirical | user | none. See `acc_margins`.
 #' @param threshold_value [numeric] see `acc_margins`
 #' @param caption [string] a caption for the plot (optional, typically used to
@@ -35,7 +30,7 @@
 #'                                    figures for binary outcomes
 #' @param no_geom_count_in_bin [logical] Suppress counts 'margins'
 #'                                       figures for binary outcomes, so they
-#'.                                      are not always including 0 and 1.
+#' .                                      are not always including 0 and 1.
 #'
 #' @return A table and a matching plot.
 #'
@@ -43,36 +38,46 @@
 #' @import patchwork
 #'
 #' @noRd
-util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL,
-                             threshold_type = NULL, threshold_value,
-                             min_obs_in_subgroup = 5, min_obs_in_cat = 5,
-                             caption = NULL, ds1, label_col,
-                             adjusted_hint = "",
-                             title = "",
-                             sort_group_var_levels =
-                               getOption("dataquieR.acc_margins_sort",
-                                         dataquieR.acc_margins_sort_default),
-                             include_numbers_in_figures =
-                               getOption("dataquieR.acc_margins_num",
-                                         dataquieR.acc_margins_num_default),
-                             no_overall_in_bin =
-                               getOption("dataquieR.no_overall_in_bin",
-                                         dataquieR.no_overall_in_bin_default),
-                             no_geom_count_in_bin =
-                               getOption("dataquieR.no_geom_count_in_bin",
-                                      dataquieR.no_geom_count_in_bin_default)) {
+# nolint end
+util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL, # nolint: line_length_linter.
+  threshold_type = NULL, threshold_value,
+  min_obs_in_subgroup = 5, min_obs_in_cat = 5,
+  caption = NULL, ds1, label_col,
+  adjusted_hint = "",
+  title = "",
+  sort_group_var_levels =
+    getOption(
+      "dataquieR.acc_margins_sort",
+      dataquieR.acc_margins_sort_default
+    ),
+  include_numbers_in_figures =
+    getOption(
+      "dataquieR.acc_margins_num",
+      dataquieR.acc_margins_num_default
+    ),
+  no_overall_in_bin =
+    getOption(
+      "dataquieR.no_overall_in_bin",
+      dataquieR.no_overall_in_bin_default
+    ),
+  no_geom_count_in_bin =
+    getOption(
+      "dataquieR.no_geom_count_in_bin",
+      dataquieR.no_geom_count_in_bin_default
+    )) {
   # preps and checks -----------------------------------------------------------
   # to avoid "no visible binding for global variable ‘sample_size’"
 
-  if (no_geom_count_in_bin &&  # so it does not scale to 0/1
+  if (no_geom_count_in_bin && # so it does not scale to 0/1
       !no_overall_in_bin) { # but we want to have the overall distribution
-    util_message("Cannot have %s = %s and %s = %s, setting %s to %s",
-                 sQuote("no_geom_count_in_bin"),
-                 dQuote(TRUE),
-                 sQuote("no_overall_in_bin"),
-                 dQuote(FALSE),
-                 sQuote("no_overall_in_bin"),
-                 dQuote(TRUE)
+    util_message(
+      "Cannot have %s = %s and %s = %s, setting %s to %s",
+      sQuote("no_geom_count_in_bin"),
+      dQuote(TRUE),
+      sQuote("no_overall_in_bin"),
+      dQuote(FALSE),
+      sQuote("no_overall_in_bin"),
+      dQuote(TRUE)
     )
     no_overall_in_bin <- TRUE
   }
@@ -82,22 +87,24 @@ util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL
   var_prop <- util_dist_selection(ds1[, resp_vars, drop = FALSE])
   if (var_prop$NDistinct < 2) {
     util_error("The response variable is constant (after data preparation).",
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
   # ensure that the response variable is binary
   if (var_prop$NDistinct != 2) {
     util_error("The response variable is not binary.",
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
   # ensure that there are enough observations for the model
   count_bin <- util_table_of_vct(ds1[[resp_vars]])
-  if (any(count_bin[, 2] < min_obs_in_cat)) {
+  if (any(count_bin[, 2, drop = TRUE] < min_obs_in_cat)) {
     util_error("Not enough observations per category (after data preparation).")
   }
   count_bin <- util_table_of_vct(ds1[[group_vars]])
-  if (any(count_bin[, 2] < min_obs_in_subgroup)) {
+  if (any(count_bin[, 2, drop = TRUE] < min_obs_in_subgroup)) {
     util_error("Not enough observations per group (after data preparation).")
   }
 
@@ -105,16 +112,16 @@ util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL
   # if no co_vars are defined for adjustment only the intercept is modelled
   if (length(co_vars) == 0) {
     co_vars <- "1"
-    co_vars_bQ <- co_vars
+    co_vars_bq <- co_vars
   } else {
-    co_vars_bQ <- util_bQuote(co_vars)
+    co_vars_bq <- util_bQuote(co_vars)
   }
 
   # build model formula
   fmla <- as.formula(paste0(
     paste0(util_bQuote(resp_vars), "~"),
     paste0(
-      paste0(co_vars_bQ, collapse = " + "),
+      paste0(co_vars_bq, collapse = " + "),
       " + ",
       util_bQuote(group_vars)
     )
@@ -124,35 +131,44 @@ util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL
     model <- glm(fmla, data = ds1, family = binomial(link = "logit"))
   })
   res_df <- data.frame(emmeans::emmeans(model, group_vars, type = "response"),
-                       check.names = FALSE)
+    check.names = FALSE
+  )
 
   # adjust for covariates, if needed
   ds1$resp_var_adj <-
     # estimated mean for each level of the grouping variable
-    res_df$prob[match(ds1[[group_vars]], res_df[, group_vars])] +
+    res_df$prob[match(ds1[[group_vars]], res_df[, group_vars, drop = TRUE])] +
     # residuals: original value of the response variable - fitted value
     ds1[[resp_vars]] - model$fitted.values
 
   summary_ds <- as.data.frame(
     dplyr::summarize(
-      dplyr::group_by_at(ds1[, c(resp_vars, group_vars), drop = FALSE],
-                         unname(group_vars)),
-      sample_size = dplyr::n()))
+      dplyr::group_by_at(
+        ds1[, c(resp_vars, group_vars), drop = FALSE],
+        unname(group_vars)
+      ),
+      sample_size = dplyr::n()
+    )
+  )
 
   res_df <- merge(res_df, summary_ds, by = group_vars, all.x = TRUE)
-  res_df <- dplyr::rename(res_df, c("margins" = "prob", "LCL" = "asymp.LCL",
-                                    "UCL" = "asymp.UCL"))
+  res_df <- dplyr::rename(res_df, c(
+    "margins" = "prob", "LCL" = "asymp.LCL",
+    "UCL" = "asymp.UCL"
+  ))
 
   # adjusted overall mean
   omv <- data.frame(emmeans::emmeans(model, "1", type = "response"))
-  omv <- dplyr::rename(omv, c("margins" = "prob", "LCL" = "asymp.LCL",
-                              "UCL" = "asymp.UCL"))
-  res_df$overall <- omv$margins # TODO: never used?
+  omv <- dplyr::rename(omv, c(
+    "margins" = "prob", "LCL" = "asymp.LCL",
+    "UCL" = "asymp.UCL"
+  ))
+  res_df$overall <- omv$margins
 
   # thresholds -----------------------------------------------------------------
   if (threshold_type %in% c("empirical", "none")) {
-    th <- mean(ds1[["resp_var_adj"]]) # TODO: use estimate in 'omv'?
-    th <- th * (1 - th) # TODO: Is variance here a good estimator? Maybe align
+    th <- mean(ds1[["resp_var_adj"]])
+    th <- th * (1 - th)
     # with measurements of deviation for nominal variables?
     parn <- c(
       paste("-", threshold_value, "TH", sep = ""), "Prob.",
@@ -165,7 +181,7 @@ util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL
 
     res_df$threshold <- threshold_value
     res_df$GRADING <- ifelse(res_df$margins < pars[1] |
-                               res_df$margins > pars[3], 1, 0)
+        res_df$margins > pars[3], 1, 0)
   } else if (threshold_type == "user") {
     th <- threshold_value
     parn <- c("", paste0("Prob.=", threshold_value, sep = ""), "")
@@ -183,14 +199,16 @@ util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL
   # figure ---------------------------------------------------------------------
   # drop confidence intervals for group_var levels that have zero variance to
   # ensure the readability of the figures
-  res_df_plot <- res_df[, c(group_vars, "margins", "LCL", "UCL",
-                            "GRADING", "sample_size")]
+  res_df_plot <- res_df[, c(
+    group_vars, "margins", "LCL", "UCL",
+    "GRADING", "sample_size"
+  ), drop = TRUE]
   gr_var <- tapply(ds1[["resp_var_adj"]], ds1[[group_vars]], var)
   gr_zero <- gr_var < sqrt(.Machine$double.eps)
   if (any(gr_zero)) {
     gr_ci_excl <- names(gr_var)[gr_zero]
-    res_df_plot$LCL[as.character(res_df_plot[, group_vars]) %in% gr_ci_excl] <- NA
-    res_df_plot$UCL[as.character(res_df_plot[, group_vars]) %in% gr_ci_excl] <- NA
+    res_df_plot$LCL[as.character(res_df_plot[, group_vars, drop = TRUE]) %in% gr_ci_excl] <- NA # nolint: line_length_linter.
+    res_df_plot$UCL[as.character(res_df_plot[, group_vars, drop = TRUE]) %in% gr_ci_excl] <- NA # nolint: line_length_linter.
   }
 
   # use offset for annotation depending on variable scale
@@ -203,9 +221,12 @@ util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL
     tbl_gr <- util_table_of_vct(ds1[[group_vars]]) %>%
       dplyr::arrange(dplyr::desc(.data$Freq))
     ds1[[group_vars]] <- factor(ds1[[group_vars]],
-                                levels = as.character(tbl_gr$Var1))
-    res_df <- res_df[match(levels(ds1[[group_vars]]),
-                           as.character(res_df[, group_vars])), ]
+      levels = as.character(tbl_gr$Var1)
+    )
+    res_df <- res_df[match(
+      levels(ds1[[group_vars]]),
+      as.character(res_df[, group_vars, drop = TRUE])
+    ), , drop = FALSE]
   }
 
   # Plot 1: hybrid density/boxplot graph
@@ -214,147 +235,149 @@ util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL
     util_error("No data left.")
   }
 
-  if (no_geom_count_in_bin) { # FIXME: Elisa had some corner cases, where this did not match the overall distribution any more.
+  if (no_geom_count_in_bin) {
     y_lims <- c(
       max(0, min(res_df_plot$LCL, na.rm = TRUE)),
       min(1, max(res_df_plot$UCL, na.rm = TRUE))
     )
-    ### extract 0/1-values and group
-    # tmp_count_df <- data.frame(
-    #   .grp = .ds00[[group_vars]],
-    #   .y = round(.ds00[["resp_var_adj"]])
-    # )
-    #
-    # ## only 0/1
-    # tmp_count_df <- tmp_count_df[!is.na(tmp_count_df$.grp) &
-    #                                !is.na(tmp_count_df$.y) &
-    #                                tmp_count_df$.y %in% c(0, 1), , drop = FALSE]
-    #
-    # ## frequencies
-    # tab <- table(tmp_count_df$.grp, tmp_count_df$.y)
-    #
-    # ## ensure coluns 0 and 1
-    # tab_df <- data.frame(
-    #   .grp = rownames(tab),
-    #   n0 = if ("0" %in% colnames(tab)) tab[, "0"] else 0,
-    #   n1 = if ("1" %in% colnames(tab)) tab[, "1"] else 0,
-    #   row.names = NULL,
-    #   check.names = FALSE
-    # )
-    #
-    # ## add to res_df_plot
-    # label_df <- merge(
-    #   data.frame(.grp = res_df_plot[[group_vars]], res_df_plot, check.names = FALSE),
-    #   tab_df,
-    #   by = ".grp",
-    #   all.x = TRUE,
-    #   sort = FALSE
-    # )
-    #
-    # ## NAs -> 0
-    # label_df$n0[is.na(label_df$n0)] <- 0
-    # label_df$n1[is.na(label_df$n1)] <- 0
-    #
-    # ## create labels
-    # label_df$label <- paste0(label_df$n0, "+", label_df$n1)
+    # Historical 0/1 count-label prototype removed here. Inspect with
+    # `git show 6eb35c7a20 -- R/util_margins_bin.R` before restoring it.
     gcnt <- NULL
-    # summary_ds$sample_size <- paste0(summary_ds$sample_size,
-    #                                  "=\n",
-    #                                 label_df$label)
+    # Historical sample-size relabeling prototype removed with count labels.
   } else {
     y_lims <- c(0, 1)
     gcnt <- geom_count(aes(alpha = 0.9), color = "gray")
   }
 
-  p1 <- util_create_lean_ggplot(ggplot(data = .ds00,
-                                       aes(x = .data[[group_vars]],
-                                           y = round(.data[["resp_var_adj"]]))) +
-                                  gcnt +
-                                  util_geom_pointrange_robust(data = res_df_plot, aes(
-                                    x = .data[[group_vars]],
-                                    y = margins,
-                                    ymin = LCL,
-                                    ymax = UCL,
-                                    color = as.factor(GRADING)),#, n = sample_size
-                                    shape = 18,
-                                    linewidth = 1,
-                                    inherit.aes = FALSE,
-                                    size = .5) +
-                                  theme_minimal() +
-                                  labs(x = "", y = "") +
-                                  theme(
-                                    legend.position = "none",
-                                    legend.title = element_blank(),
-                                    text = element_text(size = 16),
-                                    axis.text.x = element_text(angle = 90,
-                                                               vjust = 0.5,
-                                                               hjust = 1),
-                                    plot.margin = ggplot2::unit(c(2, 0, 2, 0),
-                                                                "mm")) +
-                                  scale_colour_manual(values = warn_code) +
-                                  ggplot2::expand_limits(y = y_lims),
-                                .ds00 = .ds00,
-                                group_vars = group_vars,
-                                res_df_plot = res_df_plot,
-                                warn_code = warn_code,
-                                y_lims = y_lims,
-                                gcnt = gcnt)
+  p1 <- util_create_lean_ggplot(
+    ggplot(
+      data = .ds00,
+      aes(
+        x = .data[[group_vars]],
+        y = round(.data[["resp_var_adj"]])
+      )
+    ) +
+      gcnt +
+      util_geom_pointrange_robust(
+        data = res_df_plot, aes(
+          x = .data[[group_vars]],
+          y = margins,
+          ymin = LCL,
+          ymax = UCL,
+          color = as.factor(GRADING)
+        ),
+        shape = 18,
+        linewidth = 1,
+        inherit.aes = FALSE,
+        size = .5
+      ) +
+      theme_minimal() +
+      labs(x = "", y = "") +
+      theme(
+        legend.position = "none",
+        legend.title = element_blank(),
+        text = element_text(size = 16),
+        axis.text.x = element_text(
+          angle = 90,
+          vjust = 0.5,
+          hjust = 1
+        ),
+        plot.margin = ggplot2::unit(
+          c(2, 0, 2, 0),
+          "mm"
+        )
+      ) +
+      scale_colour_manual(values = warn_code) +
+      ggplot2::expand_limits(y = y_lims),
+    .ds00 = .ds00,
+    group_vars = group_vars,
+    res_df_plot = res_df_plot,
+    warn_code = warn_code,
+    y_lims = y_lims,
+    gcnt = gcnt
+  )
 
-  p1 <- util_create_lean_ggplot(p1 +
-                                  ggplot2::coord_cartesian(ylim = y_lims,
-                                                            clip = "off"),
-                                p1 = p1,
-                                y_lims = y_lims)
+  p1 <- util_create_lean_ggplot(
+    p1 +
+      ggplot2::coord_cartesian(
+        ylim = y_lims,
+        clip = "off"
+      ),
+    p1 = p1,
+    y_lims = y_lims
+  )
 
-    if (include_numbers_in_figures) {
-      p1 <- util_create_lean_ggplot(p1 +
-                                      geom_text(data = summary_ds,
-                                                aes(x = .data[[group_vars]],
-                                                    y = Inf,
-                                                    label = sample_size),
-                                                inherit.aes = FALSE,
-                                                hjust = 0.5,
-                                                vjust = -0.2,
-                                                angle = 90) +
-                                      annotate("text",
-                                               x = 0.5,
-                                               y = Inf,
-                                               label = "N",
-                                               vjust = -0.2) +
-                                      theme(plot.margin = ggplot2::unit(c(8, 0, 2, 0),
-                                                                        "mm")),
-                                    p1 = p1,
-                                    summary_ds = summary_ds,
-                                    group_vars = group_vars,
-                                    y_lims = y_lims,
-                                    sample_size = sample_size)
-    }
+  if (include_numbers_in_figures) {
+    p1 <- util_create_lean_ggplot(
+      p1 +
+        geom_text(
+          data = summary_ds,
+          aes(
+            x = .data[[group_vars]],
+            y = Inf,
+            label = sample_size
+          ),
+          inherit.aes = FALSE,
+          hjust = 0.5,
+          vjust = -0.2,
+          angle = 90
+        ) +
+        annotate("text",
+          x = 0.5,
+          y = Inf,
+          label = "N",
+          vjust = -0.2
+        ) +
+        theme(plot.margin = ggplot2::unit(
+          c(8, 0, 2, 0),
+          "mm"
+        )),
+      p1 = p1,
+      summary_ds = summary_ds,
+      group_vars = group_vars,
+      y_lims = y_lims,
+      sample_size = sample_size
+    )
+  }
 
   if (threshold_type != "none") {
-    p1 <- util_create_lean_ggplot(p1 +
-                                    geom_hline(yintercept = pars[2],
-                                               color = "red") +
-                                    geom_hline(yintercept = pars[-2],
-                                               color = "red",
-                                               linetype = 2),
-                                  p1 = p1,
-                                  pars = pars)
-
+    p1 <- util_create_lean_ggplot(
+      p1 +
+        geom_hline(
+          yintercept = pars[2],
+          color = "red"
+        ) +
+        geom_hline(
+          yintercept = pars[-2],
+          color = "red",
+          linetype = 2
+        ),
+      p1 = p1,
+      pars = pars
+    )
   } else {
-    p1 <- util_create_lean_ggplot(p1 +
-                                    geom_hline(yintercept = pars[2],
-                                               color = "red"),
-                                  p1 = p1,
-                                  pars = pars)
+    p1 <- util_create_lean_ggplot(
+      p1 +
+        geom_hline(
+          yintercept = pars[2],
+          color = "red"
+        ),
+      p1 = p1,
+      pars = pars
+    )
   }
 
   # Plot 2: overall distributional plot flipped on y-axis of plot 1
   .ds01 <- ds1[, "resp_var_adj", drop = FALSE]
   get_y_scale <-
-    util_create_lean_ggplot(ggplot(.ds01,
-                                   aes(x = round(.data[["resp_var_adj"]]))) +
-                              geom_density(alpha = 0.35),
-                            .ds01 = .ds01)
+    util_create_lean_ggplot(
+      ggplot(
+        .ds01,
+        aes(x = round(.data[["resp_var_adj"]]))
+      ) +
+        geom_density(alpha = 0.35),
+      .ds01 = .ds01
+    )
 
   build <- ggplot2::ggplot_build(get_y_scale)
   data1 <- util_gg_get(build, "data")[[1]]
@@ -363,56 +386,76 @@ util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL
   aty <- mean(range(yvals))
 
 
-  p2 <- util_create_lean_ggplot(ggplot(.ds01,
-                                       aes(round(.data[["resp_var_adj"]]))) +
-                                  geom_density(alpha = 0.35) +
-                                  coord_flip() + # util_lazy_add_coord(p, fli)
-                                  theme_minimal() +
-                                  labs(x = NULL, y = NULL) +
-                                  ggplot2::xlim(c(min(min(round(.ds01)), pars),
-                                                  max(max(round(.ds01)) + 0.3,
-                                                      pars + offs))) +
-                                  theme(axis.text.y = element_blank(),
-                                        axis.text.x = element_blank(),
-                                        text = element_text(size = 16),
-                                        plot.margin =
-                                          ggplot2::unit(c(0, 2, 0, 2), "mm")) +
-                                  ggplot2::expand_limits(x = y_lims),
-                                .ds01 = .ds01,
-                                pars = pars,
-                                offs = offs,
-                                y_lims = y_lims)
+  p2 <- util_create_lean_ggplot(
+    ggplot(
+      .ds01,
+      aes(round(.data[["resp_var_adj"]]))
+    ) +
+      geom_density(alpha = 0.35) +
+      coord_flip() +
+      theme_minimal() +
+      labs(x = NULL, y = NULL) +
+      ggplot2::xlim(c(
+        min(min(round(.ds01)), pars),
+        max(
+          max(round(.ds01)) + 0.3,
+          pars + offs
+        )
+      )) +
+      theme(
+        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        text = element_text(size = 16),
+        plot.margin =
+          ggplot2::unit(c(0, 2, 0, 2), "mm")
+      ) +
+      ggplot2::expand_limits(x = y_lims),
+    .ds01 = .ds01,
+    pars = pars,
+    offs = offs,
+    y_lims = y_lims
+  )
 
   if (threshold_type != "none") {
-    p2 <- util_create_lean_ggplot(p2 +
-                                    annotate(geom = "text",
-                                             x = pars + offs,
-                                             y = aty,
-                                             label = parn) +
-                                    geom_vline(xintercept = pars[2],
-                                               color = "red") +
-                                    geom_vline(xintercept = pars[-2],
-                                               color = "red",
-                                               linetype = 2),
-                                  p2 = p2,
-                                  pars = pars,
-                                  offs = offs,
-                                  aty = aty,
-                                  parn = parn)
-
+    p2 <- util_create_lean_ggplot(
+      p2 +
+        annotate(
+          geom = "text",
+          x = pars + offs,
+          y = aty,
+          label = parn
+        ) +
+        geom_vline(
+          xintercept = pars[2],
+          color = "red"
+        ) +
+        geom_vline(
+          xintercept = pars[-2],
+          color = "red",
+          linetype = 2
+        ),
+      p2 = p2,
+      pars = pars,
+      offs = offs,
+      aty = aty,
+      parn = parn
+    )
   } else {
     p2 <- util_create_lean_ggplot(
       p2 +
-        annotate(geom = "text",
-                 x = pars + offs,
-                 y = aty,
-                 label = c("", parn[2], "")) +
+        annotate(
+          geom = "text",
+          x = pars + offs,
+          y = aty,
+          label = c("", parn[2], "")
+        ) +
         geom_vline(xintercept = pars[2], color = "red"),
       p2 = p2,
       pars = pars,
       offs = offs,
       aty = aty,
-      parn = parn)
+      parn = parn
+    )
   }
 
   if (is.null(caption)) {
@@ -424,24 +467,29 @@ util_margins_bin <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL
     p2 <- NULL
     my_plot_layout <- plot_layout(nrow = 1)
   } else {
-    my_plot_layout <- plot_layout(nrow = 1,
-                                  widths = c(5, 1))
+    my_plot_layout <- plot_layout(
+      nrow = 1,
+      widths = c(5, 1)
+    )
   }
 
-  res_plot <- # TODO: For all patchwork-calls, add information to reproduce the layout in plot.ly
+  res_plot <-
     util_create_lean_ggplot(
       p1 +
         p2 +
         my_plot_layout +
-        plot_annotation(title = title,
-                        subtitle = adjusted_hint,
-                        caption = caption),
+        plot_annotation(
+          title = title,
+          subtitle = adjusted_hint,
+          caption = caption
+        ),
       p1 = p1,
       p2 = p2,
       title = title,
       adjusted_hint = adjusted_hint,
       caption = caption,
-      my_plot_layout = my_plot_layout)
+      my_plot_layout = my_plot_layout
+    )
 
   # output ---------------------------------------------------------------------
   return(list("plot_data" = res_df, "plot" = res_plot))

@@ -21,10 +21,10 @@ acc_cat_distributions(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable} the name of the measurement variable}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
-\item{group_vars}{\link{variable} the name of the observer, device or
-reader variable}
+\item{group_vars}{\link{variable list} the names of the grouping variables}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -64,7 +64,14 @@ This function creates distribution plots for categorical variables.
 \link{Descriptor}
 }
 \details{
-To complete
+If \code{resp_vars} is missing or empty, all variables defined as nominal or
+ordinal in the metadata are selected. \code{resp_vars} must then identify one
+nominal or ordinal measurement variable with at least two distinct
+non-missing values.
+
+\code{group_vars} is optional. If supplied, it must identify one nominal or
+ordinal grouping variable that is not a float variable and has at least two
+distinct non-missing values.
 }
 \seealso{
 \href{https://dataquality.qihs.uni-greifswald.de/}{Online Documentation}

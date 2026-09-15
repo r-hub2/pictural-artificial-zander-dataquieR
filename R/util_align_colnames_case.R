@@ -15,7 +15,7 @@
 #'   capitalization aligned to .var_names where possible.
 #' @noRd
 util_align_colnames_case <- function(.colnames, .var_names) {
-  .colnames  <- as.character(.colnames)
+  .colnames <- as.character(.colnames)
   .var_names <- as.character(.var_names)
 
   # check for case-insensitive duplicates in .var_names
@@ -38,14 +38,16 @@ util_align_colnames_case <- function(.colnames, .var_names) {
 
     if (length(bad_keys) > 0L) {
       util_error(
-        c("for case-insensitive study-data-column-names, I need",
-        "case-insenstively distinct %s in the meta_data, but I have %s.",
-        "either fix your meta_data or set the option %s to its default %s"),
-        sQuote(VAR_NAMES),
+        c(
+          "for case-insensitive study-data-column-names, I need",
+          "case-insensitively distinct %s in the meta_data, but I have %s.",
+          "either fix your meta_data or set the option %s to its default %s"
+        ),
+        sQuote(as.character(VAR_NAMES)),
         util_pretty_vector_string(bad_keys),
         sQuote("dataquieR.study_data_colnames_case_sensitive"),
         sQuote(dataquieR.study_data_colnames_case_sensitive_default),
-        applicability_error = TRUE
+        applicability_problem = TRUE
       )
     }
   }

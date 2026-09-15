@@ -1,4 +1,916 @@
+# util_parse_redcap_rule2.R
+# Prototype replacements for util_parse_redcap_rule() without qmrparser.
+# Both frontends use the same parser core; util_parse_redcap_rule2_rly()
+# uses rly for lexing only.
+
+#' Internal helper: util redcap rule2 parse fail
+#'
+#' @noRd
+.util_redcap_rule2_parse_fail <- function(rule) {
+  structure(list(), src = rule)
+}
+
+.util_redcap_rule2_valid_entry_preds <- c(
+  "REDcapPred",
+  "term_expression",
+  "function_expression",
+  "arg_part",
+  "arg",
+  "symbol_expression",
+  "interval"
+)
+
+#' Internal helper: util redcap rule2 valid function
+#'
+#' @noRd
+.util_redcap_rule2_valid_function <- function(name) {
+  if (identical(name, "if")) {
+    return(TRUE)
+  }
+
+  env <- tryCatch(util_get_redcap_rule_env(), error = function(e) NULL)
+  if (is.environment(env) && exists(name, envir = env, inherits = TRUE)) {
+    return(TRUE)
+  }
+
+  exists(name, envir = baseenv(), inherits = FALSE)
+}
+
+#' Internal helper: util redcap rule2 dbg result
+#'
+#' @noRd
+.util_redcap_rule2_dbg_result <- function(debug, result) {
+  # The former parser emitted diagnostic messages from grammar actions when
+  # debug > 0. Keep this behaviour for tests and callers that rely on it.
+  if (isTRUE(debug > 0)) {
+    util_message(
+      "%s",
+      util_deparse1(result),
+      applicability_problem = FALSE,
+      intrinsic_applicability_problem = FALSE
+    )
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: util redcap rule2 dbg fkt
+#'
+#' @noRd
+.util_redcap_rule2_dbg_fkt <- function(debug, f) {
+  if (isTRUE(debug >= 1)) {
+    util_message(sprintf("fkt: %s", dQuote(f)),
+      applicability_problem = FALSE,
+      intrinsic_applicability_problem = FALSE)
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: util redcap rule2 dbg function expression
+#'
+#' @noRd
+.util_redcap_rule2_dbg_function_expression <- function(debug, f) {
+  if (isTRUE(debug >= 1)) {
+    util_message(sprintf("function_expression: %s", sQuote(f)),
+      applicability_problem = FALSE,
+      intrinsic_applicability_problem = FALSE)
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: util redcap rule2 dbg arg
+#'
+#' @noRd
+.util_redcap_rule2_dbg_arg <- function(debug, x) {
+  if (isTRUE(debug >= 1)) {
+    util_message(sprintf("arg %s", dQuote(paste0(deparse(x), collapse = " "))),
+      applicability_problem = FALSE,
+      intrinsic_applicability_problem = FALSE)
+  }
+  invisible(NULL)
+}
+
+#' Internal helper: util redcap rule2 warn parse
+#'
+#' @noRd
+.util_redcap_rule2_warn_parse <- function(rule, what = "rule") {
+  # The previous qmrparser-based implementation used warning() from errorFun()
+  # for parser failures. In dataquieR, parser failures are rule/metadata
+  # applicability
+  # problems, but not intrinsic applicability problems.
+  util_warning(sprintf("Parser error in REDCap %s (will ignore this rule): %s",
+      what, rule),
+    applicability_problem = TRUE,
+    intrinsic_applicability_problem = FALSE)
+}
+
+#' Internal helper: util redcap rule2 warn extra
+#'
+#' @noRd
+.util_redcap_rule2_warn_extra <- function(rule) {
+  util_warning(sprintf("Found extra characters in %s (will ignore this rule)",
+      rule),
+    applicability_problem = TRUE,
+    intrinsic_applicability_problem = FALSE)
+}
+
+#' Internal helper: util redcap rule2 string value
+#'
+#' @noRd
+.util_redcap_rule2_string_value <- function(x) {
+  quote <- substr(x, 1L, 1L)
+  if (quote %in% c("\"", "'")) {
+    x <- substr(x, 2L, nchar(x) - 1L)
+    if (identical(quote, "\"")) {
+      x <- gsub("\\\\\"", "\"", x, fixed = TRUE)
+    } else {
+      x <- gsub("\\\\'", "'", x, fixed = TRUE)
+    }
+    x <- gsub("\\\\\\\\", "\\\\", x, fixed = TRUE)
+  }
+
+  if (identical(x, "today")) {
+    return(as.call(list(as.name("util_parse_date"), Sys.Date())))
+  }
+
+  x
+}
+
+#' Internal helper: util redcap rule2 square value
+#'
+#' @noRd
+.util_redcap_rule2_square_value <- function(x) {
+  x <- trimws(x)
+
+  if (grepl("^\\d{4}-\\d{2}-\\d{2}$", x, perl = TRUE)) {
+    return(as.call(list(as.name("util_parse_date"), x, tz = "")))
+  }
+
+  if (grepl("^\\d{2}:\\d{2}:\\d{2}(\\s+[A-Za-z_][A-Za-z0-9_./+-]*)?$",
+      x, perl = TRUE)) {
+    parts <- strsplit(x, "\\s+", perl = TRUE)[[1L]]
+    return(as.call(list(
+      as.name("util_parse_time"),
+      parts[[1L]],
+      tz = if (length(parts) > 1L) parts[[2L]] else ""
+    )))
+  }
+
+  if (!nzchar(x)) {
+    util_error("Empty variable reference.",
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = FALSE)
+  }
+
+  as.name(x)
+}
+
+#' Internal helper: util redcap rule2 interval endpoint
+#'
+#' @noRd
+.util_redcap_rule2_interval_endpoint <- function(x, side = c("low", "upp"),
+  debug = 0) {
+  side <- match.arg(side)
+  x <- trimws(x)
+
+  if (!nzchar(x)) {
+    if (identical(side, "low")) {
+      return(-Inf)
+    } else {
+      return(Inf)
+    }
+  }
+
+  if (x %in% c("Inf", "+Inf")) {
+    return(Inf)
+  }
+  if (identical(x, "-Inf")) {
+    return(-Inf)
+  }
+
+  if (grepl("^[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:[eE][+-]?\\d+)?$", x, perl = TRUE)) { # nolint: line_length_linter.
+    return(as.numeric(x))
+  }
+
+  if (grepl("^\\d{4}-\\d{2}-\\d{2}(\\s+\\d{2}:\\d{2}:\\d{2}(\\s+[A-Za-z_][A-Za-z0-9_./+-]*)?)?$", # nolint: line_length_linter.
+      x, perl = TRUE)) {
+    parts <- strsplit(x, "\\s+", perl = TRUE)[[1L]]
+    if (length(parts) >= 2L) {
+      tz <- if (length(parts) >= 3L) parts[[3L]] else ""
+      return(as.call(list(
+        as.name("util_parse_date"),
+        paste(parts[[1L]], parts[[2L]]),
+        tz = tz
+      )))
+    }
+    return(as.call(list(as.name("util_parse_date"), parts[[1L]], tz = "")))
+  }
+
+  if (grepl("^\\d{2}:\\d{2}:\\d{2}(\\s+[A-Za-z_][A-Za-z0-9_./+-]*)?$",
+      x, perl = TRUE)) {
+    parts <- strsplit(x, "\\s+", perl = TRUE)[[1L]]
+    return(as.call(list(
+      as.name("util_parse_time"),
+      parts[[1L]],
+      tz = if (length(parts) > 1L) parts[[2L]] else ""
+    )))
+  }
+
+  .util_redcap_rule2_unstructure(
+    .util_parse_redcap_rule_standalone(x, debug = debug,
+      entry_pred = "REDcapPred",
+      must_eof = TRUE)
+  )
+}
+
+#' Internal helper: util redcap rule2 split interval
+#'
+#' @noRd
+.util_redcap_rule2_split_interval <- function(x) {
+  pos <- regexpr("[;,]", x, perl = TRUE)[[1L]]
+  if (pos < 0L) {
+    return(character(0))
+  }
+
+  c(substr(x, 1L, pos - 1L),
+    substr(x, pos + 1L, nchar(x)))
+}
+
+#' Internal helper: util redcap rule2 parse interval string
+#'
+#' @noRd
+.util_redcap_rule2_parse_interval_string <- function(rule, debug = 0,
+  must_eof = TRUE) {
+  x <- trimws(rule)
+  n <- nchar(x)
+  if (n < 2L) {
+    util_error("Invalid interval while parsing REDCap interval.",
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = FALSE)
+  }
+
+  open <- substr(x, 1L, 1L)
+  close <- substr(x, n, n)
+
+  if (!open %in% c("[", "(") || !close %in% c("]", ")")) {
+    util_error("Expected interval while parsing REDCap interval.",
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = FALSE)
+  }
+
+  inner <- substr(x, 2L, n - 1L)
+  parts <- .util_redcap_rule2_split_interval(inner)
+  if (length(parts) != 2L) {
+    util_error("Invalid interval while parsing REDCap interval.",
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = FALSE)
+  }
+
+  .util_redcap_rule2_paren(as.call(list(
+    as.name("interval"),
+    inc_l = identical(open, "["),
+    low = .util_redcap_rule2_interval_endpoint(parts[[1L]], side = "low",
+      debug = debug),
+    upp = .util_redcap_rule2_interval_endpoint(parts[[2L]], side = "upp",
+      debug = debug),
+    inc_u = identical(close, "]")
+  )))
+}
+
+#' Internal helper: util redcap rule2 tokenize standalone
+#'
+#' @noRd
+.util_redcap_rule2_tokenize_standalone <- function(rule) {
+  n <- nchar(rule)
+  i <- 1L
+  token_env <- new.env(parent = emptyenv())
+  assign("out", list(), envir = token_env)
+
+  add <- function(type, value = NULL, pos = i) {
+    out <- get("out", envir = token_env, inherits = FALSE)
+    out[[length(out) + 1L]] <- list(type = type, value = value, pos = pos)
+    assign("out", out, envir = token_env)
+  }
+
+  while (i <= n) {
+    ch <- substr(rule, i, i)
+
+    if (grepl("\\s", ch, perl = TRUE)) {
+      i <- i + 1L
+      next
+    }
+
+    pos <- i
+
+    if (ch == "[") {
+      j_sq <- regexpr("\\]", substring(rule, i + 1L), perl = TRUE)[[1L]]
+      j_pa <- regexpr("\\)", substring(rule, i + 1L), perl = TRUE)[[1L]]
+      candidates <- c(
+        if (j_sq > 0L) i + j_sq else NA_integer_,
+        if (j_pa > 0L) i + j_pa else NA_integer_
+      )
+      j <- suppressWarnings(min(candidates, na.rm = TRUE))
+      if (!is.finite(j)) {
+        util_error("Unclosed square-bracket expression.",
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = FALSE)
+      }
+
+      inner <- substring(rule, i + 1L, j - 1L)
+      close <- substr(rule, j, j)
+
+      if (grepl(";", inner, fixed = TRUE)) {
+        add("INTERVAL", list(open = "[", close = close, inner = inner), pos)
+      } else {
+        if (!identical(close, "]")) {
+          util_error("Invalid square-bracket expression.",
+            applicability_problem = TRUE,
+            intrinsic_applicability_problem = FALSE)
+        }
+        add("ATOM", .util_redcap_rule2_square_value(inner), pos)
+      }
+
+      i <- j + 1L
+      next
+    }
+
+    if (ch == "(") {
+      j_sq <- regexpr("\\]", substring(rule, i + 1L), perl = TRUE)[[1L]]
+      j_pa <- regexpr("\\)", substring(rule, i + 1L), perl = TRUE)[[1L]]
+      candidates <- c(
+        if (j_sq > 0L) i + j_sq else NA_integer_,
+        if (j_pa > 0L) i + j_pa else NA_integer_
+      )
+      j <- suppressWarnings(min(candidates, na.rm = TRUE))
+
+      if (is.finite(j)) {
+        inner <- substring(rule, i + 1L, j - 1L)
+        close <- substr(rule, j, j)
+        if (grepl(";", inner, fixed = TRUE) && identical(close, "]")) {
+          add("INTERVAL", list(open = "(", close = close, inner = inner), pos)
+          i <- j + 1L
+          next
+        }
+      }
+
+      add("(", "(", pos)
+      i <- i + 1L
+      next
+    }
+
+    if (ch %in% c("\"", "'")) {
+      quote <- ch
+      j <- i + 1L
+      val <- character()
+
+      while (j <= n) {
+        cj <- substr(rule, j, j)
+        if (cj == "\\" && j < n) {
+          val <- c(val, substr(rule, j, j + 1L))
+          j <- j + 2L
+          next
+        }
+        if (cj == quote) break
+        val <- c(val, cj)
+        j <- j + 1L
+      }
+
+      if (j > n) {
+        util_error("Unclosed string literal.",
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = FALSE)
+      }
+
+      add("ATOM", .util_redcap_rule2_string_value(
+        paste0(quote, paste0(val, collapse = ""), quote)
+      ), pos)
+      i <- j + 1L
+      next
+    }
+
+    two <- if (i < n) substr(rule, i, i + 1L) else ""
+    if (two %in% c("<=", ">=", "!=", "==", "<>", "**")) {
+      add("OP", two, pos)
+      i <- i + 2L
+      next
+    }
+
+    if (ch %in% c(")", ",", ";", "{", "}", "+", "-", "*", "/", "^", "<", ">", "=")) { # nolint: line_length_linter.
+      add(if (ch %in% c(")", ",", ";", "{", "}")) ch else "OP", ch, pos)
+      i <- i + 1L
+      next
+    }
+
+    if (grepl("[0-9.]", ch, perl = TRUE)) {
+      m <- regexpr("^(?:[0-9]+(?:\\.[0-9]+)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?", substring(rule, i), perl = TRUE) # nolint: line_length_linter.
+      if (m[[1L]] < 0L) {
+        util_error("Invalid numeric literal.",
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = FALSE)
+      }
+      txt <- regmatches(substring(rule, i), m)
+      add("ATOM", as.numeric(txt), pos)
+      i <- i + nchar(txt)
+      next
+    }
+
+    if (grepl("[A-Za-z_]", ch, perl = TRUE)) {
+      m <- regexpr("^[A-Za-z_][A-Za-z0-9_.]*", substring(rule, i), perl = TRUE)
+      txt <- regmatches(substring(rule, i), m)
+      low <- tolower(txt)
+
+      if (identical(low, "not")) {
+        j <- i + nchar(txt)
+        rest <- substring(rule, j)
+        m2 <- regexpr("^\\s+in\\b", rest, perl = TRUE)
+        if (m2[[1L]] > 0L) {
+          add("OP", "not in", pos)
+          i <- j + util_attr(m2, "match.length", exact = TRUE)
+          next
+        }
+      }
+
+      if (low %in% c("and", "or", "in")) {
+        add("OP", low, pos)
+      } else if (low %in% c("true", "false")) {
+        add("ATOM", low == "true", pos)
+      } else if (identical(low, "nan")) {
+        add("ATOM", NaN, pos)
+      } else {
+        add("NAME", txt, pos)
+      }
+
+      i <- i + nchar(txt)
+      next
+    }
+
+    util_error(sprintf("Unexpected character %s.", dQuote(ch)),
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = FALSE)
+  }
+
+  add("EOF", NULL, n + 1L)
+  get("out", envir = token_env, inherits = FALSE)
+}
+
+#' Internal helper: util redcap rule2 node
+#'
+#' @noRd
+.util_redcap_rule2_node <- function(expr, kind = "expr", grouped = FALSE) {
+  list(expr = expr, kind = kind, grouped = grouped)
+}
+
+#' Internal helper: util redcap rule2 paren
+#'
+#' @noRd
+.util_redcap_rule2_paren <- function(expr) {
+  as.call(list(as.name("("), expr))
+}
+
+#' Internal helper: util redcap rule2 unparen
+#'
+#' @noRd
+.util_redcap_rule2_unparen <- function(expr) {
+  if (is.call(expr) && identical(expr[[1L]], as.name("(")) && length(expr) == 2L) { # nolint: line_length_linter.
+    return(expr[[2L]])
+  }
+  expr
+}
+
+#' Internal helper: util redcap rule2 call name
+#'
+#' @noRd
+.util_redcap_rule2_call_name <- function(expr) {
+  expr <- .util_redcap_rule2_unparen(expr)
+  if (is.call(expr)) {
+    return(as.character(expr[[1L]]))
+  }
+  NA_character_
+}
+
+#' Internal helper: util redcap rule2 unstructure
+#'
+#' @noRd
+.util_redcap_rule2_unstructure <- function(expr) {
+  if (!is.null(util_attr(expr, "src", exact = TRUE))) {
+    if (is.expression(expr) && length(expr) == 1L) {
+      return(expr[[1L]])
+    }
+    attr(expr, "src") <- NULL
+  }
+  expr
+}
+
+#' Internal helper: util redcap rule2 parse tokens
+#'
+#' @noRd
+.util_redcap_rule2_parse_tokens <- function(tokens, rule, debug = 0, must_eof = TRUE) { # nolint: line_length_linter.
+  parser_env <- new.env(parent = emptyenv())
+  assign("p", 1L, envir = parser_env)
+
+  cur <- function() tokens[[get("p", envir = parser_env, inherits = FALSE)]]
+  eat <- function(type = NULL, value = NULL) {
+    tok <- cur()
+    if (!is.null(type) && !identical(tok$type, type)) {
+      util_error("Unexpected token while parsing REDCap rule.",
+        applicability_problem = TRUE,
+        intrinsic_applicability_problem = FALSE)
+    }
+    if (!is.null(value) && !identical(tok$value, value)) {
+      util_error("Unexpected token value while parsing REDCap rule.",
+        applicability_problem = TRUE,
+        intrinsic_applicability_problem = FALSE)
+    }
+    assign("p", get("p", envir = parser_env, inherits = FALSE) + 1L,
+      envir = parser_env)
+    tok
+  }
+
+  op_info <- function(op) {
+    switch(op,
+      "or"     = list(bp = 10L, assoc = "left", fn = "or"),
+      "and"    = list(bp = 20L, assoc = "left", fn = "and"),
+      "="      = list(bp = 30L, assoc = "left", fn = "="),
+      "=="     = list(bp = 30L, assoc = "left", fn = "=="),
+      "!="     = list(bp = 30L, assoc = "left", fn = "!="),
+      "<>"     = list(bp = 30L, assoc = "left", fn = "<>"),
+      "<"      = list(bp = 30L, assoc = "left", fn = "<"),
+      "<="     = list(bp = 30L, assoc = "left", fn = "<="),
+      ">"      = list(bp = 30L, assoc = "left", fn = ">"),
+      ">="     = list(bp = 30L, assoc = "left", fn = ">="),
+      "in"     = list(bp = 30L, assoc = "left", fn = "in"),
+      "not in" = list(bp = 30L, assoc = "left", fn = "not in"),
+      "+"      = list(bp = 40L, assoc = "left", fn = "+"),
+      "-"      = list(bp = 40L, assoc = "left", fn = "-"),
+      "*"      = list(bp = 50L, assoc = "left", fn = "*"),
+      "/"      = list(bp = 50L, assoc = "left", fn = "/"),
+      "^"      = list(bp = 60L, assoc = "right", fn = "^"),
+      "**"     = list(bp = 60L, assoc = "right", fn = "**"),
+      NULL
+    )
+  }
+
+  parse_expr <- function(min_bp = 0L) {
+    tok <- cur()
+
+    left <- switch(tok$type,
+      ATOM = {
+        eat("ATOM")
+        if (is.name(tok$value)) {
+          .util_redcap_rule2_node(tok$value, kind = "name")
+        } else if (is.call(tok$value)) {
+          .util_redcap_rule2_node(.util_redcap_rule2_paren(tok$value), kind = "call") # nolint: line_length_linter.
+        } else {
+          .util_redcap_rule2_node(tok$value, kind = "atom")
+        }
+      },
+      NAME = {
+        name <- tok$value
+        eat("NAME")
+        if (cur()$type == "(") {
+          .util_redcap_rule2_dbg_fkt(debug, name)
+          if (!.util_redcap_rule2_valid_function(name)) {
+            util_error(sprintf("Unknown REDCap function: %s", name),
+              applicability_problem = TRUE,
+              intrinsic_applicability_problem = FALSE)
+          }
+          eat("(")
+          args <- list()
+          if (cur()$type != ")") {
+            repeat {
+              args[[length(args) + 1L]] <- parse_expr(0L)$expr
+              .util_redcap_rule2_dbg_arg(debug, args[[length(args)]])
+              if (cur()$type != ",") break
+              eat(",")
+            }
+          }
+          eat(")")
+          .util_redcap_rule2_dbg_function_expression(debug, name)
+          if (identical(name, "if") && length(args) == 3L) {
+            .util_redcap_rule2_node(
+              .util_redcap_rule2_paren(as.call(c(list(as.name("if")), args))),
+              kind = "call"
+            )
+          } else {
+            .util_redcap_rule2_node(
+              .util_redcap_rule2_paren(as.call(c(list(as.name(name)), args))),
+              kind = "call"
+            )
+          }
+        } else {
+          util_error("Unexpected bare name while parsing REDCap rule.",
+            applicability_problem = TRUE,
+            intrinsic_applicability_problem = FALSE)
+        }
+      },
+      `(` = {
+        eat("(")
+        expr <- parse_expr(0L)
+        # This intentionally accepts trailing '; ...' inside parentheses in the
+        # same spirit as the qmrparser implementation used by the old parser.
+        if (cur()$type == ";") {
+          repeat {
+            eat(";")
+            if (cur()$type %in% c(")", "EOF")) break
+            invisible(parse_expr(0L))
+            if (cur()$type != ";") break
+          }
+        }
+        eat(")")
+        expr$expr <- .util_redcap_rule2_paren(expr$expr)
+        expr$grouped <- TRUE
+        expr
+      },
+      `{` = {
+        eat("{")
+        args <- list()
+        if (cur()$type != "}") {
+          repeat {
+            args[[length(args) + 1L]] <- parse_expr(0L)$expr
+            if (!cur()$type %in% c(",", ";")) break
+            eat(cur()$type)
+          }
+        }
+        eat("}")
+        .util_redcap_rule2_node(
+          .util_redcap_rule2_paren(as.call(c(list(as.name("set")), args))),
+          kind = "call"
+        )
+      },
+      INTERVAL = {
+        eat("INTERVAL")
+        parts <- .util_redcap_rule2_split_interval(tok$value$inner)
+        if (length(parts) != 2L) {
+          util_error("Invalid interval while parsing REDCap rule.",
+            applicability_problem = TRUE,
+            intrinsic_applicability_problem = FALSE)
+        }
+        low <- .util_redcap_rule2_interval_endpoint(parts[[1L]],
+          side = "low",
+          debug = debug)
+        upp <- .util_redcap_rule2_interval_endpoint(parts[[2L]],
+          side = "upp",
+          debug = debug)
+        .util_redcap_rule2_node(.util_redcap_rule2_paren(as.call(list(
+          as.name("interval"),
+          inc_l = identical(tok$value$open, "["),
+          low = low,
+          upp = upp,
+          inc_u = identical(tok$value$close, "]")
+        ))), kind = "call")
+      },
+      OP = {
+        op <- tok$value
+        if (!op %in% c("+", "-")) {
+          util_error("Unexpected operator while parsing REDCap rule.",
+            applicability_problem = TRUE,
+            intrinsic_applicability_problem = FALSE)
+        }
+        eat("OP")
+        if (cur()$type == "(") {
+          eat("(")
+          args <- list()
+          if (cur()$type != ")") {
+            repeat {
+              args[[length(args) + 1L]] <- parse_expr(0L)$expr
+              if (cur()$type != ",") break
+              eat(",")
+            }
+          }
+          eat(")")
+          .util_redcap_rule2_node(
+            .util_redcap_rule2_paren(as.call(c(list(as.name(op)), args))),
+            kind = "call"
+          )
+        } else {
+          .util_redcap_rule2_node(
+            .util_redcap_rule2_paren(as.call(list(as.name(op), parse_expr(70L)$expr))), # nolint: line_length_linter.
+            kind = "call"
+          )
+        }
+      },
+      util_error("Unexpected token while parsing REDCap rule.",
+        applicability_problem = TRUE,
+        intrinsic_applicability_problem = FALSE)
+    )
+
+    repeat {
+      tok <- cur()
+      if (tok$type != "OP") break
+      info <- op_info(tok$value)
+      if (is.null(info) || info$bp < min_bp) break
+      eat("OP")
+      next_min_bp <- if (identical(info$assoc, "left")) info$bp + 1L else info$bp # nolint: line_length_linter.
+      right <- parse_expr(next_min_bp)
+
+      left_expr <- left$expr
+      if (identical(info$fn, "and") && identical(.util_redcap_rule2_call_name(left_expr), "and")) { # nolint: line_length_linter.
+        left_expr <- .util_redcap_rule2_unparen(left_expr)
+      }
+      if (identical(info$fn, "or") && identical(.util_redcap_rule2_call_name(left_expr), "or")) { # nolint: line_length_linter.
+        left_expr <- .util_redcap_rule2_unparen(left_expr)
+      }
+      if (identical(info$fn, "+") && identical(.util_redcap_rule2_call_name(left_expr), "+")) { # nolint: line_length_linter.
+        left_expr <- .util_redcap_rule2_unparen(left_expr)
+      }
+
+      left <- .util_redcap_rule2_node(
+        .util_redcap_rule2_paren(as.call(list(as.name(info$fn), left_expr, right$expr))), # nolint: line_length_linter.
+        kind = "call"
+      )
+    }
+
+    left
+  }
+
+  node <- parse_expr(0L)
+  if (cur()$type != "EOF") {
+    if (must_eof) {
+      util_error("Unexpected trailing input while parsing REDCap rule.",
+        applicability_problem = TRUE,
+        intrinsic_applicability_problem = FALSE)
+    }
+    parsed_call <- .util_redcap_rule2_unparen(node$expr)
+    if (!(is.call(parsed_call) && identical(as.character(parsed_call[[1L]]), "interval"))) { # nolint: line_length_linter.
+      util_error("Unexpected trailing input while parsing REDCap rule.",
+        applicability_problem = TRUE,
+        intrinsic_applicability_problem = FALSE)
+    }
+  }
+
+  expr <- node$expr
+  if (!node$grouped && node$kind == "name") {
+    return(structure(as.expression(expr), src = rule))
+  }
+  if (!node$grouped && node$kind == "atom") {
+    return(structure(expr, src = rule))
+  }
+
+  expr
+}
+
+
+#' Internal helper: util redcap rule2 parse arg part
+#'
+#' @noRd
+.util_redcap_rule2_parse_arg_part <- function(tokens, rule, debug = 0,
+  must_eof = TRUE) {
+  p <- 1L
+  args <- list()
+  n <- length(tokens)
+
+  repeat {
+    start <- p
+    level <- 0L
+    while (p <= n && tokens[[p]]$type != "EOF") {
+      typ <- tokens[[p]]$type
+      if (typ %in% c("(", "{")) {
+        level <- level + 1L
+      } else if (typ %in% c(")", "}")) {
+        level <- max(0L, level - 1L)
+      } else if (identical(typ, ",") && level == 0L) {
+        break
+      }
+      p <- p + 1L
+    }
+
+    part_tokens <- c(tokens[start:(p - 1L)],
+      list(list(type = "EOF", value = NULL, pos = nchar(rule) + 1L)))
+    args[[length(args) + 1L]] <-
+      .util_redcap_rule2_parse_tokens(part_tokens, rule, debug = debug,
+        must_eof = TRUE)
+
+    if (p > n || tokens[[p]]$type == "EOF") {
+      break
+    }
+    if (!identical(tokens[[p]]$type, ",")) {
+      util_error("Unexpected token while parsing REDCap arg_part.",
+        applicability_problem = TRUE,
+        intrinsic_applicability_problem = FALSE)
+    }
+    p <- p + 1L
+  }
+
+  if (must_eof && p <= n && tokens[[p]]$type != "EOF") {
+    util_error("Unexpected trailing input while parsing REDCap arg_part.",
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = FALSE)
+  }
+
+  as.call(c(list(as.name("list")), args))
+}
+
+
+#' Internal helper: util redcap rule2 parse interval entry
+#'
+#' @noRd
+.util_redcap_rule2_parse_interval_entry <- function(tokens, rule, debug = 0,
+  must_eof = TRUE) {
+  if (!identical(tokens[[1L]]$type, "INTERVAL")) {
+    util_error("Expected interval while parsing REDCap interval.",
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = FALSE)
+  }
+  if (must_eof && !identical(tokens[[2L]]$type, "EOF")) {
+    util_error("Unexpected trailing input while parsing REDCap interval.",
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = FALSE)
+  }
+
+  tok <- tokens[[1L]]
+  parts <- .util_redcap_rule2_split_interval(tok$value$inner)
+  if (length(parts) != 2L) {
+    util_error("Invalid interval while parsing REDCap interval.",
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = FALSE)
+  }
+
+  .util_redcap_rule2_paren(as.call(list(
+    as.name("interval"),
+    inc_l = identical(tok$value$open, "["),
+    low = .util_redcap_rule2_interval_endpoint(parts[[1L]], side = "low",
+      debug = debug),
+    upp = .util_redcap_rule2_interval_endpoint(parts[[2L]], side = "upp",
+      debug = debug),
+    inc_u = identical(tok$value$close, "]")
+  )))
+}
+
+#' Internal helper: util parse redcap rule standalone
+#'
+#' @noRd
+.util_parse_redcap_rule_standalone <- function(rule, debug = 0,
+  entry_pred = "REDcapPred",
+  must_eof = TRUE) {
+  if (!entry_pred %in% .util_redcap_rule2_valid_entry_preds) {
+    util_error(sprintf("Unknown parser entry predicate: %s", entry_pred),
+      applicability_problem = FALSE,
+      intrinsic_applicability_problem = FALSE)
+  }
+
+  if (identical(entry_pred, "interval")) {
+    out <- tryCatch(
+      .util_redcap_rule2_parse_interval_string(rule, debug = debug,
+        must_eof = must_eof),
+      error = function(e) .util_redcap_rule2_parse_fail(rule)
+    )
+    ok <- !identical(out, .util_redcap_rule2_parse_fail(rule))
+    .util_redcap_rule2_dbg_result(debug, out)
+    if (!ok) {
+      .util_redcap_rule2_warn_parse(rule, "interval")
+    }
+    return(out)
+  }
+
+  tokens <- tryCatch(
+    .util_redcap_rule2_tokenize_standalone(rule),
+    error = function(e) NULL
+  )
+  if (is.null(tokens)) {
+    .util_redcap_rule2_dbg_result(debug, .util_redcap_rule2_parse_fail(rule))
+    .util_redcap_rule2_warn_parse(rule, "rule")
+    return(.util_redcap_rule2_parse_fail(rule))
+  }
+
+  out <- tryCatch({
+    if (identical(entry_pred, "interval")) {
+      .util_redcap_rule2_parse_interval_entry(tokens, rule, debug = debug,
+        must_eof = must_eof)
+    } else if (identical(entry_pred, "arg_part")) {
+      .util_redcap_rule2_parse_arg_part(tokens, rule, debug = debug,
+        must_eof = must_eof)
+    } else {
+      .util_redcap_rule2_parse_tokens(tokens, rule, debug = debug,
+        must_eof = must_eof)
+    }
+  }, error = function(e) .util_redcap_rule2_parse_fail(rule))
+
+  ok <- !identical(out, .util_redcap_rule2_parse_fail(rule))
+  .util_redcap_rule2_dbg_result(debug, out)
+  if (!ok) {
+    loose <- tryCatch({
+      if (identical(entry_pred, "interval")) {
+        .util_redcap_rule2_parse_interval_entry(tokens, rule, debug = 0,
+          must_eof = FALSE)
+      } else if (identical(entry_pred, "arg_part")) {
+        .util_redcap_rule2_parse_arg_part(tokens, rule, debug = 0,
+          must_eof = FALSE)
+      } else {
+        .util_redcap_rule2_parse_tokens(tokens, rule, debug = 0,
+          must_eof = FALSE)
+      }
+    }, error = function(e) .util_redcap_rule2_parse_fail(rule))
+    if (must_eof && !identical(loose, .util_redcap_rule2_parse_fail(rule))) {
+      .util_redcap_rule2_warn_extra(rule)
+    } else {
+      .util_redcap_rule2_warn_parse(rule, if (identical(entry_pred, "interval")) "interval" else "rule") # nolint: line_length_linter.
+    }
+  }
+
+  out
+}
+
 .redcap_cache <- new.env(parent = emptyenv())
+# nolint start: line_length_linter.
 #' Interpret a `REDcap`-style rule and create an expression, that represents this rule
 #'
 #' @param rule [character] `REDcap` style rule
@@ -20,7 +932,6 @@
 #' helps understanding the grammar below, just in case, theoretical computer
 #' science is not right in your mind currently.
 #'
-#' @import qmrparser
 #'
 #' @examples
 #' \dontrun{
@@ -73,1032 +984,16 @@
 #' @family parser_functions
 #' @concept metadata_management
 #' @noRd
+# nolint end
 
 util_parse_redcap_rule <- function(rule, debug = 0, entry_pred = "REDcapPred",
-                                   must_eof = FALSE) {
+  must_eof = FALSE) {
   util_expect_scalar(must_eof, check_type = is.logical)
 
-  if (!exists("f", .redcap_cache)) {
-    f <- function(rule, debug = 0, entry_pred = "REDcapPred",
-                  must_eof = must_eof) {
-
-      empty_part <- structure(list(), class = "NULL")
-      empty_part_qmr <- list(type = "empty", value = "")
-      separator <- structure(list(), class = "separator")
-
-      remove_empty_part <- function(s) {
-        if (is.symbol(s)) {
-          return(s)
-        }
-        if (identical(s, empty_part)) return(NULL)
-        res <- s[!vapply(s, identical, empty_part, FUN.VALUE = logical(1))]
-        if (identical(res, empty_part_qmr)) return(NULL)
-        res <- res[!vapply(res, identical, empty_part_qmr, FUN.VALUE = logical(1))]
-        res[vapply(res, length, FUN.VALUE = integer(1)) > 1] <-
-          lapply(res[vapply(res, length, FUN.VALUE = integer(1)) > 1],
-                 remove_empty_part)
-        res
-      }
-
-      shift <- function(x) {
-        obj_name <- force(as.character(substitute(x)))
-        obj <- get(obj_name, envir = parent.frame())
-        if (length(obj) > 0)
-          r <- obj[[1]]
-        else
-          r <- NULL
-        obj <- tail(obj, -1)
-        assign(obj_name, obj, envir = parent.frame())
-        r
-      }
-
-      tag <- function(x) {
-        ex <- substitute(x)
-        if (debug > 0 && length(ex) == 3 && is.symbol(ex[[2]]) && ex[[1]] == as.symbol("<-")) {
-          fname <- util_deparse1(ex[[2]])
-          x <- eval.parent(ex)
-          if (is.function(x)) {
-            y <- function(...) {
-              if (debug >= 2) message(sprintf("-- %s", fname))
-              args <- list(...)
-              if (length(body(x)) > 0 && "action" %in% names(body(x))) {
-                tagged_action <- body(x)[["action"]]
-                body(x)[["action"]] <- function(...) {
-                  if (debug >= 1) message(sprintf(">> %s", fname))
-                  if (debug >= 3) browser() # intended use of browser() -- dont modify this line
-                  r <- eval(parent.env(environment())$tagged_action)(...)
-                  if (debug >= 1) message(sprintf(">> %s", dQuote(util_deparse1(r))))
-                  r
-                }
-              } else if (length(body(x)) > 0) {
-                if (body(x)[[1]] == as.symbol("{")) { stop("FIXME") # FIXME: this does not work porperly
-                  tagged_action <- formals(eval(body(x)[[2]][[1]]))$action
-                  body(x)[[2]][["action"]] <- function(...) {
-                    if (debug >= 1) message(sprintf(">> %s", fname))
-                    if (debug >= 3) browser() # intended use of browser() -- dont modify this line
-                    r <- eval(parent.env(environment())$tagged_action)(...)
-                    if (debug >= 1) message(sprintf(">> %s", dQuote(util_deparse1(r))))
-                    r
-                  }
-                } else {
-                  tagged_action <- formals(eval(body(x)[[1]]))$action
-                  body(x)[["action"]] <- function(...) {
-                    if (debug >= 1) message(sprintf(">> %s", fname))
-                    if (debug >= 3) browser() # intended use of browser() -- dont modify this line
-                    r <- eval(parent.env(environment())$tagged_action)(...)
-                    if (debug >= 1) message(sprintf(">> %s", dQuote(util_deparse1(r))))
-                    r
-                  }
-                }
-              }
-              r <- do.call(x, args, quote = TRUE)
-              r
-            }
-            assign(x = fname,
-                   value = y,
-                   envir = parent.frame())
-          } else {
-            y <- x
-          }
-        } else {
-          y <- eval.parent(ex)
-        }
-        y
-      }
-
-      tag(boolean <- function()
-        alternation(
-          keyword("true"),
-          keyword("false"),
-          action = function(s) {
-            if (debug >= 1) message("boolean")
-            as.logical(s$value)
-          }
-        )
-      )
-
-      tag(dash <- function()
-        keyword("-")
-      )
-
-      tag(digit <- function()
-        alternation(
-          keyword("1"),
-          keyword("2"),
-          keyword("3"),
-          keyword("4"),
-          keyword("5"),
-          keyword("6"),
-          keyword("7"),
-          keyword("8"),
-          keyword("9"),
-          keyword("0"),
-          action = function(s) {
-            if (debug >= 1) message("digit")
-            s$value
-          })
-      )
-
-      tag(digit012345 <- function()
-        alternation(
-          keyword("1"),
-          keyword("2"),
-          keyword("3"),
-          keyword("4"),
-          keyword("5"),
-          keyword("0"),
-          action = function(s) {
-            if (debug >= 1) message("digit012345")
-            s$value
-          })
-      )
-
-      tag(digit0123 <- function()
-        alternation(
-          keyword("1"),
-          keyword("2"),
-          keyword("3"),
-          keyword("0"),
-          action = function(s) {
-            if (debug >= 1) message("digit0123")
-            s$value
-          })
-      )
-
-      tag(digit012 <- function()
-        alternation(
-          keyword("1"),
-          keyword("2"),
-          keyword("0"),
-          action = function(s) {
-            if (debug >= 1) message("digit012")
-            s$value
-          })
-      )
-
-      tag(digit01 <- function()
-        alternation(
-          keyword("1"),
-          keyword("0"),
-          action = function(s) {
-            if (debug >= 1) message("digit01")
-            s$value
-          })
-
-      )
-
-      tz_parsers <- lapply(c(
-        union(OlsonNames(), c("CEST", "CET"))
-        ), keyword)
-
-      tag(tz_parser <- function() do.call(alternation, c(
-        tz_parsers,
-        list(action = function(s) s$value))))
-
-      # TODO: maybe, we need to downgrade this to string, since REDcap seems unaware of a datetime data type, it uses strings and converts them later, if needed
-      # One way could be to write our dates w/o quotes or in single quotes, backticks or whatever, and to support then also strings in the datediff function -- maybe add
-      # some converter function string to date. Then, also datediff has to be rewritten in util_get_redcap_rule_env. See also tag: 1893839
-      dt_general <- function(no_brackets = FALSE) alternation(
-        concatenation(
-          if (!no_brackets) keyword("[", action = function(s) empty_part) else empty(action = function(s) {empty_part}),
-          digit(), digit(), digit(), digit(),
-          dash(),
-          digit01(), digit(),
-          dash(),
-          digit0123(), digit(),
-          alternation(concatenation(
-            whitespace(),
-            ignore_ws,
-            digit012(),
-            digit(),
-            keyword(":"),
-            digit012345(),
-            digit(),
-            option(
-              concatenation(
-                keyword(":"),
-                digit012345(),
-                digit()
-              )
-            ),
-            option(
-              concatenation(
-                whitespace(),
-                ignore_ws,
-                tz_parser()
-              )
-            )
-          ), empty(action = function(s) empty_part)),
-          if (!no_brackets) keyword("]", action = function(s) empty_part) else empty(action = function(s) {empty_part}),
-          action = function(s) {
-            s <- remove_empty_part(s)
-
-            # Flatten while keeping names to filter parser bookkeeping fields
-            flat <- unlist(s, use.names = TRUE)
-
-            # Remove internal fields like ...$type
-            if (!is.null(names(flat))) {
-              flat <- flat[!grepl("type$", names(flat), perl = TRUE)]
-            }
-
-            # Work with characters
-            flat <- as.character(flat)
-
-            # Drop all "option" markers (we had two: one for :SS, one for TZ)
-            flat <- flat[flat != "option"]
-
-            # Detect TZ token from tz_parser (use same source as tz_parsers)
-            tz_set <- union(OlsonNames(), c("CEST", "CET"))
-
-            tz <- ""
-            tz_pos <- tail(which(flat %in% tz_set), 1)
-
-            if (length(tz_pos)) {
-              tz <- flat[tz_pos]
-              # Also drop the whitespace right before the TZ (if any),
-              # because we’ll rebuild the final string without it.
-              drop_idx <- tz_pos
-              if (tz_pos > 1 && grepl("^\\s+$", flat[tz_pos - 1])) {
-                drop_idx <- c(tz_pos - 1, drop_idx)
-              }
-              flat <- flat[-drop_idx]
-            }
-
-            # Rebuild the literal without internal markers or TZ token
-            s_str <- paste(flat, collapse = "")
-
-            call("util_parse_date", s_str, tz = tz)
-          }
-        ),
-        keyword("\"today\"", action = function(s) {
-          call("util_parse_date", Sys.Date())
-        }),
-        action = function(s) {
-          if (debug >= 1) message("datetime")
-          remove_empty_part(s)
-        }
-      )
-
-      dt_no_brackets <- dt_general
-
-      formals(dt_no_brackets)$no_brackets <- TRUE
-
-      tag(datetime <- dt_general)
-
-      tag(datetime_no_brackets <- dt_no_brackets)
-
-      # ------ 324 387
-      to_general <- function(no_brackets = FALSE) alternation(
-        concatenation(
-          if (!no_brackets) keyword("[", action = function(s) empty_part) else empty(action = function(s) {empty_part}),
-          alternation(concatenation(
-            digit012(),
-            digit(),
-            keyword(":"),
-            digit012345(),
-            digit(),
-            option(
-              concatenation(
-                keyword(":"),
-                digit012345(),
-                digit()
-              )
-            ),
-            option(
-              concatenation(
-                whitespace(),
-                ignore_ws,
-                tz_parser()
-              )
-            )
-          ), empty(action = function(s) empty_part)),
-          if (!no_brackets) keyword("]", action = function(s) empty_part) else empty(action = function(s) {empty_part}),
-          action = function(s) {
-            s <- remove_empty_part(s)
-            s_str <- unlist(s)[!grepl("type$", perl = TRUE, names(unlist(s)))]
-            if (any(unlist(s) == "option")) {
-              tz0 <- unname(tail(unlist(s), 1))
-              if (tz0 != "option") {
-                tz <- tz0
-                s_str <- head(s_str, -2)
-              } else {
-                tz <- ""
-              }
-              rm("tz0")
-            } else {
-              tz <- ""
-            }
-            call("util_parse_time", paste(s_str, collapse = ""), tz = tz)
-          }
-        ),
-        action = function(s) {
-          if (debug >= 1) message("time")
-          remove_empty_part(s)
-        }
-      )
-
-      to_no_brackets <- to_general
-
-      formals(to_no_brackets)$no_brackets <- TRUE
-
-      tag(time <- to_general)
-
-      tag(time_no_brackets <- to_no_brackets)
-      # ----- 324 387
-
-      tag(nan <- function() keyword('"NaN"', action = function(s) {
-        if (debug >= 1) message("nan")
-        ""
-      }))
-
-      tag(set <- function() concatenation(
-                                          charParser("{"),
-                                          ignore_ws,
-                                          arg_part(),
-                                          ignore_ws,
-                                          charParser("}"),
-                                          action = function(s0) {
-                                            s <- s0
-                                            s <- remove_empty_part(s)
-                                            do.call(call, c(list(name = "set"), s[[2]]), quote = TRUE)
-                                          }
-      ))
-      # --- strict time without brackets, no empty alternative
-      tag(time_strict_no_brackets <- function()
-        concatenation(
-          digit012(), digit(), keyword(":"),          # HH:
-          digit012345(), digit(),                     # MM
-          option(concatenation(keyword(":"), digit012345(), digit())),  # :SS
-          option(concatenation(whitespace(), ignore_ws, tz_parser())),  # TZ (optional)
-          action = function(s0) {
-            s <- remove_empty_part(s0)
-            s_str <- unlist(s)[!grepl("type$", perl = TRUE, names(unlist(s)))]
-            tz <- ""
-            if (any(unlist(s) == "option")) {
-              tz0 <- unname(tail(unlist(s), 1))
-              if (tz0 != "option") {
-                tz <- tz0
-                s_str <- head(s_str, -2)
-              }
-              rm("tz0")
-            }
-            list(type = "time_strict", value = paste(s_str, collapse = ""), tz = tz)
-          }
-        )
-      )
-
-      # --- strict datetime without brackets, no empty alternative
-      tag(datetime_strict_no_brackets <- function()
-        concatenation(
-          digit(), digit(), digit(), digit(),         # YYYY
-          dash(),
-          digit01(), digit(),                         # MM
-          dash(),
-          digit0123(), digit(),                       # DD
-          alternation(
-            concatenation(
-              whitespace(), ignore_ws,
-              digit012(), digit(), keyword(":"),      # HH:
-              digit012345(), digit(), keyword(":"),   # MM:
-              digit012345(), digit(),                 # SS
-              option(concatenation(whitespace(), ignore_ws, tz_parser()))
-            ),
-            empty(action = function(s) empty_part)
-          ),
-          action = function(s0) {
-            s <- remove_empty_part(s0)
-            s_str <- unlist(s)[!grepl("type$", perl = TRUE, names(unlist(s)))]
-            tz <- ""
-            if (any(unlist(s) == "option")) {
-              tz0 <- unname(tail(unlist(s), 1))
-              if (tz0 != "option") {
-                tz <- tz0
-                s_str <- head(s_str, -2)
-              }
-              rm("tz0")
-            }
-            list(type = "datetime_strict", value = paste(s_str, collapse = ""), tz = tz)
-          }
-        )
-      )
-
-      tag(interval <- function() concatenation(
-        alternation(charParser("("), charParser("["), action = function(s0) {
-          s <- s0
-          s <- remove_empty_part(s)
-          s$value
-        }),
-        ignore_ws,
-        alternation(
-                    datetime_no_brackets(),
-                    keyword("Inf", action = function(s0) {Inf}),
-                    keyword("+Inf", action = function(s0) {Inf}),
-                    keyword("-Inf", action = function(s0) {-Inf}),
-                    term_expression(),#TODO: need alternative datetime rule here (w/o square brackets)
-                    empty(action = function(s) {-Inf}),
-                    time_no_brackets(),
-                    action = function(s0) {
-                      s <- s0
-                      s <- remove_empty_part(s)
-                      s
-                    }),
-        ignore_ws,
-        alternation(charParser(";"), charParser(","),
-                    action = function(s0) empty_part),
-        ignore_ws,
-        alternation(
-                    datetime_no_brackets(),
-                    keyword("Inf", action = function(s0) {Inf}),
-                    keyword("+Inf", action = function(s0) {Inf}),
-                    keyword("-Inf", action = function(s0) {-Inf}),
-                    term_expression(),
-                    empty(action = function(s) {+Inf}),
-                    time_no_brackets(),
-                    action = function(s0) {
-                      s <- s0
-                      s <- remove_empty_part(s)
-                      s
-                    }),
-        ignore_ws,
-        alternation(charParser(")"), charParser("]"), action = function(s0) {
-          s <- s0
-          s <- remove_empty_part(s)
-          s$value
-        }),
-        action = function(s0) {
-          s <- s0
-          s <- remove_empty_part(s)
-          r <- unlist(s, recursive = FALSE, use.names = FALSE)
-          do.call(call, c(list(name = "interval",
-                               inc_l = r[[1]] == "[",
-                               low = r[[2]],
-                               upp = r[[3]],
-                               inc_u = r[[4]] == "]")), quote = TRUE)
-        }
-      ))
-
-      tag(literal <- function()
-        alternation(
-          set(),
-          interval(),
-          nan(),
-          datetime(),
-          datetime_strict_no_brackets(),
-          time(),
-          time_strict_no_brackets(),
-          string(),
-          numberFloat(),
-          numberInteger(),
-          numberNatural(),
-          numberScientific(),
-          boolean(),
-          action = function(s) {
-            if (debug >= 1) message("literal")
-            if (!is.list(s))
-              return(s)
-
-            s <- remove_empty_part(s)
-            if (s$type %in% c("datetime", "datetime_strict")) {
-              # util_parse_date(s$value)
-              call("util_parse_date", s$value)
-            } else if (s$type %in% c("time", "time_strict")) {
-              if (!is.null(s$tz) && nzchar(s$tz)) {
-                call("util_parse_time", s$value, tz = s$tz)
-              } else {
-                call("util_parse_time", s$value)
-              }
-            } else if (s$type == "string") {
-              as.character(s$value)
-            } else if (s$type %in% c("numberInteger", "numberNatural")) {
-              as.integer(s$value)
-            } else if (s$type %in% c("numberFloat", "numberScientific")) {
-              as.numeric(s$value)
-              # } else if (s$type == "boolean") {
-              #   as.logical(s$value)
-            }
-
-          }
-        )
-      )
-
-      tag(symbol_expression <- function()
-        concatenation(keyword("["), symbolic(charFirst = function(ch) isLetter(ch) || ch == "_" || ch == ".", charRest = function(ch) isLetter(ch) ||
-                                               isDigit(ch) || ch == "-" || ch == "_" || ch == "."), keyword("]"),
-                      action = function(s) {
-                        if (debug >= 1) message("symbol_expression")
-                        s <- remove_empty_part(s)
-                        as.symbol(s[[2]]$value)
-                      })
-      )
-
-      tag(REDcapPred <- function() concatenation( # TODO: simplify
-        alternation(
-          expression()
-        ),
-        eofMark(),
-        action = function(s) {
-          if (debug >= 1) message("REDcapPred")
-          s <- remove_empty_part(s)
-          s[[1]]$value
-        }))
-
-      keywordfunction <- function(fname) {
-        kwf <- function(...) {
-          if (debug >= 2) message(sprintf("-- %s", fname))
-          rf <- keyword(fname, action = function(s) {
-            if (debug >= 1) message(sprintf(">> %s", fname))
-            if (debug >= 3) browser() # intended use of browser() -- dont modify this line
-            r <- list(type = "keyword", value = s)
-            if (debug >= 1) message(sprintf(">> %s", dQuote(util_deparse1(r))))
-            r
-          })
-          r <- rf(...)
-          r
-        }
-        kwf
-      }
-
-      redcap_rule_env <- util_get_redcap_rule_env()
-
-      functions <- unique(setdiff(names(redcap_rule_env), # but only, if ** is in names
-                                  c("(")))
-
-      get_internal <- function(fname) {
-        r <- as.logical(attr(redcap_rule_env[[fname]], "internal"))
-        if (length(r) == 0) {
-          r <- FALSE
-        }
-        r
-      }
-
-      internal <- vapply(setNames(nm = functions), get_internal,
-                          FUN.VALUE = integer(1))
-
-      functions <- functions[!internal]
-
-      get_order <- function(fname) {
-        r <- as.integer(attr(redcap_rule_env[[fname]], "order"))
-        if (length(r) == 0) {
-          r <- 0L
-        }
-        r
-      }
-
-      get_prio <- function(fname) {
-        r <- as.integer(attr(redcap_rule_env[[fname]], "prio"))
-        if (length(r) == 0) {
-          r <- -3L
-        }
-        r
-      }
-
-      fkt_order <- vapply(setNames(nm = functions), get_order,
-                         FUN.VALUE = integer(1))
-
-      functions <- functions[order(fkt_order)]
-
-      op_prio <- vapply(setNames(nm = functions), get_prio,
-                        FUN.VALUE = integer(1))
-      supported_fkt <- lapply(functions, keywordfunction)
-      supported_fkt <- append(supported_fkt,
-                              empty(action =
-                                      function(s) {
-                                        list(type = "empty", value = "identity")
-                                      }))
-      op_prio <- c(op_prio, -3L)
-
-      fkt <- function() do.call(
-        what = alternation,
-        args = append(supported_fkt,
-                      c(action = function(s) {
-                        f <- s$value
-                        if (debug >= 1) message(sprintf("fkt: %s", dQuote(f)))
-                        if (f == "identity") {
-                          return(empty_part)
-                        } else {
-                          as.symbol(f)
-                        }
-                      })
-        )
-      )
-
-      op_far_below_lowest <- function() do.call( # TODO: rename these with a number in the name
-        what = alternation,
-        args = append(supported_fkt[op_prio == -2],
-                      c(action = function(s) {
-                        f <- s$value
-                        if (debug >= 1) message(sprintf("fkt: %s", dQuote(f)))
-                        if (f == "identity") {
-                          return(empty_part)
-                        } else {
-                          as.symbol(f)
-                        }
-                      })
-        )
-      )
-
-      op_below_lowest <- function() do.call(
-        what = alternation,
-        args = append(supported_fkt[op_prio == -1],
-                      c(action = function(s) {
-                        f <- s$value
-                        if (debug >= 1) message(sprintf("fkt: %s", dQuote(f)))
-                        if (f == "identity") {
-                          return(empty_part)
-                        } else {
-                          as.symbol(f)
-                        }
-                      })
-        )
-      )
-
-
-      op_lowest <- function() do.call(
-        what = alternation,
-        args = append(supported_fkt[op_prio == 0],
-                      c(action = function(s) {
-                        f <- s$value
-                        if (debug >= 1) message(sprintf("fkt: %s", dQuote(f)))
-                        if (f == "identity") {
-                          return(empty_part)
-                        } else {
-                          as.symbol(f)
-                        }
-                      })
-        )
-      )
-
-      op_low <- function() do.call(
-        what = alternation,
-        args = append(supported_fkt[op_prio == 1],
-                      c(action = function(s) {
-                        f <- s$value
-                        if (debug >= 1) message(sprintf("fkt: %s", dQuote(f)))
-                        if (f == "identity") {
-                          return(empty_part)
-                        } else {
-                          as.symbol(f)
-                        }
-                      })
-        )
-      )
-
-      op_high <- function() do.call(
-        what = alternation,
-        args = append(supported_fkt[op_prio == 2],
-                      c(action = function(s) {
-                        f <- s$value
-                        if (debug >= 1) message(sprintf("fkt: %s", dQuote(f)))
-                        if (f == "identity") {
-                          return(empty_part)
-                        } else {
-                          as.symbol(f)
-                        }
-                      })
-        )
-      )
-
-
-      op_highest <- function() do.call(
-        what = alternation,
-        args = append(supported_fkt[op_prio == 3],
-                      c(action = function(s) {
-                        f <- s$value
-                        if (debug >= 1) message(sprintf("fkt: %s", dQuote(f)))
-                        if (f == "identity") {
-                          return(empty_part)
-                        } else {
-                          as.symbol(f)
-                        }
-                      })
-        )
-      )
-
-      tag(arg <- function() alternation(function_expression(),
-                                        literal(),
-                                        symbol_expression(),
-                                        action = function(s) {
-                                          if (debug >= 1) message(sprintf("arg %s", dQuote(paste0(deparse(s), collapse = " "))))
-                                          if (is.list(s)) {
-                                            s <- remove_empty_part(s)
-                                            s$value
-                                          } else {
-                                            s
-                                          }
-                                        }))
-
-      tag(arg_part <- function() alternation(
-        concatenation(
-          repetition1N(
-            concatenation(ignore_ws,
-                          term_expression(),
-                          ignore_ws,
-                          alternation(charParser(","),
-                                      charParser(";"), action = function(s) {
-                                        separator
-                                      }),
-                          ignore_ws
-            )
-          ),
-          ignore_ws,
-          term_expression(),
-          ignore_ws
-        ),
-        concatenation(
-          ignore_ws,
-          term_expression(),
-          ignore_ws
-        ),
-        ignore_ws,
-        action = function(s0) {
-          if (debug >= 1) message("arg_part")
-          s <- remove_empty_part(s0$value)
-          if (length(s) > 1 &&
-              length(s[[1]]) > 1 &&
-              identical(s[[1]]$type,
-                        "repetition1N")) {
-            rep <- s[[1]]$value
-            rep <- lapply(rep,
-                          function(t)
-                            remove_empty_part(
-                              t$value))
-            rep <- lapply(
-              rep,
-              function(r) {
-                r[!vapply(r, identical,
-                          separator,
-                          FUN.VALUE =
-                            logical(1))]
-              })
-            res <- append(unlist(rep, recursive = FALSE), s[[2]])
-          } else if (length(s) > 0) {
-            res <- s[[1]]
-          } else {
-            res <- empty_part
-          }
-          #res <- unlist(lapply(res, deparse))
-          #paste(res, collapse = ", ")
-          res
-        }
-      ))
-
-      tag(function_expression <- function() concatenation(fkt(), ignore_ws,
-                                                          charParser("(", action = function(s) as.symbol("(")),
-                                                          ignore_ws,
-                                                          arg_part(),
-                                                          ignore_ws,
-                                                          charParser(")", action = function(s) as.symbol(")")),
-                                                          action = function(s0) {
-                                                            s <- s0
-                                                            s <- remove_empty_part(s)
-
-                                                            fkt <- gsub("`", "", fixed = TRUE, as.character(shift(s))) # TODO: use a better ways
-                                                            if (debug >= 1) message(sprintf("function_expression: %s", sQuote(fkt)))
-                                                            lng <- vapply(s, function(s_i) {
-                                                              (length(s_i) == 1 && is.language(s_i))
-                                                            }, FUN.VALUE = logical(1))
-                                                            # val <- vapply(s, function(s_i) {
-                                                            #   (length(s_i) == 2)
-                                                            # }, FUN.VALUE = logical(1))
-                                                            # s1 <- s
-                                                            # s1[val] <- lapply(s[val], `[[`, "value")
-                                                            # s[lng] <- lapply(s[lng], deparse)
-                                                            r <- unlist(s, recursive = FALSE, use.names = FALSE)
-                                                            # r <- r[!vapply(r, function(x) !is.language(x) && util_empty(x), FUN.VALUE = logical(1))]
-                                                            # if (length(r) == 3 && is.language(r[[2]])) {
-                                                            #   call(gsub("`", "", as.character(r[[2]])), r[[1]], r[[3]])
-                                                            # } else {
-                                                            #
-                                                            # }
-                                                            r <- r[!(r %in% c(as.symbol(")"), as.symbol("(")))]
-                                                            do.call(call, c(list(name = fkt), r), quote = TRUE)
-                                                          }
-      ))
-
-      action_subterm = function(s) {
-        if (debug > 0) message(util_deparse1(sys.call()))
-        s <- remove_empty_part(s)
-        if (length(s)) {
-          part <- function(x) {
-            if (length(x) < 3) {
-              if (length(x) == 1)
-                x[[1]]
-              else
-                stop("Syntax error")
-            } else {
-              call(util_deparse1(x[[length(x)-1]]),
-                   Recall(head(x, -2)),
-                   x[[length(x)]]
-              )
-            }
-          }
-          if (length(s) > 1) {
-             if (inherits(s[[1]], "POSIXct")) {
-               s[[1]] <- call("util_parse_date", list(as.character(s[[1]])))
-              #   s[[1]] <- as.numeric(s[[1]])
-             }
-            ensure_brackets(part(c(s[[1]], s[[2]])))
-          } else
-            ensure_brackets(part(c(s[[1]])))
-        } else
-          empty_part
-      }
-
-      action_op <- function(s) {
-        if (debug > 0) message(util_deparse1(sys.call()))
-        s <- remove_empty_part(s)
-        if (inherits(s[[2]], "POSIXct")) {
-          s[[2]] <- call("util_parse_date", list(as.character(s[[2]])))
-        }
-        c(s[[1]], s[[2]])
-      }
-
-      action_factor <- function(s) {
-        if (debug > 0) message(util_deparse1(sys.call()))
-        s <- remove_empty_part(s)
-        if (!is.null(s))
-          do.call("c", s$value)
-        else
-          empty_part # base::expression()
-      }
-
-      ensure_brackets <- function(x) {
-        if (length(x) < 2) {
-          x
-        } else {
-          if (!is.call(x) || x[[1]] == as.symbol("(")) {
-            x
-          } else {
-            call("(", x)
-          }
-        }
-      }
-
-      tag( expression <- function() concatenation(
-        alternation(op_far_below_lowest(), empty(action = function(s) {empty_part}), action = function(s) {
-          s <- remove_empty_part(s)
-          if (length(s) == 0)
-            empty_part
-          else
-            s
-        }), ignore_ws,
-        term(), ignore_ws,
-        repetition0N(concatenation(op_far_below_lowest(),  ignore_ws, term()),  ignore_ws,
-                     action = function(s) {
-                       s <- remove_empty_part(s)
-                       if (!is.null(s))
-                         do.call("c", lapply(s$value, `[[`, "value"))
-                       else
-                         empty_part # base::expression()
-                     }),
-        action = action_subterm)
-      )
-
-
-      tag( term <- function() concatenation(factor1(),  ignore_ws, repetition0N(concatenation(op_below_lowest(),  ignore_ws, factor1(), ignore_ws,
-                                                                                              action = action_op),
-                                                                                action = action_factor),
-                                            action = action_subterm)
-      )
-
-      tag( factor1 <- function() concatenation(factor2(),  ignore_ws, repetition0N(concatenation(op_lowest(),  ignore_ws, factor2(),  ignore_ws,
-                                                                                                 action = action_op),
-                                                                                   action = action_factor),
-                                               action = action_subterm)
-      )
-
-      tag( factor2 <- function() concatenation(factor3(), ignore_ws, repetition0N(concatenation(op_low(), ignore_ws, factor3(), ignore_ws,
-                                                                                                action = action_op),
-                                                                                  action = action_factor),
-                                               action = action_subterm)
-      )
-
-      tag( factor3 <- function() concatenation(factor4(), ignore_ws, repetition0N(concatenation(op_high(), ignore_ws, factor4(), ignore_ws,
-                                                                                                action = action_op),
-                                                                                  action = action_factor),
-                                               action = action_subterm)
-      )
-
-      tag( factor4 <- function() concatenation(factor5(), ignore_ws, repetition0N(concatenation(op_highest(), ignore_ws, factor5(), ignore_ws,
-                                                                                                action = action_op),
-                                                                                  action = action_factor),
-                                               action = action_subterm)
-      )
-
-      tag( factor5 <- function() alternation(arg(),
-                                             concatenation(
-                                               charParser("(", action = function(s) empty_part),
-                                               ignore_ws,
-                                               expression(),
-                                               ignore_ws,
-                                               charParser(")", action = function(s) empty_part),
-                                               action = function(s) {
-                                                 do.call(call, c(
-                                                   list(name = "("),
-                                                   remove_empty_part(s)),
-                                                   quote = TRUE)
-                                               }),
-                                             action = function(s) {
-                                               s <- remove_empty_part(s)
-                                               s
-                                             })
-      )
-
-      term_expression <- expression
-
-      # tag(term_expression <- function() alternation(
-      #   term_expression_1(),
-      #   arg(),
-      #   action = function(s) {
-      #     if (debug >= 1) message("term_expression")
-      #     s
-      #   }
-      # ))
-
-
-      ignore_ws <- whitespace(action = function(s) empty_part)
-
-      # tag(term_expression_1 <- function() concatenation( # TODO: remove?
-      #   alternation(function_expression(), arg()),
-      #   ignore_ws,
-      #   #      alternation(op_low()),
-      #   alternation(
-      #     op_highest(), # ^ * is prefix of **
-      #     op_lowest(), # compare ops
-      #     op_low(), # +
-      #     op_high(), # *
-      #     action = function(s) {
-      #       s
-      #     }
-      #   ),
-      #   ignore_ws,
-      #   alternation(term_expression(), function_expression(), arg()),
-      #   action = function(s) {
-      #     if (debug >= 1) message("term_expression_1")
-      #     s <- remove_empty_part(s)
-      #     if(length(s) < 3) {
-      #       stop(sprintf("two terms combined without an operator: %s",
-      #                    dQuote(paste(s[[1]]$value,
-      #                                 s[[2]]$value))))
-      #     }
-      #     call(as.character(s[[2]]),
-      #          s[[1]]$value,
-      #          s[[3]]$value
-      #     )
-      #   }
-      # ))
-
-      errorFun <- function(strmPosition,h=NULL,type="") {
-        if ( is.null(h) || type != "concatenation" ) {# TODO: XXX
-          warning(sprintf("Error from line %d, character %d in %s (will ignore this rule): %s",
-                          strmPosition$line,
-                          strmPosition$linePos,
-                          rule,
-                          substring(rule, strmPosition$streamPos)))
-        } else {
-          errorFun(h$pos,h$h,h$type)
-        }
-        return(list(type=type,pos=strmPosition,h=h))
-      }
-
-      # cstream <- get(entry_pred)()(streamParserFromString(sprintf("(%s)", rule))) # <ADDBR>, see below
-      cstream <- get(entry_pred)()(streamParserFromString(sprintf("%s", rule)))
-
-      if ( cstream$status == "fail" ) {
-        invisible(errorFun(cstream$node$pos,cstream$node$h,cstream$node$type))
-        return(util_attach_attr(list(), src = rule))
-      } else if ( cstream$status != "ok" ) {
-        warning(sprintf("Unknown error parsing %s: %s (will ignore this rule)", rule, cstream$status))
-        return(util_attach_attr(list(), src = rule))
-      } else {
-        # r <- cstream$node[[2]] # 2 to remove the brackets added in <ADDBR>
-        iseof <- !(cstream$stream$pos < cstream$stream$lenchar)
-        if (!iseof && must_eof) {
-          strmPosition <- streamParserPosition(cstream$stream)
-          warning(sprintf("Found extra characters in line %d, character %d in %s (will ignore this rule): %s",
-                          strmPosition$line,
-                          strmPosition$linePos,
-                          rule,
-                          substring(rule, strmPosition$streamPos)))
-          return(list())
-        }
-        # if (cstream$) {
-        #
-        # }
-        r <- cstream$node
-        if (debug > 0) message(r)
-        if (is.symbol(r)) r <- as.expression(r)
-        attr(r, "src") <- rule
-        return(r)
-      }
-    }
-
-    # parent.env(environment(f)) <- environment(empty)
-
-    assign("f", f, .redcap_cache)
-  }
-
-  get("f", .redcap_cache)(rule = rule, debug = debug, entry_pred = entry_pred,
-                          must_eof = must_eof)
-
+  # entry_pred is kept for API compatibility with the former qmrparser-based
+  # implementation. For the dedicated interval entry point, require an interval
+  # as the first token; other entry points use the normal REDcap predicate path.
+  .util_parse_redcap_rule_standalone(rule = rule, debug = debug,
+    entry_pred = entry_pred,
+    must_eof = must_eof)
 }

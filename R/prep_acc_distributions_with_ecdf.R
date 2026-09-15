@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Utility function to plot a combined figure for distribution checks
 #'
 #' @description
@@ -8,9 +9,6 @@
 #'
 #' @inheritParams .template_function_indicator
 #'
-#' @param resp_vars [variable list] the name of the measurement variable
-#' @param group_vars [variable list] the name of the observer, device or
-#'                                   reader variable
 #' @param n_group_max maximum number of categories to be displayed individually
 #'                  for the grouping variable (`group_vars`, devices / examiners)
 #' @param n_obs_per_group_min minimum number of data points per group to create
@@ -19,59 +17,70 @@
 #' @return A `SummaryPlot`.
 #'
 #' @importFrom ggplot2 ggplot_build xlim
+# nolint end
 prep_acc_distributions_with_ecdf <- function(resp_vars = NULL,
-                                             group_vars = NULL,
-                                             study_data,
-                                             label_col,
-                                             item_level = "item_level",
-                                             meta_data = item_level,
-                                             meta_data_v2,
-                                             n_group_max = getOption("dataquieR.max_group_var_levels_in_plot", dataquieR.max_group_var_levels_in_plot_default),
-                                             n_obs_per_group_min = getOption("dataquieR.min_obs_per_group_var_in_plot", dataquieR.min_obs_per_group_var_in_plot_default)) {
+  group_vars = NULL,
+  study_data,
+  label_col,
+  item_level = "item_level",
+  meta_data = item_level,
+  meta_data_v2,
+  n_group_max = getOption("dataquieR.max_group_var_levels_in_plot", dataquieR.max_group_var_levels_in_plot_default), # nolint: line_length_linter.
+  n_obs_per_group_min = getOption("dataquieR.min_obs_per_group_var_in_plot", dataquieR.min_obs_per_group_var_in_plot_default)) { # nolint: line_length_linter.
   # preps ----------------------------------------------------------------------
   util_maybe_load_meta_data_v2()
-  prep_prepare_dataframes(.replace_hard_limits = TRUE,
-                          #.apply_factor_metadata = TRUE, # can be omitted in favor of .apply_factor_metadata_inadm
-                          .apply_factor_metadata_inadm = TRUE
+  prep_prepare_dataframes(
+    .replace_hard_limits = TRUE,
+    # .apply_factor_metadata = TRUE, # can be omitted in favor of
+    # .apply_factor_metadata_inadm
+    .apply_factor_metadata_inadm = TRUE
   )
 
   util_correct_variable_use(resp_vars,
-                            allow_any_obs_na = TRUE,
-                            allow_all_obs_na = FALSE,
-                            min_distinct_values = 10,
-                            need_scale = "interval | ratio"
+    allow_any_obs_na = TRUE,
+    allow_all_obs_na = FALSE,
+    min_distinct_values = 10,
+    need_scale = "interval | ratio"
   )
 
   util_correct_variable_use(group_vars,
-                            allow_more_than_one = FALSE,
-                            allow_any_obs_na = TRUE,
-                            allow_all_obs_na = FALSE,
-                            min_distinct_values = 2,
-                            need_type = "!float",
-                            need_scale = "nominal | ordinal"
+    allow_more_than_one = FALSE,
+    allow_any_obs_na = TRUE,
+    allow_all_obs_na = FALSE,
+    min_distinct_values = 2,
+    need_type = "!float",
+    need_scale = "nominal | ordinal"
   )
 
   util_expect_scalar(n_group_max,
-                     check_type = util_is_numeric_in(min = 2,
-                                                     whole_num = TRUE,
-                                                     finite = TRUE))
+    check_type = util_is_numeric_in(
+      min = 2,
+      whole_num = TRUE,
+      finite = TRUE
+    )
+  )
 
   util_expect_scalar(n_obs_per_group_min,
-                     check_type = util_is_numeric_in(min = 0,
-                                                     whole_num = TRUE,
-                                                     finite = TRUE))
+    check_type = util_is_numeric_in(
+      min = 0,
+      whole_num = TRUE,
+      finite = TRUE
+    )
+  )
 
-  part1 <- acc_distributions(resp_vars = resp_vars,
-                             study_data = study_data,
-                             meta_data = meta_data,
-                             label_col = label_col,
-                             flip_mode = "noflip")
+  part1 <- acc_distributions(
+    resp_vars = resp_vars,
+    study_data = study_data,
+    meta_data = meta_data,
+    label_col = label_col,
+    flip_mode = "noflip"
+  )
   p1 <- part1$SummaryPlotList[[resp_vars]]
-  built   <- ggplot2::ggplot_build(p1)
-  layout  <- util_gg_get(built, "layout")
+  built <- ggplot2::ggplot_build(p1)
+  layout <- util_gg_get(built, "layout")
   scalesx <- util_gg_get(layout, "panel_scales_x")[[1]]
-  rngobj  <- util_gg_get(scalesx, "range")
-  xx      <- util_gg_get(rngobj, "range")
+  rngobj <- util_gg_get(scalesx, "range")
+  xx <- util_gg_get(rngobj, "range")
   xx_exp <- xx
   xx_exp[1] <- xx_exp[1] - 0.05 * (xx_exp[2] - xx_exp[1])
   xx_exp[2] <- xx_exp[2] + 0.05 * (xx_exp[2] - xx_exp[1])
@@ -81,24 +90,26 @@ prep_acc_distributions_with_ecdf <- function(resp_vars = NULL,
       xx_exp = xx_exp
     )
   )
-  part2 <- acc_distributions_ecdf(resp_vars = resp_vars, group_vars = group_vars,
-                                  study_data = study_data,
-                                  label_col = label_col,
-                                  meta_data = meta_data,
-                                  n_group_max = n_group_max,
-                                  n_obs_per_group_min = n_obs_per_group_min)
+  part2 <- acc_distributions_ecdf(
+    resp_vars = resp_vars, group_vars = group_vars,
+    study_data = study_data,
+    label_col = label_col,
+    meta_data = meta_data,
+    n_group_max = n_group_max,
+    n_obs_per_group_min = n_obs_per_group_min
+  )
   p2prep <- part2$SummaryPlotList[[resp_vars]]
   suppressMessages(
     p2 <- p2prep + util_create_lean_ggplot(
-        xlim(xx_exp),
+      xlim(xx_exp),
       xx_exp = xx_exp
     )
   )
 
   P <-
     p1 %lean+% p2 %lean+%
-      plot_layout(ncol = 1) %lean+%
-      plot_annotation(tag_levels = 'A')
+    plot_layout(ncol = 1) %lean+%
+    plot_annotation(tag_levels = "A")
 
   return(list(SummaryPlot = util_set_size(P)))
 }
@@ -107,30 +118,6 @@ prep_acc_distributions_with_ecdf <- function(resp_vars = NULL,
 #' @concept plotly_shims
 #' @noRd
 util_as_plotly_prep_acc_distributions_with_ecdf <- function(res, ...) {
-  if (length(res$SummaryPlot) != 1) {
-    nres <- length(res$SummaryPlot)
-    return(util_ggplotly(util_create_lean_ggplot(ggplot2::ggplot() +
-                                                      ggplot2::annotate("text", x = 0, y = 0,
-                                                                        label =
-                                                                          sprintf(paste("Internal error: I should  have exactly 1 result, if",
-                                                                                        "calling plotly for a dq_report2 otuput. I have %d."),
-                                                                                  nres)) +
-                                                      theme(
-                                                        axis.line = element_blank(),
-                                                        axis.text.x = element_blank(),
-                                                        axis.text.y = element_blank(),
-                                                        axis.ticks = element_blank(),
-                                                        axis.title.x = element_blank(),
-                                                        axis.title.y = element_blank(),
-                                                        legend.position = "none",
-                                                        panel.background = element_blank(),
-                                                        panel.border = element_blank(),
-                                                        panel.grid.major = element_blank(),
-                                                        panel.grid.minor = element_blank(),
-                                                        plot.background = element_blank()
-                                                      ),
-                                                    nres = nres)))
-  }
   res$SummaryPlot <-
     util_remove_dataquieR_result_class(res$SummaryPlot)
   # use res$SummaryPlot, not something from the enclosure
@@ -138,14 +125,51 @@ util_as_plotly_prep_acc_distributions_with_ecdf <- function(res, ...) {
   util_ensure_suggested("plotly")
 
   if (inherits(res$SummaryPlot, "patchwork")) {
-    py1 <- try(util_ggplotly(res$SummaryPlot[[1]],
-                                ...), silent = TRUE)
-    py2 <- try(util_ggplotly(res$SummaryPlot[[2]],
-                                ...), silent = TRUE)
+    if (length(res$SummaryPlot) != 2) {
+      nres <- length(res$SummaryPlot)
+      return(util_ggplotly(util_create_lean_ggplot(
+        ggplot2::ggplot() +
+          ggplot2::annotate("text",
+            x = 0, y = 0,
+            label =
+              sprintf(
+                paste(
+                  "Internal error: I should have exactly 2 patchwork panels,",
+                  "if calling plotly for a prep_acc_distributions_with_ecdf",
+                  "dq_report2 output. I have %d."
+                ),
+                nres
+              )
+          ) +
+          theme(
+            axis.line = element_blank(),
+            axis.text.x = element_blank(),
+            axis.text.y = element_blank(),
+            axis.ticks = element_blank(),
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
+            legend.position = "none",
+            panel.background = element_blank(),
+            panel.border = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            plot.background = element_blank()
+          ),
+        nres = nres
+      )))
+    }
+    py1 <- try(util_ggplotly(
+      res$SummaryPlot[[1]],
+      ...
+    ), silent = TRUE)
+    py2 <- try(util_ggplotly(
+      res$SummaryPlot[[2]],
+      ...
+    ), silent = TRUE)
     util_stop_if_not(!inherits(py1, "try-error"))
     util_stop_if_not(!inherits(py2, "try-error"))
     # https://plotly.com/r/subplots/#subplots-with-shared-yaxes
-    plotly::subplot(
+    return(plotly::subplot(
       plotly::add_annotations( # https://stackoverflow.com/a/59191142
         py1,
         text = "A",
@@ -173,9 +197,42 @@ util_as_plotly_prep_acc_distributions_with_ecdf <- function(res, ...) {
         font = list(size = 15)
       ),
       nrows = 2,
-      shareX = TRUE)
-  } else {
-    py <- util_ggplotly(res$SummaryPlot, ...)
-    plotly::layout(py, xaxis = list(tickangle = "auto"))
+      shareX = TRUE
+    ))
   }
+
+  if (length(res$SummaryPlot) != 1) {
+    nres <- length(res$SummaryPlot)
+    return(util_ggplotly(util_create_lean_ggplot(
+      ggplot2::ggplot() +
+        ggplot2::annotate("text",
+          x = 0, y = 0,
+          label =
+            sprintf(
+              paste(
+                "Internal error: I should  have exactly 1 result, if",
+                "calling plotly for a dq_report2 otuput. I have %d."
+              ),
+              nres
+            )
+        ) +
+        theme(
+          axis.line = element_blank(),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks = element_blank(),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          legend.position = "none",
+          panel.background = element_blank(),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          plot.background = element_blank()
+        ),
+      nres = nres
+    )))
+  }
+  py <- util_ggplotly(res$SummaryPlot, ...)
+  plotly::layout(py, xaxis = list(tickangle = "auto"))
 }

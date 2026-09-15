@@ -5,7 +5,4 @@
 #' @return [data.frame] [study_data]
 #' @export
 prep_merge_study_data <- function(study_data_list) {
-  # TODO: Implement me!
-  # Reduce(merge, study_data_list) # similar to this,
-  # see sq2psqlrepository:::getStudyData.sq2psqlRepository
 }

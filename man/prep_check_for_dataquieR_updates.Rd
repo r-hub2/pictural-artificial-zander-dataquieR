@@ -7,7 +7,8 @@
 prep_check_for_dataquieR_updates(
   beta = FALSE,
   deps = TRUE,
-  ask = interactive()
+  ask = interactive(),
+  byte_compile = TRUE
 )
 }
 \arguments{
@@ -16,6 +17,9 @@ prep_check_for_dataquieR_updates(
 \item{deps}{\link{logical} check for missing (optional) dependencies}
 
 \item{ask}{\link{logical} ask for updates}
+
+\item{byte_compile}{\link{logical} install \code{dataquieR} from source with
+byte-compiled R code}
 }
 \value{
 \code{invisible(NULL)}

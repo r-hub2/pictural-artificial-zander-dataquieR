@@ -25,8 +25,11 @@
 #############################
 # List of generic functions #
 #############################
+#' Internal helper: A not equal B vv
+#'
+#' @noRd
 A_not_equal_B_vv <- function(study_data, A, B, A_levels, B_levels,
-                             A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
 
   grading <- ifelse(X[[A]] != X[[B]], 1, 0)
@@ -34,8 +37,11 @@ A_not_equal_B_vv <- function(study_data, A, B, A_levels, B_levels,
 }
 attr(A_not_equal_B_vv, "description") <- "A \u2260 B"
 
+#' Internal helper: A less than B vv
+#'
+#' @noRd
 A_less_than_B_vv <- function(study_data, A, B, A_levels, B_levels,
-                             A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   util_warn_unordered(X[[A]], A)
   util_warn_unordered(X[[B]], B)
@@ -51,8 +57,11 @@ A_less_than_B_vv <- function(study_data, A, B, A_levels, B_levels,
 }
 attr(A_less_than_B_vv, "description") <- "A < B"
 
+#' Internal helper: A less equal B vv
+#'
+#' @noRd
 A_less_equal_B_vv <- function(study_data, A, B, A_levels, B_levels,
-                              A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   util_warn_unordered(X[[A]], A)
   util_warn_unordered(X[[B]], B)
@@ -68,8 +77,11 @@ A_less_equal_B_vv <- function(study_data, A, B, A_levels, B_levels,
 }
 attr(A_less_equal_B_vv, "description") <- "A \u2264 B"
 
+#' Internal helper: A greater than B vv
+#'
+#' @noRd
 A_greater_than_B_vv <- function(study_data, A, B, A_levels, B_levels,
-                                A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   util_warn_unordered(X[[A]], A)
   util_warn_unordered(X[[B]], B)
@@ -85,8 +97,11 @@ A_greater_than_B_vv <- function(study_data, A, B, A_levels, B_levels,
 }
 attr(A_greater_than_B_vv, "description") <- "A > B"
 
+#' Internal helper: A greater equal B vv
+#'
+#' @noRd
 A_greater_equal_B_vv <- function(study_data, A, B, A_levels, B_levels,
-                                 A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   util_warn_unordered(X[[A]], A)
   util_warn_unordered(X[[B]], B)
@@ -102,24 +117,33 @@ A_greater_equal_B_vv <- function(study_data, A, B, A_levels, B_levels,
 }
 attr(A_greater_equal_B_vv, "description") <- "A \u2265 B"
 
+#' Internal helper: A present not B vv
+#'
+#' @noRd
 A_present_not_B_vv <- function(study_data, A, B, A_levels, B_levels,
-                               A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   grading <- ifelse(!is.na(X[[A]]) & is.na(X[[B]]), 1, 0)
   return(grading)
 }
 attr(A_present_not_B_vv, "description") <- "\u2203 A \u2227 \u2204 B"
 
+#' Internal helper: A present and B vv
+#'
+#' @noRd
 A_present_and_B_vv <- function(study_data, A, B, A_levels, B_levels,
-                               A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   grading <- ifelse(!is.na(X[[A]]) & !(is.na(X[[B]])), 1, 0)
   return(grading)
 }
 attr(A_present_and_B_vv, "description") <- "\u2203 A \u2227 \u2203 B"
 
+#' Internal helper: A present and B levels vl
+#'
+#' @noRd
 A_present_and_B_levels_vl <- function(study_data, A, B, A_levels, B_levels,
-                                      A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   grading <- ifelse((!is.na(X[[A]])) & X[[B]] %in% B_levels, 1, 0)
   return(grading)
@@ -127,8 +151,11 @@ A_present_and_B_levels_vl <- function(study_data, A, B, A_levels, B_levels,
 attr(A_present_and_B_levels_vl, "description") <-
   "\u2203 A \u2227 B \u2208 L\u2082"
 
+#' Internal helper: A levels and B levels ll
+#'
+#' @noRd
 A_levels_and_B_levels_ll <- function(study_data, A, B, A_levels, B_levels,
-                                     A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   grading <- ifelse(X[[A]] %in% A_levels & X[[B]] %in% B_levels, 1, 0)
   return(grading)
@@ -136,8 +163,11 @@ A_levels_and_B_levels_ll <- function(study_data, A, B, A_levels, B_levels,
 attr(A_levels_and_B_levels_ll, "description") <-
   "A \u2208 L\u2081 \u2227 B \u2208 L\u2082"
 
+#' Internal helper: A levels and B gt value lc
+#'
+#' @noRd
 A_levels_and_B_gt_value_lc <- function(study_data, A, B, A_levels, B_levels,
-                                       A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   util_warn_unordered(X[[B]], B)
   if (is.factor(X[[B]])) {
@@ -148,8 +178,11 @@ A_levels_and_B_gt_value_lc <- function(study_data, A, B, A_levels, B_levels,
 }
 attr(A_levels_and_B_gt_value_lc, "description") <- "A \u2208 L \u2227 B > c"
 
+#' Internal helper: A levels and B lt value lc
+#'
+#' @noRd
 A_levels_and_B_lt_value_lc <- function(study_data, A, B, A_levels, B_levels,
-                                       A_value, B_value) {
+  A_value, B_value) {
   X <- study_data
   util_warn_unordered(X[[B]], B)
   if (is.factor(X[[B]])) {
@@ -185,16 +218,20 @@ attr(A_levels_and_B_lt_value_lc, "description") <- "A \u2208 L \u2227 B < c"
 contradiction_functions <- objects(pattern = ".*")
 contradiction_functions <- mget(contradiction_functions)
 contradiction_functions <- contradiction_functions[
-  vapply(contradiction_functions, is.function, TRUE)]
+  vapply(contradiction_functions, is.function, TRUE)
+]
 contradiction_functions <- contradiction_functions[
   vapply(contradiction_functions, function(object) {
-  !is.null(attr(object, "description"))
-}, TRUE)]
+    !is.null(util_attr(object, "description", exact = TRUE))
+  }, TRUE)
+]
 
 #' description of the contradiction functions
 #' @export
-contradiction_functions_descriptions <- lapply(contradiction_functions, attr,
-                                               "description")
+contradiction_functions_descriptions <- lapply(
+  contradiction_functions, util_attr,
+  "description"
+)
 
 ######################################################################
 #

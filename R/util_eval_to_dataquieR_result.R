@@ -31,24 +31,27 @@
 #' @concept process
 #' @noRd
 util_eval_to_dataquieR_result <- function(expression, env = parent.frame(),
-                                          filter_result_slots, nm,
-                                          function_name,
-                                          my_call = expression,
-                                          my_storr_object = NULL,
-                                          init = FALSE,
-                                          called_in_pipeline = TRUE,
-                                          checkpoint_resumed = FALSE) {
+  filter_result_slots, nm,
+  function_name,
+  my_call = expression,
+  my_storr_object = NULL,
+  init = FALSE,
+  called_in_pipeline = TRUE,
+  checkpoint_resumed = FALSE) {
   withr::local_options(list(rlang_trace_top_env = rlang::current_env()))
-  if (!isTRUE(getOption("dataquieR.traceback",
-                        dataquieR.traceback_default))) {
+  if (!isTRUE(getOption(
+    "dataquieR.traceback",
+    dataquieR.traceback_default
+  ))) {
     withr::local_options(list(rlang_backtrace_on_error = "none"))
   }
   if (missing(function_name)) {
     error <- try(
       function_name <- rlang::call_name(expression),
-      silent = TRUE)
+      silent = TRUE
+    )
     if (util_is_try_error(error)) {
-      function_name <- "unkown function"
+      function_name <- "unknown function"
     }
   }
 
@@ -56,10 +59,11 @@ util_eval_to_dataquieR_result <- function(expression, env = parent.frame(),
 
   storr_err <-
     try(my_storr_object <- util_fix_storr_object(my_storr_object),
-        silent = TRUE)
+      silent = TRUE
+    )
 
   if (util_is_try_error(storr_err)) {
-    return(attr(storr_err, "condition"))
+    return(util_attr(storr_err, "condition", exact = TRUE))
   }
   if (!is.null(my_storr_object) &&
       inherits(my_storr_object, "storr") &&
@@ -71,7 +75,7 @@ util_eval_to_dataquieR_result <- function(expression, env = parent.frame(),
   }
   .old_.dq2_globs_.called_in_pipeline <- .dq2_globs$.called_in_pipeline
   .dq2_globs$.called_in_pipeline <- called_in_pipeline
-  on.exit({
+  withr::defer({
     .dq2_globs$.called_in_pipeline <- .old_.dq2_globs_.called_in_pipeline
   })
   errors <- list()
@@ -79,8 +83,10 @@ util_eval_to_dataquieR_result <- function(expression, env = parent.frame(),
   messages <- list()
   e <- environment()
   collect_condition <- function(cnd) {
-    if (!isTRUE(getOption("dataquieR.traceback",
-                          dataquieR.traceback_default))) {
+    if (!isTRUE(getOption(
+      "dataquieR.traceback",
+      dataquieR.traceback_default
+    ))) {
       attr(cnd, "trace") <- NULL
       cnd$trace <- NULL
     }
@@ -94,36 +100,20 @@ util_eval_to_dataquieR_result <- function(expression, env = parent.frame(),
       util_error("")
     }
   }
-  #r_summary <- data.frame()
+  # `r_summary` is assembled only after condition categories are known.
 
   need_compute <- TRUE
 
   if (checkpoint_resumed &&
       called_in_pipeline &&
       use_storr &&
-      my_storr_object$exists(nm, namespace =
-                             util_get_storr_stat_namespace(my_storr_object))) {
-    # r <- my_storr_object$get(nm)
-    # if (inherits(r, "dataquieR_result")) { # FIXME: Write some Ack to the storr instead of this
-    #   if (inherits(r, "dataquieR_NULL")) {
-    #     err <- attr(r, "error")
-    #     if (length(err) > 0) {
-    #       util_stop_if_not(
-    #         "Internal error, sorry. Please report: Got more than one error in one dataquieR_result." =
-    #           length(err) != 1
-    #       )
-    #       intrinsic_applicability_problem <-
-    #         attr(err[[1]], "intrinsic_applicability_problem")
-    #       applicability_problem <-
-    #         attr(err[[1]], "applicability_problem")
-    #       need_compute <-
-    #         !intrinsic_applicability_problem &&
-    #         !applicability_problem # TODO: Maybe, if metadata are allowed to change in between, need_compute could be TRUE for applicability problems
-    #     }
-    #   } else {
-        need_compute <- FALSE
-      # }
-    # }
+      my_storr_object$exists(nm,
+        namespace =
+          util_get_storr_stat_namespace(my_storr_object)
+      )) {
+    # Historical checkpoint-resume inspection removed here. Inspect with
+    # `git show 0b2b77aaef -- R/util_eval_to_dataquieR_result.R`.
+    need_compute <- FALSE
   }
   if (!need_compute) {
     r <- NA
@@ -133,23 +123,38 @@ util_eval_to_dataquieR_result <- function(expression, env = parent.frame(),
     r <- list()
     class(r) <- union("empty", class(r))
     tm <- system.time(
-    suppressWarnings(suppressMessages(try(withCallingHandlers(
-      {
-        r <-  eval(expression, envir = env)
-        if (length(r)) {
-          if (length(filter_result_slots)) {
-            r <- util_filter_names_by_regexps(r,
-                                              filter_result_slots)
+      suppressWarnings(suppressMessages(try(withCallingHandlers(
+        {
+          r <- eval(expression, envir = env)
+          if (length(r)) {
+            if (length(filter_result_slots)) {
+              r <- util_filter_names_by_regexps(
+                r,
+                filter_result_slots
+              )
+            }
+            if (.called_in_pipeline) {
+              r <- util_compress_ggplots_in_res(r)
+            }
+            check_id <- util_attr(my_call, CHECK_ID, exact = TRUE)
+            check_label <- util_attr(my_call, CHECK_LABEL, exact = TRUE)
+            r <- util_add_variable_group_identity(
+              r,
+              check_id = check_id,
+              check_label = check_label
+            )
+            r <- util_attach_entity_grading_context(
+              result = r,
+              env = env,
+              function_name = function_name
+            )
           }
-          if (.called_in_pipeline) {
-            r <- util_compress_ggplots_in_res(r)
-          }
-        }
-      },
-      error = collect_condition,
-      warning = collect_condition,
-      message = collect_condition
-    ), silent = TRUE))))
+        },
+        error = collect_condition,
+        warning = collect_condition,
+        message = collect_condition
+      ), silent = TRUE)))
+    )
     if (length(r) == 0) {
       r <- list()
       class(r) <- union("dataquieR_NULL", class(r))
@@ -159,15 +164,17 @@ util_eval_to_dataquieR_result <- function(expression, env = parent.frame(),
       if (is.data.frame(meta_data) &&
           is.character(label_col) &&
           length(label_col) == 1) {
-      r$SummaryTable <- util_map_to_other_metrics(
-                                          r$SummaryTable,
-                                          eval(quote(meta_data),
-                                               envir = env),
-                                          get("label_col",
-                                              envir = env,
-                                              inherits = TRUE),
-                                          add_attribs = add_attribs)
-
+        r$SummaryTable <- util_map_to_other_metrics(
+          r$SummaryTable,
+          eval(quote(meta_data),
+            envir = env
+          ),
+          get("label_col",
+            envir = env,
+            inherits = TRUE
+          ),
+          add_attribs = add_attribs
+        )
       }
     }
     for (a in names(add_attribs)) {
@@ -185,101 +192,75 @@ util_eval_to_dataquieR_result <- function(expression, env = parent.frame(),
     class(r) <- union("dataquieR_result", class(r))
     res_check <- try(r <- util_dataquieR_result(r), silent = TRUE)
     if (util_is_try_error(res_check)) {
-      attr(r, "error") <- util_attach_attr(list(attr(res_check, "condition")),
-                                          class = "dataquieR_invalid_result_error"
+      attr(r, "error") <- util_attach_attr(
+        list(util_attr(res_check, "condition",
+            exact = TRUE
+          )),
+        class = "dataquieR_invalid_result_error"
       )
     }
 
     if (called_in_pipeline) {
-
       if (length(r) > 0) {
-        try({
-          # r_summary <- util_extract_indicator_metrics(r$SummaryTable)
-          s <- prep_extract_summary(r)
-          r_summary1 <- suppressWarnings(prep_summary_to_classes(s)) # FIXME: split this function, we do not want classes, here
-          #      r_summary <- r_summary0$Table
-
-        }, silent = TRUE)
+        try(
+          {
+            s <- prep_extract_summary(r)
+            r_summary1 <- suppressWarnings(prep_summary_to_classes(s))
+          },
+          silent = TRUE
+        )
       }
 
-      CAT_ <-
-        vapply(setNames(nm = c("applicability", "error", "anamat", "indicator_or_descriptor")), function(aspect) {
-          as.character(as.numeric(util_as_cat(util_get_category_for_result(r, aspect = aspect))))
-        }, FUN.VALUE = character(1))
-
-      MSG_ <-
-        vapply(setNames(nm = c("applicability", "error", "anamat", "indicator_or_descriptor")), function(aspect) {
-          util_get_message_for_result(r, aspect = aspect)
-        }, FUN.VALUE = character(1))
-
-      names(CAT_) <- paste0("CAT_", names(CAT_))
-      names(MSG_) <- paste0("MSG_", names(MSG_))
-
-      # rownames(CAT_) <- NULL
-      # rownames(MSG_) <- NULL
-      # rownames(r) <- NULL
-
-      # if (is.data.frame(r_summary) && nrow(r_summary) > 0) {
-      #   r_summary <- cbind.data.frame(r_summary, t(CAT_), t(MSG_))
-      # } else {
-      r_summary <- cbind.data.frame(t(CAT_), t(MSG_))
-      # }
-
-      r_summary <- data.frame(
-        VAR_NAMES = unname(attr(my_call, VAR_NAMES)),
-        STUDY_SEGMENT = unname(attr(my_call, STUDY_SEGMENT)),
-        call_names = unname(attr(r, "cn")),
-        value = as.character(r_summary),
-        values_raw = as.character(r_summary),
-        function_name = function_name,
-        indicator_metric = names(r_summary)
+      r_summary <- util_add_result_conditions_to_summary(
+        result = r,
+        summary = r_summary1,
+        function_name = function_name
       )
-      r_summary <- util_rbind(r_summary, r_summary1)
-      r_summary$function_name <- function_name
 
       attr(r_summary, "resnames") <- names(r)
 
       attr(r, "r_summary") <- r_summary
-
     }
 
-  #  save(my_storr_object, r, file = "/tmp/debug")
+    # Historical local storr debug dump removed here.
 
     if (!is.null(my_storr_object) &&
         inherits(my_storr_object, "storr") &&
-        !util_is_try_error(try(my_storr_object$list(), silent = TRUE))) { # TODO: During tests, check for RDS files in the back-end larger than some threshold
-      # util_message("Before: %s", strsplit(as.character(system("df -h /", intern = TRUE)), "\\s+")[[2]][4])
-      # util_message("OS1: %s", capture.output(print(object.size(r), units = "MB", digits = 2)))
-      # util_message("OS2: %s", capture.output(print(object.size(r_summary), units = "MB", digits = 2)))
+        !util_is_try_error(try(my_storr_object$list(), silent = TRUE))) {
+      # Historical storr disk/object-size debug output removed here. Inspect
+      # with `git show 22c6c5bfb8 -- R/util_eval_to_dataquieR_result.R`.
       my_storr_object$set(
         key = nm,
         value = r_summary,
-        namespace = util_get_storr_summ_namespace(my_storr_object))
+        namespace = util_get_storr_summ_namespace(my_storr_object)
+      )
       if (!init && (!inherits(r, "dataquieR_NULL") ||
-          length(attr(r, "error")) == 0 ||
-          isTRUE(attr(attr(r, "error")[[1]], "intrinsic_applicability_problem")))) {
+            length(util_attr(r, "error", exact = TRUE)) == 0 ||
+            isTRUE(util_attr(util_attr(r, "error", exact = TRUE)[[1]],
+                "intrinsic_applicability_problem",
+                exact = TRUE
+              )))) {
         if (!init) {
-          my_storr_object$set(key = nm, value = TRUE, namespace =
-                                util_get_storr_stat_namespace(my_storr_object))
+          my_storr_object$set(
+            key = nm, value = TRUE, namespace =
+              util_get_storr_stat_namespace(my_storr_object)
+          )
         }
-        if (called_in_pipeline)
+        if (called_in_pipeline) {
           r <- util_compress(r)
+        }
         my_storr_object$set(key = nm, value = r)
       }
-      my_storr_object$flush_cache() # TODO: Needed?
-      # util_message("After: %s", strsplit(as.character(system("df -h /", intern = TRUE)), "\\s+")[[2]][4])
-      # if (util_as_numeric_with_unit(paste0(strsplit(as.character(system("df -H /", intern = TRUE)), "\\s+")[[2]][4], "b")) < util_as_numeric_with_unit("10Gb"))
-      #   util_error("Stopped by too low disk space")
-      # # if (util_get_avail_ram() < 1024^2 * 2) { # less than 2 MByte free
-      # #   util_error("Stopped by too low RAM")
-      # # }
-      # util_message("Free: %s", capture.output(print(util_get_avail_ram(), units = "GiB")))
+      my_storr_object$flush_cache()
+      # Historical post-flush disk/RAM guard prototype removed here. Inspect
+      # with `git show 22c6c5bfb8 -- R/util_eval_to_dataquieR_result.R`.
       r <- NA
     } else if (!is.null(my_storr_object)) {
       r <- "Invalid storr object"
     } else {
-      if (called_in_pipeline)
+      if (called_in_pipeline) {
         r <- util_compress(r)
+      }
     }
 
     try(my_storr_object$driver$disconnect(), silent = TRUE)

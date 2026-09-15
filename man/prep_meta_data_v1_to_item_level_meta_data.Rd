@@ -13,7 +13,8 @@ prep_meta_data_v1_to_item_level_meta_data(
 )
 }
 \arguments{
-\item{item_level}{\link{data.frame} the old item-level-metadata}
+\item{item_level}{\link{data.frame} the data frame that contains metadata
+attributes of study data}
 
 \item{verbose}{\link{logical} display all estimated decisions, defaults to \code{TRUE},
 except if called in a \link{dq_report2} pipeline.}

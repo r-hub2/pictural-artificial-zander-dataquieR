@@ -1,46 +1,27 @@
+# nolint start: line_length_linter.
 #' Generate a stratified full DQ report
 #'
-#' @param resp_vars [variable] the names of the measurement variables, if
-#'                             missing or `NULL`, all variables will be included
+#' @inheritParams .template_function_indicator
+#' @inheritParams .template_function_report_plan
+#'
 #' @param id_vars [variable] a vector containing the name/s of the variables
 #'                            containing ids, to
 #'                            be used to merge multiple data frames if provided
 #'                            in `study_data` and to be add to referred vars
-#' @param study_data [data.frame] the data frame that contains the measurements:
-#'                                it can be an R object (e.g., `bia`), a
-#'                                data frame (e.g., `"C:/Users/data/bia.dta"`),
-#'                                a vector containing data frames files (e.g.,
-#'                                c(`"C:/Users/data/bia.dta"`,
-#'                                `C:/Users/data/biames.dta"`)), or it can be
-#'                                left empty and the data frames are provided
-#'                                in the data frame level metadata. If only the
-#'                                file name without path is provided
-#'                                (e.g., `"bia.dta"`), the file
-#'                                name needs the extension and the path must be
-#'                                provided in the argument `input_dir`. It can
-#'                                also contain only the file name in case of
-#'                                example data from the package `dataquieR`
-#'                                (e.g., `"study_data"` or `"ship"`)
-#' @param item_level [data.frame] the data frame that contains metadata
-#'                               attributes of study data
-#' @param meta_data [data.frame] old name for `item_level`
-#' @param meta_data_segment [data.frame] -- optional: Segment level metadata
-#' @param meta_data_dataframe [data.frame] -- optional if `study_data` is
-#'                                            present: Data frame level metadata
-#' @param meta_data_cross_item [data.frame] -- optional: Cross-item level
-#'                                                                 metadata
-#' @param meta_data_item_computation [data.frame] -- optional: Computed items
-#'                                                                     metadata
-#' @param ... arguments to be passed through to [dq_report] or [dq_report2]
-#' @param label_col [variable attribute] the name of the column in the
-#'                                       metadata containing the labels of
-#'                                       the variables
-#' @param meta_data_v2 [character] path or file name of the workbook like
-#'                                 metadata file, see
-#'                                 [`prep_load_workbook_like_file`] for details.
-#'                                 **ALL LOADED DATAFRAMES WILL BE PURGED**,
-#'                                 using [`prep_purge_data_frame_cache`],
-#'                                 if you specify `meta_data_v2`
+#' @param ... arguments to be passed through to [dq_report] or [dq_report2],
+#'            including `cores`. In RStudio, avoid passing a caller-created
+#'            cluster such as `cores = cl`; this can hang during HTML report
+#'            finalization while thumbnail and embedded HTML files are written. Prefer
+#'            passing a number, e.g., `cores = 4`, or a backend list, e.g.,
+#'            `cores = list(mode = "socket", cpus = 4)`, so `dataquieR` can
+#'            create and stop the cluster itself. Alternatively run the same
+#'            command outside RStudio (on Windows start R from the Start menu,
+#'            on macOS open Terminal and run R, on Linux run R in a terminal).
+#'            To force a caller-owned cluster
+#'            in RStudio, set
+#'            `options(dataquieR.force_rstudio_user_cluster = TRUE)` or pass
+#'            `advanced_options =
+#'            list(dataquieR.force_rstudio_user_cluster = TRUE)`.
 #' @param segment_column [variable attribute] name of a metadata attribute
 #'                                             usable to split the report in
 #'                                             sections of variables, e.g. all
@@ -81,12 +62,32 @@
 #'                              in this directory if no path is provided
 #' @param advanced_options [list] options to set during report computation,
 #'                                see [options()]
-#' @param output_dir [character] if given, the output is not returned but saved
-#'                               in this directory
+#' @param html_table_backend [character] HTML table backend to use when
+#'                           `also_print` is `TRUE`. One of `"auto"`, `"DT2"`,
+#'                           or `"DT"`.
+#' @param output_dir [character] if given, the report objects are written to
+#'                               this directory and are not retained in RAM.
+#' @param dir [character] alias for `output_dir`.
 #' @param missing_tables [character] the name of the data frame containing the
 #'                                   missing codes, it can be a vector if more
 #'                                   than one table is provided. Example:
-#'                                   `c("missing_table1", "missing_table2")`
+#'                                   `c("missing_table1", "missing_table2")`.
+#'                                   Use this when `item_level` metadata are
+#'                                   provided separately from the workbook that
+#'                                   contains the referenced code or missing
+#'                                   list sheets. If a complete `meta_data_v2`
+#'                                   workbook is loaded, item-level references
+#'                                   in columns such as `CODE_LIST_TABLE` or
+#'                                   `MISSING_LIST_TABLE` may use the sheet name
+#'                                   only, e.g., `"tab1"`. If only the
+#'                                   item-level metadata are supplied, the
+#'                                   referenced table must already be present in
+#'                                   the data-frame cache under the exact name
+#'                                   used in the metadata. For tables loaded
+#'                                   from a workbook, this can be the fully
+#'                                   qualified workbook/sheet name, e.g.,
+#'                                   `"meta_data_v2.xlsx|tab1"`, and that same
+#'                                   name should be listed in `missing_tables`.
 #' @param also_print [logical] if `output_dir` is not `NULL`, also create
 #'                             `HTML` output for each report using
 #'                             [print.dataquieR_resultset2()]
@@ -131,10 +132,6 @@
 #' @param subgroup [character] optional, to define subgroups of cases. Rules are
 #'                                      to be written as `REDCap` rules.
 #'                                      Only VAR_NAMES are accepted in the rules.
-#' @param cross_item_level [data.frame] alias for `meta_data_cross_item`
-#' @param `cross-item_level` [data.frame] alias for `meta_data_cross_item`
-#' @param segment_level [data.frame] alias for `meta_data_segment`
-#' @param dataframe_level [data.frame] alias for `meta_data_dataframe`
 #' @param item_computation_level [data.frame] alias for
 #'                               `meta_data_item_computation`
 #' @param storr_factory [function] `NULL`, or
@@ -154,10 +151,25 @@
 #'                                     to the back-end.
 #' @param view [logical] open the returned report
 #'
-#' @return A named [list] of named [list]s of [dq_report2] reports, returned
-#'         invisibly unless `view = TRUE`. If `output_dir` is given, the result
-#'         is still returned (invisibly), and optionally opened in a browser
-#'         (`view = TRUE`, `also_print = TRUE`).
+#' @details
+#' `dq_report_by()` accepts the canonical study data and metadata arguments used
+#' by the indicator functions. In addition, report inputs can be given as file
+#' paths, vectors of file paths, cached example-data names, or via the data-frame
+#' level metadata. File names without a path are resolved relative to
+#' `input_dir`, if provided.
+#'
+#' The returned `dataquieR_report_by` bundle is printable. Without an output
+#' directory it contains the computed reports in memory. With `output_dir` or
+#' `dir`, reports are flushed to `.dq2` files and removed from the returned
+#' object. Such a disk-backed bundle remains printable only while that directory
+#' and its files are readable. Use `print(result)` to render its collection
+#' overview, or provide `also_print = TRUE` during computation.
+#'
+#' @return A printable `dataquieR_report_by` named list. Without an output
+#'         directory its leaves are [dq_report2] reports. With an output
+#'         directory its leaves are lightweight placeholders and the report
+#'         data remain in the referenced `.dq2` files. The result is returned
+#'         invisibly unless `view = TRUE`.
 #'
 #' @param force_overwrite [logical] force to overwrite `output_dir`, even if it
 #'                                 exists
@@ -174,10 +186,13 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{ # really long-running example.
+#' \dontrun{
+#' # really long-running example.
 #' prep_load_workbook_like_file("meta_data_v2")
-#' rep <- dq_report_by("study_data", label_col =
-#'   LABEL, strata_column = "CENTER_0")
+#' rep <- dq_report_by("study_data",
+#'   label_col =
+#'     LABEL, strata_column = "CENTER_0"
+#' )
 #' rep <- dq_report_by("study_data",
 #'   label_col = LABEL, strata_column = "CENTER_0",
 #'   segment_column = NULL
@@ -201,61 +216,85 @@
 #'   segment_column = STUDY_SEGMENT, output_dir = "/tmp/testRep",
 #'   also_print = TRUE
 #' )
-#' dq_report_by(study_data = "study_data", meta_data_v2 = "meta_data_v2",
-#'   advanced_options = list(dataquieR.study_data_cache_max = 0,
-#'   dataquieR.study_data_cache_metrics = TRUE,
-#'   dataquieR.study_data_cache_metrics_env = environment()),
-#'   cores = NULL, dimensions = "int")
-#' dq_report_by(study_data = "study_data", meta_data_v2 = "meta_data_v2",
+#' dq_report_by(
+#'   study_data = "study_data", meta_data_v2 = "meta_data_v2",
+#'   advanced_options = list(
+#'     dataquieR.study_data_cache_max = 0,
+#'     dataquieR.study_data_cache_metrics = TRUE,
+#'     dataquieR.study_data_cache_metrics_env = environment()
+#'   ),
+#'   cores = NULL, dimensions = "int"
+#' )
+#' dq_report_by(
+#'   study_data = "study_data", meta_data_v2 = "meta_data_v2",
 #'   advanced_options = list(dataquieR.study_data_cache_max = 0),
-#'   cores = NULL, dimensions = "int")
+#'   cores = NULL, dimensions = "int"
+#' )
 #' }
+# nolint end
 dq_report_by <- function(study_data,
-                         item_level = "item_level",
-                         meta_data_segment = "segment_level",
-                         meta_data_dataframe = "dataframe_level",
-                         meta_data_cross_item = "cross-item_level",
-                         meta_data_item_computation = "item_computation_level",
-                         missing_tables = NULL,
-                         label_col,
-                         meta_data_v2,
-                         segment_column = NULL,
-                         strata_column = NULL,
-                         strata_select = NULL,
-                         selection_type = NULL,
-                         segment_select = NULL,
-                         segment_exclude = NULL,
-                         strata_exclude = NULL,
-                         subgroup = NULL,
-                         resp_vars = character(0),
-                         id_vars = NULL,
-                         advanced_options =  list(),
-                         storr_factory = NULL,
-                         amend = FALSE,
-                         checkpoint_resumed =
-                           getOption("dataquieR.resume_checkpoint",
-                                     dataquieR.resume_checkpoint_default),
-                         ...,
-                         output_dir = NULL,
-                         input_dir = NULL,
-                         also_print = FALSE, # TODO: is this needed? or should this default to TRUE, whenever we have an output_dir?
-                         force_overwrite = FALSE,
-                         disable_plotly = FALSE,
-                         view = TRUE,
-                         meta_data = item_level,
-                         cross_item_level,
-                         `cross-item_level`,
-                         segment_level,
-                         dataframe_level,
-                         item_computation_level,
-                         author = prep_get_user_name(),
-                         title = ifelse(is.null(output_dir),
-                                        "Data quality report Bundle",
-                                        paste0(basename(output_dir))),
-                         subtitle = as.character(Sys.Date()),
-                         user_info = NULL) {
-
+  item_level = "item_level",
+  meta_data_segment = "segment_level",
+  meta_data_dataframe = "dataframe_level",
+  meta_data_cross_item = "cross-item_level",
+  meta_data_item_computation = "item_computation_level",
+  missing_tables = NULL,
+  label_col,
+  meta_data_v2,
+  segment_column = NULL,
+  strata_column = NULL,
+  strata_select = NULL,
+  selection_type = NULL,
+  segment_select = NULL,
+  segment_exclude = NULL,
+  strata_exclude = NULL,
+  subgroup = NULL,
+  resp_vars = character(0),
+  id_vars = NULL,
+  advanced_options = list(),
+  html_table_backend =
+    getOption(
+      "dataquieR.html_table_backend",
+      dataquieR.html_table_backend_default
+    ),
+  storr_factory = NULL,
+  amend = FALSE,
+  checkpoint_resumed =
+    getOption(
+      "dataquieR.resume_checkpoint",
+      dataquieR.resume_checkpoint_default
+    ),
+  ...,
+  output_dir = NULL,
+  input_dir = NULL,
+  also_print = FALSE,
+  force_overwrite = FALSE,
+  disable_plotly = FALSE,
+  view = TRUE,
+  meta_data = item_level,
+  cross_item_level,
+  `cross-item_level`,
+  segment_level,
+  dataframe_level,
+  item_computation_level,
+  author = prep_get_user_name(),
+  title = "Data quality report Bundle",
+  subtitle = as.character(Sys.Date()),
+  user_info = NULL,
+  dir = NULL) {
+  output_dir <- util_resolve_output_dir_alias(
+    dir = dir,
+    output_dir = output_dir,
+    dir_missing = missing(dir),
+    output_dir_missing = missing(output_dir)
+  )
+  has_output_dir <- !is.null(output_dir)
+  if (missing(title) && has_output_dir) {
+    title <- basename(output_dir)
+  }
   by_call <- rlang::caller_call(0)
+
+  util_defer_activate_rstudio_console(environment())
 
   .outer_by_env$outer_by <- list(
     i = NA,
@@ -263,16 +302,21 @@ dq_report_by <- function(study_data,
     msg = "Preparing computation..."
   )
 
-  on.exit({.outer_by_env$outer_by <- NULL}, add = TRUE)
+  withr::defer(
+    {
+      .outer_by_env$outer_by <- NULL
+    }
+  )
 
   start_time <- Sys.time()
 
   rep_id <- util_make_report_id()
 
   if (!suppressWarnings(util_ensure_suggested("plotly",
-                                              goal =
-                                              "creating interactive figures",
-                                              err = FALSE))) {
+        goal =
+          "creating interactive figures",
+        err = FALSE
+      ))) {
     if (!isTRUE(disable_plotly)) {
       util_message("Without the package plotly, you miss interactive figures.")
       disable_plotly <- TRUE
@@ -282,9 +326,18 @@ dq_report_by <- function(study_data,
   dots <- rlang::dots_list(...)
 
   util_stop_if_not(is.list(advanced_options))
+  util_expect_scalar(html_table_backend, check_type = is.character)
+  html_table_backend <- tolower(html_table_backend)
+  html_table_backend <- util_match_arg(
+    html_table_backend,
+    c("auto", "dt2", "dt")
+  )
+  if ("cores" %in% names(dots)) {
+    util_guard_rstudio_user_cluster(dots[["cores"]], advanced_options)
+  }
   util_expect_scalar(view, check_type = is.logical)
 
-  old_O <- options(c(
+  withr::local_options(c(
     list(
       dataquieR.CONDITIONS_WITH_STACKTRACE = FALSE,
       dataquieR.ERRORS_WITH_CALLER = FALSE,
@@ -294,15 +347,14 @@ dq_report_by <- function(study_data,
     ),
     advanced_options
   ))
-  on.exit(options(old_O), add = TRUE)
 
   # store the call to use it later for the technical info in the reports
   call_report_by <- paste(deparse(sys.call()), collapse = "")
+  call_report_by_overview <- util_compact_dq_report_by_call_from_env(
+    environment()
+  )
 
-  # ?re-think the next line with
-  # https://gitlab.com/libreumg/dataquier/-/issues/482
-  # clear the study data cache
-  # util_purge_study_data_cache()
+  # Historical study-data-cache purge idea tracked in dataquieR issue 482.
 
   # Check the arguments (exception of segment_select and segment_exclude)----
 
@@ -330,10 +382,12 @@ dq_report_by <- function(study_data,
 
   # check if the provided selection_type is acceptable
   if (!is.null(selection_type)) {
-    util_stop_if_not(selection_type %in%
-                       c("value", "v_label", "regex"),
-                     label =
-                       'The selection_type can only be "value", "v_label", or "regex"')
+    util_stop_if_not(
+      selection_type %in%
+        c("value", "v_label", "regex"),
+      label =
+        'The selection_type can only be "value", "v_label", or "regex"'
+    )
   }
 
   # check if subgroup rule is a string
@@ -347,29 +401,39 @@ dq_report_by <- function(study_data,
 
   util_expect_scalar(force_overwrite, check_type = is.logical)
 
-  ### check output directory only if also_print == TRUE
-  # if users specify an output dir, check if it is a scalar, a character
-  # string, check if also_print is a scalar and logical,
-  # stop if the specified dir already exists
-  # provide an error if the dir can not be created
-  if((!missing (also_print) && also_print == TRUE) ) {
-    if (!missing(output_dir)) {
-      util_expect_scalar(output_dir, check_type = is.character)
-      util_expect_scalar(also_print, check_type = is.logical)
-      util_overwrite_if_requested(output_dir, force_overwrite)
-      output_dir <- util_normalize_path(output_dir)
+  util_expect_scalar(also_print, check_type = is.logical)
+  if (has_output_dir) {
+    util_expect_scalar(output_dir, check_type = is.character)
+    output_entries <- if (dir.exists(output_dir)) {
+      list.files(output_dir, all.files = TRUE, no.. = TRUE)
+    } else {
+      character()
     }
+    if (also_print || length(output_entries)) {
+      util_overwrite_if_requested(output_dir, force_overwrite)
+    } else if (file.exists(output_dir) && !dir.exists(output_dir)) {
+      util_error(
+        "%s already exists as a file, not a directory",
+        dQuote(output_dir)
+      )
+    } else if (!dir.exists(output_dir) &&
+        !dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)) {
+      util_error("Could not create %s", dQuote(output_dir))
+    }
+    output_dir <- util_normalize_path(output_dir)
   }
 
   .hi <- .hp <- .hm <- NULL
   content_file <- NULL
-  if (!missing(output_dir) && also_print) {
+  if (has_output_dir && also_print) {
     content_file <- file.path(output_dir, "index.html")
-    list2env(util_init_html_progress(output_dir = output_dir,
-                            content_file = content_file,
-                            title = title,
-                            view = view,
-                            rep_id = rep_id), envir = environment())
+    list2env(util_init_html_progress(
+      output_dir = output_dir,
+      content_file = content_file,
+      title = title,
+      view = view,
+      rep_id = rep_id
+    ), envir = environment())
   }
 
   ### check input directory
@@ -382,7 +446,8 @@ dq_report_by <- function(study_data,
       util_error(
         "%s does not exist. Provide an %s containing the study data",
         dQuote(input_dir),
-        sQuote("input_dir"))
+        sQuote("input_dir")
+      )
     }
   }
 
@@ -402,41 +467,59 @@ dq_report_by <- function(study_data,
   ### load meta_data_v2 and item_level metadata
   # in case of presence of meta_data_v2 purge the cache and load it
   if (!missing(meta_data_v2)) {
-    util_message("Have %s set, so I'll remove all loaded data frames",
-                 sQuote("meta_data_v2"))
+    util_message(
+      "Have %s set, so I'll remove all loaded data frames",
+      sQuote("meta_data_v2")
+    )
 
 
-    #save the grading rule-sets and formats and re-add to cache after purge
+    # save the grading rule-sets and formats and re-add to cache after purge
     grading_rl <- NULL
-    if (getOption("dataquieR.grading_rulesets",
-                  dataquieR.grading_rulesets_default) %in%
-        prep_list_dataframes()) {
-      grading_rl <- prep_get_data_frame(getOption("dataquieR.grading_rulesets",
-                                                  dataquieR.grading_rulesets_default))
+    if (getOption(
+      "dataquieR.grading_rulesets",
+      dataquieR.grading_rulesets_default
+    ) %in%
+      prep_list_dataframes()) {
+      grading_rl <- prep_get_data_frame(getOption(
+        "dataquieR.grading_rulesets",
+        dataquieR.grading_rulesets_default
+      ))
     }
-   format_rl <- NULL
-    if (options("dataquieR.grading_formats" =
-                dataquieR.grading_formats_default) %in%
-        prep_list_dataframes()) {
-      format_rl <- prep_get_data_frame(options("dataquieR.grading_formats" =
-                                                 dataquieR.grading_formats_default))
+    format_rl <- NULL
+    if (options(
+      "dataquieR.grading_formats" =
+        dataquieR.grading_formats_default
+    ) %in%
+      prep_list_dataframes()) {
+      format_rl <- prep_get_data_frame(options(
+        "dataquieR.grading_formats" =
+          dataquieR.grading_formats_default
+      ))
     }
     prep_purge_data_frame_cache()
-    if(!is.null(grading_rl)) {
+    if (!is.null(grading_rl)) {
       prep_add_data_frames(
         data_frame_list =
           setNames(list(grading_rl),
-                   nm = getOption("dataquieR.grading_rulesets",
-                                  dataquieR.grading_rulesets_default)))
+            nm = getOption(
+              "dataquieR.grading_rulesets",
+              dataquieR.grading_rulesets_default
+            )
+          )
+      )
     }
-    if(!is.null(format_rl)) {
+    if (!is.null(format_rl)) {
       prep_add_data_frames(
         data_frame_list =
           setNames(list(format_rl),
-                   nm = options("dataquieR.grading_formats" =
-                                  dataquieR.grading_formats_default)))
+            nm = options(
+              "dataquieR.grading_formats" =
+                dataquieR.grading_formats_default
+            )
+          )
+      )
     }
-    #try to import the metadata, and if not possible, try to add
+    # try to import the metadata, and if not possible, try to add
     # the path if provided
     m <- try(prep_load_workbook_like_file(meta_data_v2), silent = TRUE)
     if (inherits(m, "try-error")) {
@@ -457,7 +540,7 @@ dq_report_by <- function(study_data,
     # if it is not present predicts item-level from the data
     if (!is.data.frame(meta_data) &&
         (length(meta_data) != 1 || (!is.character(meta_data)) ||
-         !exists(meta_data, .dataframe_environment()) )) {
+            !exists(meta_data, .dataframe_environment()))) {
       w <- paste(
         "Did not find any sheet named %s in %s, is this",
         "really dataquieR version 2 metadata?"
@@ -466,8 +549,9 @@ dq_report_by <- function(study_data,
         w <- cli::bg_red(cli::col_br_yellow(w))
       }
       util_warning(w, dQuote(meta_data),
-                   dQuote(meta_data_v2),
-                   immediate = TRUE)
+        dQuote(meta_data_v2),
+        immediate = TRUE
+      )
     }
   }
 
@@ -479,51 +563,17 @@ dq_report_by <- function(study_data,
 
   name_sd <- character(0)
 
-  # Getting name of file indicated by user to add it as argument in util_verify_names
+  # Getting name of file indicated by user to add it as argument in
+  # util_verify_names
   # (not including names from dataframe_level metadata)
   if (!missing(study_data)) {
-    # 1. the study_data argument is specified by the user, and is only 1 data frame
-    ## 1a. the data frame is an object in the environment
-    if (is.data.frame(study_data)) {
-       # get the name of the study data from the function call
-      name_sd <- head(as.character(substitute(study_data)), 1)
-
-    } else if (length(study_data) == 1 &&
-              is.character(study_data)) {
-      # 1b. the name of a data frame (not loaded yet) was indicated by the user
-      # add the path before the name of the study data
-      if (!is.null(input_dir)) {
-        if (!grepl(.Platform$file.sep, study_data, fixed = TRUE)) {
-          if (endsWith(input_dir, .Platform$file.sep)) {
-            input_dir <- substr(input_dir, 1, nchar(input_dir) - 1)
-          }
-          name_sd <- file.path(input_dir, study_data)
-        }
-      } else {
-        name_sd <- study_data
-      }
-
-    } else if (!is.data.frame(study_data) && length(study_data) > 1) {
-      ## 1c. two or more study data indicated as vector by the user
-      # if the study names are a vector of names without path and they are
-      # not URL, add the input_dir before the names of each study data
-      # create a list containing all names of the study data
-      if (!is.null(input_dir)) {
-        name_sd <- vapply(study_data, function(x) {
-          res <- x
-          if (!grepl(.Platform$file.sep, x, fixed = TRUE)) {
-            if (endsWith(input_dir, .Platform$file.sep)) {
-              input_dir <- substr(input_dir, 1, nchar(input_dir) - 1)
-            }
-            res <- file.path(input_dir, x)
-          }
-          return(res)
-        }, FUN.VALUE = character(1))
-        names(name_sd) <- NULL
-      } else {
-        name_sd <- study_data
-      }
-    }
+    name_sd <- util_report_by_study_data_refs(
+      study_data = study_data,
+      study_data_expr = util_report_by_study_data_expr(
+        substitute(study_data)
+      ),
+      input_dir = input_dir
+    )
   } else {
     name_sd <- character(0)
   }
@@ -533,8 +583,7 @@ dq_report_by <- function(study_data,
   rm(name_sd)
 
 
-
-  ##back-compatibility for column names in item_level_metadata
+  ## back-compatibility for column names in item_level_metadata
   my_args <- list(...)
   if ("cause_label_df" %in% names(my_args)) {
     cause_label_df <- my_args$cause_label_df
@@ -548,8 +597,10 @@ dq_report_by <- function(study_data,
     names(meta_data),
     error = TRUE,
     err_msg =
-      sprintf("Did not find the mandatory column %%s in the %s.",
-        sQuote("meta_data"))
+      sprintf(
+        "Did not find the mandatory column %%s in the %s.",
+        sQuote("meta_data")
+      )
   ))
 
   # define label_col as "LABEL" if they are not specified by users
@@ -563,32 +614,26 @@ dq_report_by <- function(study_data,
   # fix to rename columns from old metadata to new
   # (e.g., KEY_STUDY_SEGMENT > STUDY_SEGMENT)
   # even if cause_label_df is missing
-  if (missing(cause_label_df)) {
-    try(meta_data <- do.call(
-      prep_meta_data_v1_to_item_level_meta_data,  #TODO: check very slow
-      list(
-        meta_data = meta_data,
-        label_col = label_col,
-        verbose = FALSE
-      )
-    ),
-    silent = TRUE)
+  if (rlang::is_missing(cause_label_df)) {
+    try(meta_data <- util_prepare_item_level_metadata(
+      meta_data = meta_data,
+      label_col = label_col
+    ), silent = TRUE)
   } else {
-    try(meta_data <- do.call(
-      prep_meta_data_v1_to_item_level_meta_data,
-      list(
-        meta_data = meta_data,
-        label_col = label_col,
-        cause_label_df = cause_label_df,
-        verbose = FALSE
-      )
-    ),
-    silent = TRUE)
+    try(meta_data <- util_prepare_item_level_metadata(
+      meta_data = meta_data,
+      label_col = label_col,
+      cause_label_df = cause_label_df
+    ), silent = TRUE)
   }
 
   label_col_provided <- label_col
-  mod_label <- util_ensure_label(meta_data = meta_data,  #here it creates VAR_NAMES_1
-                                 label_col = label_col)
+  # dq_report_by() must repair duplicate display labels before calling
+  # dq_report2(), so split/overview labels stay consistent with sub-reports.
+  mod_label <- util_ensure_label(
+    meta_data = meta_data,
+    label_col = label_col
+  )
   if (!is.null(mod_label$label_modification_text)) {
     # There were changes in the metadata.
     meta_data <- mod_label$meta_data
@@ -600,219 +645,72 @@ dq_report_by <- function(study_data,
 
   rm(my_args)
 
-  # check if a column VARIABLE_ROLE is present in the metadata.
-  # if not create one with always "primary" as role
-  if (!(VARIABLE_ROLE %in% colnames(meta_data))) {
-    util_message(
-      "No %s assigned in item level metadata. Defaulting to %s.",
-      sQuote(VARIABLE_ROLE),
-      dQuote(VARIABLE_ROLES$PRIMARY),
-      applicability_problem = TRUE)
-    meta_data$VARIABLE_ROLE <- VARIABLE_ROLES$PRIMARY
-  }
+  meta_data <- util_ensure_variable_roles(
+    meta_data = meta_data,
+    label_col = label_col
+  )
 
   util_stop_if_not(
-    `Internal error, sorry: meta_data should be a data frame in dq_report_by. Please report` =
-      is.data.frame(meta_data))
+    `Internal error, sorry: meta_data should be a data frame in dq_report_by. Please report` = # nolint: line_length_linter.
+      is.data.frame(meta_data)
+  )
 
   # if DATAFRAMES is present in the item_level metadata
   # check if it is a character vector.
   if (DATAFRAMES %in% colnames(meta_data)) {
     util_expect_data_frame(meta_data,
-                           col_names = list(DATAFRAMES = is.character))
-  }
-
-  # Check if id_vars is a string vector, and is present in item_level md----
-  if (!is.null(id_vars)) {
-    util_expect_scalar(
-      arg_name = id_vars,
-      allow_more_than_one = TRUE,
-      check_type = is.character
+      col_names = list(DATAFRAMES = is.character)
     )
-
-    #Check if id_vars is written with pipe, in case fix it
-    if (length(id_vars) == 1) {
-      id_vars <-
-        unname(unlist(util_parse_assignments(id_vars,
-                                             split_char = SPLIT_CHAR)))
-    }
-    # check if the id_vars is present in the item_level md
-    id_vars <- vapply(id_vars, FUN = function(x){
-      if (!x %in% meta_data$VAR_NAMES) {
-        var_x <- x
-        x <- try(util_map_labels(x,
-                             meta_data = meta_data,
-                             from = label_col,
-                             to = VAR_NAMES), silent = TRUE)
-        if (util_is_try_error(x)) {
-          util_error(c("The id_vars %s is not present",
-                       " in the item_level metadata"),
-                     dQuote(var_x))
-        } else {
-          names(x) <- NULL
-        }
-        rm(var_x)
-        return(x)
-      } else {x}
-    }, FUN.VALUE = character(1) )
-    names(id_vars) <- NULL
-
-  } else {
-    #if not specified as argument by the user
-    id_vars <- character(0)
   }
 
-
-  # Check the arguments segment_select and segment_exclude----
-  # check if both segment_column and segment_select are present
-  if (!is.null(segment_select) && is.null(segment_column)) {
-
-    if(STUDY_SEGMENT %in% colnames(meta_data)) {
-      segment_column <- STUDY_SEGMENT
-      possible_segments <- unique(meta_data$STUDY_SEGMENT)
-      if (any(!segment_select %in% possible_segments, na.rm = TRUE)) {
-        util_error(c("segment_select values are not present in the ",
-                     "column 'STUDY_SEGMENT' that is assumed to be the ",
-                     "segment_column when this is not assigned."))
-      }
-    } else {
-      util_error(c("No segment_column provided and no STUDY_SEGMENT ",
-                   "available in the metadata"))
-    }
-  }
-
-  #check if both segment_column and segment_exclude are present
-  if (!is.null(segment_exclude) && is.null(segment_column)) {
-    if(STUDY_SEGMENT %in% colnames(meta_data)) {
-      segment_column <- STUDY_SEGMENT
-      possible_segments <- unique(meta_data$STUDY_SEGMENT)
-      if(any(!segment_exclude %in% possible_segments, na.rm = TRUE)) {
-        util_error(c("segment_exclude values are not present in the ",
-                     "column 'STUDY_SEGMENT' that is assumed to be the ",
-                     "segment_column when this is not assigned."))
-      }
-    } else {
-      util_error(c("No segment_column provided and no STUDY_SEGMENT",
-                   " available in the metadata"))
-      }
-  }
-
-  # Load cross-item_level metadata and normalize it ----
-  # check if there is a cross item metadata and if it is a data frame
-  # in case is not present, create an empty data frame for cross item metadata
-  try(util_expect_data_frame(meta_data_cross_item), silent = TRUE)
-  if (!is.data.frame(meta_data_cross_item)) {
-    util_message(sprintf(
-      "No cross-item level metadata %s found",
-      dQuote(meta_data_cross_item)))
-    meta_data_cross_item <- data.frame(VARIABLE_LIST = character(0),
-                                       CHECK_LABEL = character(0))
-  }
-
-  # First normalize input for meta_data_cross_item from the user
-  meta_data_cross_item <- util_normalize_cross_item(
+  # Normalize identifier variables to their item-level variable names ----
+  id_vars <- util_report_by_id_vars(
+    id_vars = id_vars,
     meta_data = meta_data,
-    meta_data_cross_item = meta_data_cross_item,
     label_col = label_col
   )
 
-  # Load segment_level metadata ----
-  try(util_expect_data_frame(meta_data_segment,
-                             col_names = list(STUDY_SEGMENT = is.character)),
-      silent = TRUE)
-  # if not present, create an empty one
-  if (!is.data.frame(meta_data_segment)) {
-    util_message("No segment level metadata %s found",
-                 dQuote(meta_data_segment))
-    if(!is.null(meta_data$STUDY_SEGMENT)) {  #Add study segments if present
-      meta_data_segment <- data.frame(STUDY_SEGMENT =
-                                        unique(meta_data$STUDY_SEGMENT),
-                                      SEGMENT_ID_VARS = NA_character_)
-    } else {
-      meta_data_segment <- data.frame(STUDY_SEGMENT =
-                                        character(0),
-                                      SEGMENT_ID_VARS = character(0))
-    }
-  }
 
-  if(!SEGMENT_ID_VARS %in% colnames(meta_data_segment)){
-    meta_data_segment$SEGMENT_ID_VARS <- NA_character_
-  }
+  # Resolve segment selection through the default STUDY_SEGMENT column ----
+  segment_column_was_missing <- missing(segment_column)
+  segment_column <- util_report_by_segment_column(
+    meta_data = meta_data,
+    segment_column = segment_column,
+    segment_select = segment_select,
+    segment_exclude = segment_exclude
+  )
 
-
-  # Load data frame_level metadata ----
-  # check if there is a dataframe level metadata or provide message
-  try(util_expect_data_frame(meta_data_dataframe), silent = TRUE)
-  if (!is.data.frame(meta_data_dataframe)) {
-    util_message(sprintf(
-      "No dataframe level metadata %s found",
-      dQuote(meta_data_dataframe)))
-    meta_data_dataframe <- data.frame(DF_NAME = character(0),
-                                      DF_CODE = character(0),
-                                      DF_ID_VARS = character(0))
-  } else if (is.data.frame(meta_data_dataframe) &&
-             (!missing(study_data) && !is.data.frame(study_data) &&
-              length(study_data) > 1)) {
-    # two or more study data indicated as vector by the user
-    util_message(c("When multiple data frames are provided for the",
-                   " argument 'study data', ",
-                   "the dataframe_level_metadata information will be ignored"))
-    meta_data_dataframe <- data.frame(DF_NAME = character(0),
-                                      DF_CODE = character(0),
-                                      DF_ID_VARS = character(0))
-  } else {
-    # check presence of expected columns in the dataframe_level metadata
-    util_expect_data_frame(meta_data_dataframe,
-                           col_names = list(DF_NAME = is.character))
-
-    if (DF_ID_VARS %in% colnames(meta_data_dataframe)) {
-      util_expect_data_frame(meta_data_dataframe,
-                             col_names = list(DF_ID_VARS = is.character))
-    } else {
-      meta_data_dataframe$DF_ID_VARS <- NA_character_
-    }
-
-    if (DF_CODE %in% colnames(meta_data_dataframe)) {
-      util_expect_data_frame(meta_data_dataframe,
-                             col_names = list(DF_CODE = is.character))
-    } else {
-      meta_data_dataframe$DF_CODE <- NA_character_
-    }
-
-    if(nrow(meta_data_dataframe) > 0) {
-      # Add the path to the dataframe name if not already present,
-      # if input_dir is provided
-      if (!is.null(input_dir)) {
-        meta_data_dataframe$DF_NAME <-
-          vapply(
-            meta_data_dataframe$DF_NAME,
-            FUN = function(x) {
-              if (!grepl(.Platform$file.sep, x, fixed = TRUE)) {
-                if (endsWith(input_dir, .Platform$file.sep)) {
-                  input_dir <- substr(input_dir, 1, nchar(input_dir) - 1)
-                }
-                x <- file.path(input_dir, x)
-                return(x)
-              } else {
-                return(x)
-              }
-            },
-            FUN.VALUE = character(1)
-          )}
-    }
-  }
+  # Prepare the remaining metadata levels ----
+  metadata_levels <- util_report_by_metadata_levels(
+    meta_data = meta_data,
+    meta_data_cross_item = meta_data_cross_item,
+    meta_data_segment = meta_data_segment,
+    meta_data_dataframe = meta_data_dataframe,
+    label_col = label_col,
+    study_data_provided = !missing(study_data),
+    study_data_is_data_frame = !missing(study_data) && is.data.frame(study_data), # nolint: line_length_linter.
+    study_data_length = if (!missing(study_data)) length(study_data) else 0L,
+    input_dir = input_dir
+  )
+  meta_data_cross_item <- metadata_levels$meta_data_cross_item
+  meta_data_segment <- metadata_levels$meta_data_segment
+  meta_data_dataframe <- metadata_levels$meta_data_dataframe
 
   # Load "meta_data_item_computation" metadata and complete VARIABLE_LIST ----
   # check if there is a computed_items metadata and if it is a data frame
   # in case is not present, create an empty data frame for computed_items
   try(util_expect_data_frame(meta_data_item_computation),
-      silent = TRUE)
+    silent = TRUE
+  )
   if (!is.data.frame(meta_data_item_computation)) {
     util_message(sprintf(
       "No meta_data_item_computation %s found",
-      dQuote(meta_data_item_computation)))
-    meta_data_item_computation <- data.frame(VAR_NAMES = character(0),
-                                             COMPUTATION_RULE = character(0))
+      dQuote(meta_data_item_computation)
+    ))
+    meta_data_item_computation <- data.frame(
+      VAR_NAMES = character(0),
+      COMPUTATION_RULE = character(0)
+    )
   }
 
   if (VARIABLE_LIST %in% colnames(meta_data_cross_item)) {
@@ -829,73 +727,18 @@ dq_report_by <- function(study_data,
     meta_data[["ORIGINAL_VAR_NAMES"]],
     meta_data[["ORIGINAL_LABEL"]]
   ))
-  needles <- paste0("[", needles_var_names, "]")
-  x <- vapply(
-    setNames(needles, nm = needles_var_names),
-    grepl,
-    setNames(nm = meta_data_item_computation[["COMPUTATION_RULE"]]),
-    fixed = TRUE,
-    FUN.VALUE = logical(length = nrow(meta_data_item_computation))
+  meta_data_item_computation <- util_report_by_complete_computation_variables(
+    meta_data_item_computation,
+    variable_names = needles_var_names
   )
-  if (is.vector(x)) {
-    x <- as.matrix(t(x))
-  }
-  variablelist <- unname(lapply(as.data.frame(t(x)), function(xx)
-    unique(sort(colnames(
-      x
-    )[xx]))))
-  variablelist <-
-    lapply(variablelist, paste0, collapse = sprintf(" %s ", SPLIT_CHAR))
-
-  if (!VARIABLE_LIST %in% colnames(meta_data_item_computation) &&
-      nrow(meta_data_item_computation) > 0) {
-    meta_data_item_computation[[VARIABLE_LIST]] <- NA_character_
-  } else if (!VARIABLE_LIST %in% colnames(meta_data_item_computation) &&
-             nrow(meta_data_item_computation) == 0) {
-    meta_data_item_computation[[VARIABLE_LIST]] <- character(0)
-  }
-  vl_empty <- util_empty(meta_data_item_computation[[VARIABLE_LIST]])
-  meta_data_item_computation[[VARIABLE_LIST]][vl_empty] <-
-    variablelist[vl_empty]
 
   # define vars_in_subgroup----
-  if(!is.null(subgroup)){
-    needles_var_names <- unique(c(meta_data[[VAR_NAMES]],
-                                  meta_data[[label_col]],
-                                  meta_data[[LABEL]],
-                                  meta_data[[LONG_LABEL]],
-                                  meta_data[["ORIGINAL_VAR_NAMES"]],
-                                  meta_data[["ORIGINAL_LABEL"]]))
-    needles <- paste0("[", needles_var_names, "]")
-    x <- vapply(setNames(needles, nm = needles_var_names),
-                grepl,
-                setNames(nm = subgroup),
-                fixed = TRUE,
-                FUN.VALUE = logical(length = length(subgroup)))
-    if (is.vector(x)) {
-      x <- as.matrix(t(x))
-    }
-    vars_in_subgroup <- unlist(unname(lapply(as.data.frame(t(x)), function(xx)
-      unique(sort(colnames(x)[xx])))))
-    rm(needles_var_names, needles, x)
-  } else {
-    vars_in_subgroup <- character(0)
-  }
-
-  vars_in_subgroup <- #if not in VAR_NAMES reduce it to VAR_NAMES
-    vapply(vars_in_subgroup, FUN = function(x) {
-      if(!x %in% meta_data$VAR_NAMES) {
-        x <- util_map_labels(
-          x,
-          meta_data = meta_data,
-          from = label_col,
-          to = VAR_NAMES)
-        names(x) <- NULL
-        return(x)
-      } else {
-        x
-      }
-    }, FUN.VALUE = character(1))
+  vars_in_subgroup <- util_report_by_subgroup_variables(
+    subgroup = subgroup,
+    variable_names = needles_var_names,
+    meta_data = meta_data,
+    label_col = label_col
+  )
 
   # Define needed objects for later use----
   # initialize split_segment to FALSE
@@ -904,15 +747,16 @@ dq_report_by <- function(study_data,
 
 
   # Prepare/filter item_level metadata when argument resp_vars is provided ----
-  if(!missing(resp_vars)) {
-    #if resp_vars is not VAR_NAMES but LABELS, first turn them to VAR_NAMES
+  if (!missing(resp_vars)) {
+    # if resp_vars is not VAR_NAMES but LABELS, first turn them to VAR_NAMES
     resp_vars <- vapply(resp_vars, FUN = function(x) {
-      if(!x %in% meta_data$VAR_NAMES) {
+      if (!x %in% meta_data[[VAR_NAMES]]) {
         x <- util_map_labels(
           x,
           meta_data = meta_data,
           from = label_col,
-          to = VAR_NAMES)
+          to = VAR_NAMES
+        )
         names(x) <- NULL
         return(x)
       } else {
@@ -920,29 +764,12 @@ dq_report_by <- function(study_data,
       }
     }, FUN.VALUE = character(1))
 
-    # 1st: extract all rules from cross-item containing a var from resp_vars
-    #combine var_names with labels
-    vars <- util_map_labels(resp_vars,
-                            meta_data = meta_data,
-                            to = label_col,
-                            from = VAR_NAMES)
-    # create a list with the vars from the column
-    # variable_list in cross-item metadata
-    rules_vars <-
-      util_parse_assignments(meta_data_cross_item$VARIABLE_LIST,
-                             multi_variate_text =
-                               TRUE)
-
-    # intersect vars in the rules with vars
-    # in the segment to see which rules affect the
-    # current segment and discard rules not affected by the resp_vars
-    rules_to_use_cil <-
-      vapply(lapply(rules_vars, intersect, vars),
-             length,
-             FUN.VALUE = integer(1)) > 0
-    cil_in_resp_vars <- meta_data_cross_item[rules_to_use_cil, , FALSE]
-
-    rm(rules_to_use_cil, rules_vars)
+    cil_in_resp_vars <- util_filter_cross_item_metadata(
+      meta_data_cross_item = meta_data_cross_item,
+      resp_vars = resp_vars,
+      meta_data = meta_data,
+      label_col = label_col
+    )
 
 
     # 2nd: extract all rules containing a resp_vars from item_computation_level
@@ -952,36 +779,42 @@ dq_report_by <- function(study_data,
       meta_data_item_computation$VAR_NAMES,
       meta_data = meta_data,
       to = label_col,
-      from = VAR_NAMES)
+      from = VAR_NAMES
+    )
     # intersect vars in the rules with resp_vars
     computed_to_use <-
       vapply(lapply(comp_vars, intersect, vars),
-             length,
-             FUN.VALUE = integer(1)) > 0
+        length,
+        FUN.VALUE = integer(1)
+      ) > 0
 
     # discard rules not affected by resp_vars
-    computed_in_resp_vars <- meta_data_item_computation[computed_to_use, ,
-                                                        FALSE]
+    computed_in_resp_vars <- meta_data_item_computation[
+      computed_to_use, ,
+      drop = FALSE
+    ]
 
-    rm(computed_to_use, comp_vars, vars)
+    rm(computed_to_use, comp_vars)
 
     # Obtain all the original plus referred variables and
     # the filtered item_level metadata.
     # All the referred variables added has a variable role = 'suppress'
-    overview_referred <- util_referred_vars(resp_vars = resp_vars,
-                                            id_vars = id_vars,
-                                            vars_in_subgroup = vars_in_subgroup,
-                                            label_col = label_col,
-                                            meta_data = meta_data,
-                                            meta_data_segment =
-                                              meta_data_segment,
-                                            meta_data_dataframe =
-                                              meta_data_dataframe,
-                                            meta_data_cross_item =
-                                              cil_in_resp_vars,
-                                            meta_data_item_computation =
-                                              computed_in_resp_vars,
-                                            strata_column = strata_column)
+    overview_referred <- util_referred_vars(
+      resp_vars = resp_vars,
+      id_vars = id_vars,
+      vars_in_subgroup = vars_in_subgroup,
+      label_col = label_col,
+      meta_data = meta_data,
+      meta_data_segment =
+        meta_data_segment,
+      meta_data_dataframe =
+        meta_data_dataframe,
+      meta_data_cross_item =
+        cil_in_resp_vars,
+      meta_data_item_computation =
+        computed_in_resp_vars,
+      strata_column = strata_column
+    )
     meta_data_cross_item <- cil_in_resp_vars
     meta_data_item_computation <- computed_in_resp_vars
     resp_vars_complete <- overview_referred$vars_complete
@@ -991,10 +824,10 @@ dq_report_by <- function(study_data,
 
     rm(overview_referred)
 
-    #Modify also meta_data_item_computation to remove non necessary rows
+    # Modify also meta_data_item_computation to remove non necessary rows
     meta_data_item_computation <-
       meta_data_item_computation[meta_data_item_computation$VAR_NAMES %in%
-                                   resp_vars_complete, , drop = FALSE]
+        resp_vars_complete, , drop = FALSE]
   }
 
 
@@ -1004,7 +837,7 @@ dq_report_by <- function(study_data,
   # specifically stated by the user "segment_column = NULL"
   # if there is "segment_column = NULL" it is nowhere in the if statement,
   # and it does not create any split
-  if ((missing(segment_column) && is.null(segment_column)) &&
+  if ((segment_column_was_missing && is.null(segment_column)) &&
       is.null(strata_column) && is.null(subgroup)) {
     if (STUDY_SEGMENT %in% colnames(meta_data)) {
       segment_column <- STUDY_SEGMENT
@@ -1020,15 +853,19 @@ dq_report_by <- function(study_data,
       )
     }
   } else if (is.null(segment_column) &&
-             !is.null(strata_column)) {
+      !is.null(strata_column)) {
     # if strata_column specified, check if the variable is in VAR_NAMES and
     # set a new object with the label if possible
     if (label_col_provided != VAR_NAMES && !is.null(strata_column)) {
       strata_column1 <- strata_column
-      strata_column <- try(util_map_labels(strata_column,
-                                           meta_data, VAR_NAMES,
-                                           label_col),
-                           silent = TRUE)
+      strata_column <- try(
+        util_map_labels(
+          strata_column,
+          meta_data, VAR_NAMES,
+          label_col
+        ),
+        silent = TRUE
+      )
       # if strata_column is a VAR_NAME then there is an error instead of a
       # vector in strata_column, so replace with the original value
       if (!is.vector(strata_column)) {
@@ -1044,10 +881,12 @@ dq_report_by <- function(study_data,
           applicability_problem = TRUE
         )
       }
-      strata_column_label <- util_map_labels(strata_column,
-                                             meta_data,
-                                             label_col,
-                                             VAR_NAMES)
+      strata_column_label <- util_map_labels(
+        strata_column,
+        meta_data,
+        label_col,
+        VAR_NAMES
+      )
     } else if (label_col_provided == VAR_NAMES && !is.null(strata_column)) {
       if (!strata_column %in% meta_data[VAR_NAMES]) {
         util_error(
@@ -1058,18 +897,21 @@ dq_report_by <- function(study_data,
           applicability_problem = TRUE
         )
       }
-      strata_column_label <- util_map_labels(strata_column,
-                                             meta_data, label_col,
-                                             VAR_NAMES)
+      strata_column_label <- util_map_labels(
+        strata_column,
+        meta_data, label_col,
+        VAR_NAMES
+      )
     }
     # if only segment_column is provided, check if the value corresponds to
     # a column in the item_level_metadata
   } else if (!is.null(segment_column) &&
-             is.null(strata_column)) {
+      is.null(strata_column)) {
     if (!(segment_column %in% colnames(meta_data))) {
       util_error(
         "No metadata attribute %s found for segmenting DQ report.",
-        dQuote(segment_column))
+        dQuote(segment_column)
+      )
     }
     # if both segment_column and strata_column are provided
     # check if the segment_column provided corresponds to a column
@@ -1077,18 +919,23 @@ dq_report_by <- function(study_data,
     # check if the variable of strata_column is in VAR_NAMES and
     # set a new object with the label if possible
   } else if (!is.null(segment_column) &&
-             !is.null(strata_column)) {
+      !is.null(strata_column)) {
     if (!(segment_column %in% colnames(meta_data))) {
       util_error(
         "No metadata attribute %s found for segmenting DQ report.",
-        dQuote(segment_column))
+        dQuote(segment_column)
+      )
     }
     if (label_col_provided != VAR_NAMES && !is.null(strata_column)) {
       strata_column1 <- strata_column
-      strata_column <- try(util_map_labels(strata_column,
-                                           meta_data, VAR_NAMES,
-                                           label_col),
-                           silent = TRUE)
+      strata_column <- try(
+        util_map_labels(
+          strata_column,
+          meta_data, VAR_NAMES,
+          label_col
+        ),
+        silent = TRUE
+      )
       # if strata_column is a VAR_NAME then there is an error instead of a
       # vector in strata_column, so replace with the original value
 
@@ -1105,9 +952,11 @@ dq_report_by <- function(study_data,
           applicability_problem = TRUE
         )
       }
-      strata_column_label <- util_map_labels(strata_column,
-                                             meta_data, label_col,
-                                             VAR_NAMES)
+      strata_column_label <- util_map_labels(
+        strata_column,
+        meta_data, label_col,
+        VAR_NAMES
+      )
     } else if (label_col_provided == VAR_NAMES && !is.null(strata_column)) {
       if (!strata_column %in% meta_data[, VAR_NAMES, drop = TRUE]) {
         util_error(
@@ -1118,152 +967,116 @@ dq_report_by <- function(study_data,
           applicability_problem = TRUE
         )
       }
-      strata_column_label <- util_map_labels(strata_column,
-                                             meta_data, label_col,
-                                             VAR_NAMES)
+      strata_column_label <- util_map_labels(
+        strata_column,
+        meta_data, label_col,
+        VAR_NAMES
+      )
     }
   }
 
   # Define the study data----
-  #if the study_data argument is specified by the user
-  if (!missing(study_data)) {
-    ### case 1: only one study data indicated----
-    #the data frame is an object in the environment
-    if (is.data.frame(study_data)) {
-      # if it is a data frame, look up the call of the function
-      # to get the name of the study data from the call
-      name_of_study_data <-
-        head(as.character(substitute(study_data)), 1)
-      # add the study data to the cache
-      prep_add_data_frames(data_frame_list = setNames(list(study_data),
-                                                      nm = name_of_study_data))
-      # create also here for compatibility a list_sd_columns,
-      # a list containing one element in this case,
-      # containing the names of the study data variables
-      dataframe_names <- name_of_study_data
-      list_sd_columns <- colnames(study_data)
-      list_sd_columns <- list(list_sd_columns)
-      names(list_sd_columns) <- dataframe_names
-    } else if (length(study_data) == 1 &&
-               is.character(study_data)) {
-      # if the user indicate a name of a data frame,
-      # use that name (not loaded yet)
-
-      # add the path before the name of the study data
-      if (!is.null(input_dir)) {
-        if (!grepl(.Platform$file.sep, study_data, fixed = TRUE)) {
-          if (endsWith(input_dir, .Platform$file.sep)) {
-            input_dir <- substr(input_dir, 1, nchar(input_dir) - 1)
-          }
-          study_data <- file.path(input_dir, study_data)
-        }
-      }
-      name_of_study_data <- study_data
-
-      # create also here for compatibility a list_sd_columns,
-      # a list containing one element in this case,
-      # containing the names of the study data variables
-      dataframe_names <- name_of_study_data
-      list_sd_columns <- colnames(prep_get_data_frame(dataframe_names))
-      list_sd_columns <- list(list_sd_columns)
-      names(list_sd_columns) <- dataframe_names
-    } else if (!is.data.frame(study_data) && length(study_data) > 1) {
-      ## case 2: two or more study data indicated as vector by the user----
-      # if the study names are a vector of names without path and they are
-      # not URL, add the input_dir before the names of each study data
-
-      # create a list containing all names of the study data
-      if (!is.null(input_dir)) {
-        dataframe_names <- vapply(study_data, function(x) {
-          res <- x
-          if (!grepl(.Platform$file.sep, x, fixed = TRUE)) {
-            if (endsWith(input_dir, .Platform$file.sep)) {
-              input_dir <- substr(input_dir, 1, nchar(input_dir) - 1)
-            }
-            res <- file.path(input_dir, x)
-          }
-          return(res)
-        }, FUN.VALUE = character(1))
-        names(dataframe_names) <- NULL
-      } else {
-        dataframe_names<- study_data
-      }
-
-
-
-      # import the name of the variables in the study data
-      list_sd_columns <- lapply(setNames(nm = dataframe_names), function (nm) {
-        columns_df <-
-          try(prep_get_data_frame(nm,
-                                  column_names_only = TRUE,
-                                  keep_types = TRUE),
-              silent = TRUE)
-        if (util_is_try_error(columns_df)) {
-          columns_df <- NULL
-        }
-        columns_df
-      })
-      #import works also with URLs, in combination with n_max and nrows = 0
-      list_sd_columns <- lapply(list_sd_columns, colnames)
-      names(list_sd_columns) <- dataframe_names
-    } else {
-      util_error(c("The provided ",
-                   "study_data argument of class %s is not supported"),
-                 util_pretty_vector_string(class(study_data)),
-                 applicability_problem = TRUE)
+  # If the user starts from a prepared/mapped ds1, continue with the original
+  # study data kept in attr(., "study_data"). This keeps dq_report_by aligned
+  # with raw-data calls for strata selection and metadata matching, both of
+  # which use VAR_NAMES. If the caller already passed a type-adjusted ds1, the
+  # pre-adjustment values cannot be reconstructed at this point.
+  if (!missing(study_data) &&
+      is.data.frame(study_data) &&
+      isTRUE(util_attr(study_data, "MAPPED", exact = TRUE))) {
+    raw_study_data <- util_attr(study_data, "study_data", exact = TRUE)
+    raw_study_data <- util_raw_study_data_attr_subset(
+      ds1 = study_data,
+      raw_study_data = raw_study_data,
+      meta_data = meta_data
+    )
+    if (!is.data.frame(raw_study_data)) {
+      util_error(
+        c(
+          "The prepared study data attribute %s is missing or stale.",
+          "Please pass raw study data or rebuild the prepared data frame."
+        ),
+        sQuote("study_data"),
+        applicability_problem = TRUE
+      )
     }
+    study_data <- raw_study_data
+  }
+
+  # if the study_data argument is specified by the user
+  if (!missing(study_data)) {
+    study_data_info <- util_report_by_collect_study_data(
+      study_data = study_data,
+      study_data_expr = util_report_by_study_data_expr(
+        substitute(study_data)
+      ),
+      input_dir = input_dir
+    )
+    study_data <- study_data_info$study_data
+    name_of_study_data <- study_data_info$name_of_study_data
+    dataframe_names <- study_data_info$dataframe_names
+    list_sd_columns <- study_data_info$list_sd_columns
+    rm(study_data_info)
   } else if (missing(study_data) &&
-             is.data.frame(meta_data_dataframe)) {
-    ### case 3: no study data name provided by the user, use meta_data_dataframe----
+      is.data.frame(meta_data_dataframe)) {
+    ### case 3: no study data name provided by the user, use
+    #meta_data_dataframe----
     # import the study_data names from meta_data_dataframe
 
-     #Following 4 rowsNot needed, It is not possible to arrive here without a valid DF_NAME
-     # check if the column DF_NAME is not empty
-#    if (all(is.na(meta_data_dataframe$DF_NAME))) {
-#      util_error("Column %s in dataframe_level metadata can not be empty.",
-#                 sQuote("DF_NAME"))
-#    }
+    # Following 4 rowsNot needed, It is not possible to arrive here without a
+    # valid DF_NAME
+    # check if the column DF_NAME is not empty
+    #    if (all(is.na(meta_data_dataframe$DF_NAME))) {
+    #      util_error("Column %s in dataframe_level metadata can not be empty.",
+    #                 sQuote("DF_NAME"))
+    #    }
 
     # vector of the names present in the dataframe_level metadata
     dataframe_names <- meta_data_dataframe[, DF_NAME, drop = TRUE]
 
-    #if there are information about the DATAFRAMES and DF_CODE
+    # if there are information about the DATAFRAMES and DF_CODE
     if ((DF_CODE) %in% colnames(meta_data_dataframe) &&
         DATAFRAMES %in% colnames(meta_data)) {
       # Create a vector with the name of the study_data as before with
       # the actual path but also with the relative DF_CODE
       study_data_withcode <- meta_data_dataframe[, c(DF_NAME, DF_CODE),
-                                                 drop = FALSE]
+        drop = FALSE
+      ]
       list_sd_columns <- NULL
-
     } else {
-      #if there are NO information about the DATAFRAMES and DF_CODE
+      # if there are NO information about the DATAFRAMES and DF_CODE
       # import only headers of study data files
-      list_sd_columns <- lapply(setNames(nm = dataframe_names), function (nm) {
+      list_sd_columns <- lapply(setNames(nm = dataframe_names), function(nm) {
         columns_df <-
-          try(prep_get_data_frame(nm,
-                                  column_names_only = TRUE,
-                                  keep_types = TRUE),
-              silent = TRUE)
+          try(
+            prep_get_data_frame(nm,
+              column_names_only = TRUE,
+              keep_types = TRUE
+            ),
+            silent = TRUE
+          )
         if (util_is_try_error(columns_df)) {
           columns_df <- NULL
         }
         columns_df
       })
-      #import works also with URLs in combination with n_max = 0 and nrows = 0
+      # import works also with URLs in combination with n_max = 0 and nrows = 0
       list_sd_columns <- lapply(list_sd_columns, colnames)
       names(list_sd_columns) <- dataframe_names
     }
     # stop if no study data provided and no dataframe_level metadata available
     # or dataframe_level metadata is empty
   } else if (missing(study_data) &&
-             (!is.data.frame(meta_data_dataframe) ||
-              nrow(meta_data_dataframe) == 0 )) {
+      (!is.data.frame(meta_data_dataframe) ||
+          nrow(meta_data_dataframe) == 0)) {
     util_error(
-      c("Not possible to create reports as no study data and no",
+      c(
+        "Not possible to create reports as no study data and no",
         "dataframe level metadata %s with study",
-        "data names are available"),
-      dQuote(meta_data_dataframe))
+        "data names are available"
+      ),
+      dQuote(meta_data_dataframe)
+    )
   }
 
   # Define name_of_study_data to NULL if it does not exist yet----
@@ -1272,198 +1085,111 @@ dq_report_by <- function(study_data,
   }
 
 
-
-  # Prepare the metadata depending on the presence of a segment_column or not----
+  # Prepare the metadata depending on the presence of a segment_column or
+  # not----
   ### 1st case: the segment_column is present----
   if (!is.null(segment_column)) {
     # if there are empty entries in the column defined for the split, set
     # a new non-used segment name (e.g., na1) and use it for empty rows
     split_segments <- TRUE
-    .md <- meta_data[[segment_column]]
-    i <- ""
-    while (any(.md == paste0("na", i), na.rm = TRUE)) {
-      if (i == "") {
-        i <- 0
-      }
-      i <- i + 1
-    }
-    .md[util_empty(.md)] <- paste0("na", i)
-    meta_data[[segment_column]] <- .md
-    # define an object containing the segments to create
-    segments <- unique(meta_data[[segment_column]])
-
-    # backwards compatibility-replace var_names with label in segments to create
-    if (label_col_provided != VAR_NAMES &&
-        all(segments %in% meta_data[[VAR_NAMES]])) {
-      segmentNames <- util_map_labels(segments, meta_data, label_col)
-    } else {
-      segmentNames <- segments
-    }
-    rm(segments)
-
-    # Add selection of 1 or multiple levels of segment_column or select using a
-    # regex
-    if (!is.null(segment_select)) {
-      #Fix segment_select in case is written as "A | B" instead of c("A", "B")
-      if (length(segment_select) == 1) {
-        segment_select <-  unname(unlist(util_parse_assignments(segment_select,
-                                                                split_char = SPLIT_CHAR)))
-      }
-      # check if the typed levels exist in the segment_column possible levels
-      # before to select it
-      if (!any(segment_select %in% segmentNames)) {
-        #if there is more than one element it means it is not a pattern, but
-        # a list of names
-        if (length(segment_select) > 1) {
-          # stop if selection does not match any level
-          util_error(
-            "No segment_column level matches the provided names: %s",
-            dQuote(segment_select) )
-        } else {
-          # if the argument is not present in the level names, check if it is
-          # a pattern, and if it also does not match any level then provide a
-          # warning and stop
-          all_segmentNames <- segmentNames
-          segmentNames <- segmentNames[grepl(segment_select, segmentNames)]
-          if (length(segmentNames) == 0) {
-            # stop if selection (name or pattern) does
-            # not match any level
-            util_error(
-              c("No segment_column level matches the provided name or",
-                "pattern: %s"),
-              dQuote(segment_select))
-            segmentNames <- all_segmentNames
-          }
-          rm(all_segmentNames)
-        }
-      } else {
-        segmentNames <- segmentNames[segmentNames %in% segment_select]
-      }
-    }
-
-    ### remove segments to exclude
-    if (!is.null(segment_exclude)) {
-      #Fix segment_exclude in case is written as "A | B" instead of c("A", "B")
-      if (length(segment_exclude) == 1) {
-        segment_exclude <-
-          unname(unlist(util_parse_assignments(segment_exclude,
-                                               split_char = SPLIT_CHAR)))
-      }
-
-      # check if the typed levels exist in the segment_column possible levels
-      # before to select it
-      if (!any(segment_exclude %in% segmentNames)) {
-        #if there is more than one element it means it is not a pattern, but
-        # a list of names
-        if (length(segment_exclude) > 1) {
-          # stop if selection does not match any level
-          util_error(
-            "No segment_column level matches the provided names to exclude: %s",
-            dQuote(segment_exclude))
-        } else {
-          # if the argument is not present in the level names, check if it is
-          # a pattern, and if it also does not match any level then provide a
-          # warning and stop
-          all_segmentNames <- segmentNames
-          unwanted_seg <- segmentNames[grepl(segment_exclude, segmentNames)]
-          segmentNames <- setdiff(segmentNames, unwanted_seg)
-          if (length(segmentNames) == 0) {
-            # stop if selection (name or pattern) has no segment left
-            util_error(
-              c("No segment_column level left after removing ",
-                "unwanted segments: %s"),
-              dQuote(segment_exclude))
-          }
-          rm(all_segmentNames)
-        }
-      } else {
-        #exclude unwanted segments
-        segmentNames <- segmentNames[!(segmentNames %in% segment_exclude)]
-        if (length(segmentNames) == 0) {
-          # stop if selection has no segment left
-          util_error(
-            c("No segment_column level left after removing ",
-              "unwanted segments: %s"),
-            dQuote(segment_exclude))
-        }
-      }
-    }
+    segment_info <- util_report_by_segment_names(
+      meta_data = meta_data,
+      segment_column = segment_column,
+      segment_select = segment_select,
+      segment_exclude = segment_exclude,
+      label_col = label_col,
+      label_col_provided = label_col_provided
+    )
+    meta_data <- segment_info$meta_data
+    segment_names <- segment_info$segment_names
+    rm(segment_info)
 
 
     # Filter cross-item level for the rules that can contain variables
     # in the segment (cross-item_level already normalized)
     # extract all rules containing a variable from the current evaluated segment
-    cil_in_segment <- lapply(setNames(segmentNames, nm = segmentNames),
-                             function(segment) {
-                               vars <-
-                                 meta_data[meta_data[[segment_column]] ==
-                                             segment, VAR_NAMES]
-                               #replace var_names with labels
-                               vars <- util_map_labels(vars,
-                                                       meta_data = meta_data,
-                                                       to = label_col,
-                                                       from = VAR_NAMES)
-                               # extracting the variable names from the column
-                               # variable_list in cross-item metadata to have
-                               # a vector of variable names for each rule in the
-                               # list rules_vars
-                               rules_vars <-
-                                 util_parse_assignments(
-                                   meta_data_cross_item$VARIABLE_LIST,
-                                   multi_variate_text = TRUE)
-                               # intersect vars in the rules with vars
-                               # in the segment to discard rules not
-                               # affecting the current segment
-                               rules_to_use <-
-                                 vapply(lapply(rules_vars, intersect, vars),
-                                        length,
-                                        FUN.VALUE = integer(1)) > 0
-                               meta_data_cross_item[rules_to_use, , FALSE]
-                             })
+    cil_in_segment <- lapply(
+      setNames(segment_names, nm = segment_names),
+      function(segment) {
+        vars <-
+          meta_data[meta_data[[segment_column]] ==
+            segment, VAR_NAMES]
+        # replace var_names with labels
+        vars <- util_map_labels(vars,
+          meta_data = meta_data,
+          to = label_col,
+          from = VAR_NAMES
+        )
+        # extracting the variable names from the column
+        # variable_list in cross-item metadata to have
+        # a vector of variable names for each rule in the
+        # list rules_vars
+        rules_vars <-
+          util_parse_assignments(
+            meta_data_cross_item$VARIABLE_LIST,
+            multi_variate_text = TRUE
+          )
+        # intersect vars in the rules with vars
+        # in the segment to discard rules not
+        # affecting the current segment
+        rules_to_use <-
+          vapply(lapply(rules_vars, intersect, vars),
+            length,
+            FUN.VALUE = integer(1)
+          ) > 0
+        meta_data_cross_item[rules_to_use, , drop = FALSE]
+      }
+    )
 
     # Filter computed items to extract all rules to compute
     # containing a VAR_NAMES from the current evaluated segment
     computed_in_segment <-
-      lapply(setNames(segmentNames, nm = segmentNames),
-             function(segment) {
-               vars <-
-                 meta_data[meta_data[[segment_column]] ==
-                             segment, VAR_NAMES]
-               #replace var_names with labels
-               vars <- util_map_labels(vars,
-                                       meta_data = meta_data,
-                                       to = label_col,
-                                       from = VAR_NAMES)
-               # extracting the variable names from the column
-               # VAR_NAMES in meta_data_item_computation
-               comp_vars <- util_map_labels(
-                 meta_data_item_computation$VAR_NAMES,
-                 meta_data = meta_data,
-                 to = label_col,
-                 from = VAR_NAMES
-               )
-               # intersect vars in the rules with vars
-               # in the segment to see which VAR_NAMES affect the
-               # current segment
-               computed_to_use <-
-                 vapply(lapply(comp_vars, intersect, vars),
-                        length,
-                        FUN.VALUE = integer(1)) > 0
-               # discard rules not affected by the
-               # current segment
-               meta_data_item_computation[computed_to_use, , FALSE]
-             })
+      lapply(
+        setNames(segment_names, nm = segment_names),
+        function(segment) {
+          vars <-
+            meta_data[meta_data[[segment_column]] ==
+              segment, VAR_NAMES]
+          # replace var_names with labels
+          vars <- util_map_labels(vars,
+            meta_data = meta_data,
+            to = label_col,
+            from = VAR_NAMES
+          )
+          # extracting the variable names from the column
+          # VAR_NAMES in meta_data_item_computation
+          comp_vars <- util_map_labels(
+            meta_data_item_computation$VAR_NAMES,
+            meta_data = meta_data,
+            to = label_col,
+            from = VAR_NAMES
+          )
+          # intersect vars in the rules with vars
+          # in the segment to see which VAR_NAMES affect the
+          # current segment
+          computed_to_use <-
+            vapply(lapply(comp_vars, intersect, vars),
+              length,
+              FUN.VALUE = integer(1)
+            ) > 0
+          # discard rules not affected by the
+          # current segment
+          meta_data_item_computation[computed_to_use, , drop = FALSE]
+        }
+      )
 
     # Select only the data frames interested by the current segment
     ### if there is a dataframe level metadata----
     if (is.data.frame(meta_data_dataframe) &&
-        nrow(meta_data_dataframe) > 0) { #this is introduced in the case of
+        nrow(meta_data_dataframe) > 0) { # this is introduced in the case of
       # study_data argument filled and so the dataframe level will be ignored
 
       # check if the column DF_NAME is not empty
       if (all(is.na(meta_data_dataframe$DF_NAME))) {
-        util_error("Column %s in dataframe_level metadata can not be empty.",
-                   sQuote("DF_NAME"))
+        util_error(
+          "Column %s in dataframe_level metadata can not be empty.",
+          sQuote("DF_NAME")
+        )
       }
 
       # extract the data frame per segment
@@ -1472,12 +1198,12 @@ dq_report_by <- function(study_data,
       if ((DF_CODE) %in% colnames(meta_data_dataframe) &&
           DATAFRAMES %in% colnames(meta_data)) {
         dfr_in_segment <-
-          lapply(setNames(segmentNames, nm = segmentNames), function(segment) {
+          lapply(setNames(segment_names, nm = segment_names), function(segment) { # nolint: line_length_linter.
             vars <-
               meta_data[meta_data[[segment_column]] ==
-                          segment, c(VAR_NAMES, DATAFRAMES), drop = FALSE]
+                segment, c(VAR_NAMES, DATAFRAMES), drop = FALSE]
 
-            dfr_CODE_from_item_level <- unique(unname(unlist(
+            dfr_code_from_item_level <- unique(unname(unlist(
               util_parse_assignments(
                 vars$DATAFRAMES,
                 split_char = SPLIT_CHAR,
@@ -1487,78 +1213,48 @@ dq_report_by <- function(study_data,
 
             dfr_to_use <-
               meta_data_dataframe[meta_data_dataframe[[DF_CODE]] %in%
-                                    dfr_CODE_from_item_level, , FALSE]
+                dfr_code_from_item_level, , FALSE]
           })
       } else {
         #### caseB: there are no DF_CODE and DATAFRAMES ----
-        dfr_in_segment <-
-          lapply(setNames(segmentNames, nm = segmentNames), function(segment) {
-            vars <-
-              meta_data[meta_data[[segment_column]] ==
-                          segment, VAR_NAMES]
-            dfr_to_use <-
-              vapply(lapply(list_sd_columns, intersect, vars),
-                     length,
-                     FUN.VALUE = integer(1)) > 0
-            # convert to data frame with row.names = file names
-            # and column with TRUE or FALSE
-            dfr_to_use <- do.call(rbind, lapply(dfr_to_use, as.data.frame))
-            colnames(dfr_to_use) <- "intersection"
-            dfr_to_use <-
-              dfr_to_use[dfr_to_use$intersection == TRUE, , drop = FALSE]
-            dfr_to_use <- row.names(dfr_to_use)
-            #discard data frames not containing the vars of this segment)
-            dfr_to_use <-
-              dataframe_names[dataframe_names %in% dfr_to_use]
-
-            meta_data_dataframe[meta_data_dataframe[[DF_NAME]] %in%
-                                  dfr_to_use, , FALSE]
-          })
+        dfr_in_segment <- util_report_by_dataframes_by_segment(
+          segment_names = segment_names,
+          meta_data = meta_data,
+          segment_column = segment_column,
+          list_sd_columns = list_sd_columns,
+          dataframe_names = dataframe_names,
+          meta_data_dataframe = meta_data_dataframe
+        )
       }
-
     } else if (!is.data.frame(meta_data_dataframe) ||
-               (is.data.frame(meta_data_dataframe) &&
-                nrow(meta_data_dataframe) == 0)) {
+        (is.data.frame(meta_data_dataframe) &&
+            nrow(meta_data_dataframe) == 0)) {
       ### in case there is no dataframe metadata or it is empty----
       if (length(study_data) == 1 || is.data.frame(study_data)) {
-        meta_data_dataframe <- data.frame(DF_NAME =
-                                            name_of_study_data)
+        meta_data_dataframe <- util_dataframe_metadata_for_names(
+          name_of_study_data,
+          include_df_code = FALSE,
+          include_df_id_vars = FALSE
+        )
         dfr_in_segment <-
-          lapply(setNames(segmentNames, nm = segmentNames), function(segment) {
-            data.frame(DF_NAME = name_of_study_data,
-                       DF_CODE = NA_character_,
-                       DF_ID_VARS = NA_character_)
+          lapply(setNames(segment_names, nm = segment_names), function(segment) { # nolint: line_length_linter.
+            util_dataframe_metadata_for_names(name_of_study_data)
           })
       } else if (!is.data.frame(study_data) &&
-                 length(study_data) > 1) {
-        meta_data_dataframe <- data.frame(DF_NAME = dataframe_names,
-                                          DF_CODE = NA_character_,
-                                          DF_ID_VARS = NA_character_)
+          length(study_data) > 1) {
+        meta_data_dataframe <- util_dataframe_metadata_for_names(
+          dataframe_names
+        )
 
         dfr_in_segment <-
-          lapply(setNames(segmentNames, nm = segmentNames), function(segment) {
-            vars <-
-              meta_data[meta_data[[segment_column]] ==
-                          segment, VAR_NAMES]
-            dfr_to_use <-
-              vapply(lapply(list_sd_columns, intersect, vars),
-                     length,
-                     FUN.VALUE = integer(1)) > 0
-            #convert to data frame with row.names = file names and
-            # column with TRUE or FALSE
-            dfr_to_use <- do.call(rbind, lapply(dfr_to_use, as.data.frame))
-            colnames(dfr_to_use) <- "intersection"
-            dfr_to_use <-
-              dfr_to_use[dfr_to_use$intersection == TRUE, , drop = FALSE]
-            dfr_to_use <- row.names(dfr_to_use)
-            #discard data frames not containing the vars of this segment
-            dfr_to_use <-
-              dataframe_names[dataframe_names %in% dfr_to_use]
-            meta_data_dataframe <-
-              meta_data_dataframe[meta_data_dataframe$DF_NAME %in% dfr_to_use,
-                                  , drop = FALSE]
-          })
-
+          util_report_by_dataframes_by_segment(
+            segment_names = segment_names,
+            meta_data = meta_data,
+            segment_column = segment_column,
+            list_sd_columns = list_sd_columns,
+            dataframe_names = dataframe_names,
+            meta_data_dataframe = meta_data_dataframe
+          )
       }
     }
 
@@ -1567,29 +1263,30 @@ dq_report_by <- function(study_data,
     # if the segment_column is study_segment, separate it by segment
     if (segment_column == STUDY_SEGMENT) {
       seg_in_segment <-
-        lapply(setNames(segmentNames, nm = segmentNames), function(segment) {
+        lapply(setNames(segment_names, nm = segment_names), function(segment) {
           meta_data_segment[meta_data_segment[[STUDY_SEGMENT]] ==
-                              segment, , FALSE]
+              segment, , drop = FALSE]
         })
     } else {
       # in case the segment_column is not the segment, need to first
       # create a list with the corresponding segments for each segment_column
       if (!STUDY_SEGMENT %in% colnames(meta_data)) {
-        #In case there is no STUDY_SEGMENT
-        meta_data$STUDY_SEGMENT <- "all"
+        # In case there is no STUDY_SEGMENT
+        meta_data[[STUDY_SEGMENT]] <- "all"
       }
-      segments_list <- meta_data[, c(segment_column, STUDY_SEGMENT), #TODO: need back compatibility with KEY_STUDY_SEGMENT using prep_meta_data_v1_to_item_level_meta_data?
-                                 drop = FALSE]
+      segments_list <- meta_data[, c(segment_column, STUDY_SEGMENT),
+        drop = FALSE
+      ]
       segments_list <- unique(segments_list)
       segments_list <-
-        lapply(setNames(segmentNames, nm = segmentNames), function(piece) {
+        lapply(setNames(segment_names, nm = segment_names), function(piece) {
           segments_list[segments_list[segment_column] ==
-                          piece, STUDY_SEGMENT, TRUE]
+              piece, STUDY_SEGMENT, drop = TRUE]
         })
       seg_in_segment <-
-        lapply(setNames(segmentNames, nm = segmentNames), function(x) {
+        lapply(setNames(segment_names, nm = segment_names), function(x) {
           meta_data_segment[meta_data_segment[[STUDY_SEGMENT]] %in%
-                              c(segments_list[[x]]), , FALSE]
+              c(segments_list[[x]]), , drop = FALSE]
         })
       # in case of segment_select not present in the data, there will be
       # elements $<NA> in the list. Remove them
@@ -1597,158 +1294,24 @@ dq_report_by <- function(study_data,
     }
 
 
-    #For each segment define which variables to include (using a repeat-loop)
-    if(!missing(resp_vars)) {
-      # if there is the argument resp_vars
-      vars_in_segment <-
-        lapply(setNames(segmentNames, nm = segmentNames),
-               function(segment) {
-
-                 # First select the variables that are indicated
-                 # as part of the segment in the item-level metadata
-                 # (in this case the metadata was filtered and contains
-                 # original and referred variables)
-                 vars <-
-                   meta_data[meta_data[[segment_column]] ==
-                               segment, VAR_NAMES]
-                 #include variables that are in resp_vars and in this segment
-                 vars<- vars[vars %in% resp_vars]
-                 overview_vars_md <-
-                   util_referred_vars(resp_vars = vars,
-                                      id_vars = id_vars,
-                                      vars_in_subgroup = vars_in_subgroup,
-                                      label_col = label_col,
-                                      meta_data = meta_data,
-                                      meta_data_segment =
-                                        seg_in_segment[[segment]],
-                                      meta_data_dataframe =
-                                        dfr_in_segment[[segment]],
-                                      meta_data_cross_item =
-                                        cil_in_segment[[segment]],
-                                      meta_data_item_computation =
-                                        computed_in_segment[[segment]],
-                                      strata_column = strata_column)
-
-                 vars <- overview_vars_md$vars_complete
-               })
-
-      # Subset the item_level metadata per each segment
-      md_in_segment <-
-        lapply(setNames(segmentNames, nm = segmentNames),
-               function(segment) {
-                 # First select the variables that are indicated
-                 # as part of the segment in the item-level metadata
-                 # (in this case the metadata was filtered and contains
-                 # original and referred variables
-                 vars <-
-                   meta_data[meta_data[[segment_column]] ==
-                               segment, VAR_NAMES]
-                 #include variables that are in resp_vars and in this segment
-                 vars<- vars[vars %in% resp_vars]
-                 overview_vars_md <-
-                   util_referred_vars(resp_vars = vars,
-                                      id_vars = id_vars,
-                                      vars_in_subgroup = vars_in_subgroup,
-                                      label_col = label_col,
-                                      meta_data = meta_data,
-                                      meta_data_segment =
-                                        seg_in_segment[[segment]],
-                                      meta_data_dataframe =
-                                        dfr_in_segment[[segment]],
-                                      meta_data_cross_item =
-                                        cil_in_segment[[segment]],
-                                      meta_data_item_computation =
-                                        computed_in_segment[[segment]],
-                                      strata_column = strata_column)
-
-                 md_seg <- overview_vars_md$md_complete
-                 attr(md_seg, "normalized") <- TRUE
-                 attr(md_seg, "version") <- 2
-                 return(md_seg)
-               })
-
-
-
-
-
-      # create resp_vars_in_segment
-      resp_vars_in_segment <- lapply(setNames(segmentNames, nm = segmentNames),
-                                     function(segment) {
-                                       vars_in_segment <-
-                                         vars_in_segment[[segment]][
-                                           vars_in_segment[[segment]] %in%
-                                                                      resp_vars]
-                                     })
-    } else {
-      # if there is no argument resp_vars
-      vars_in_segment <-
-        lapply(setNames(segmentNames, nm = segmentNames),
-               function(segment) {
-                 # First select the variables that are indicated
-                 # as part of the segment in the item-level metadata
-                 vars <-
-                   meta_data[meta_data[[segment_column]] ==
-                               segment, VAR_NAMES]
-                 overview_vars_md <-
-                   util_referred_vars(resp_vars = vars,
-                                      id_vars = id_vars,
-                                      vars_in_subgroup = vars_in_subgroup,
-                                      label_col = label_col,
-                                      meta_data = meta_data,
-                                      meta_data_segment =
-                                        seg_in_segment[[segment]],
-                                      meta_data_dataframe =
-                                        dfr_in_segment[[segment]],
-                                      meta_data_cross_item =
-                                        cil_in_segment[[segment]],
-                                      meta_data_item_computation =
-                                        computed_in_segment[[segment]],
-                                      strata_column = strata_column)
-                 vars <- overview_vars_md$vars_complete
-               })
-
-      # Define the item_level metadata for each segment
-      md_in_segment <-
-        lapply(setNames(segmentNames, nm = segmentNames),
-               function(segment) {
-                 # First select the variables that are indicated
-                 # as part of the segment in the item-level metadata
-                 vars <-
-                   meta_data[meta_data[[segment_column]] ==
-                               segment, VAR_NAMES]
-                 overview_vars_md <-
-                   util_referred_vars(resp_vars = vars,
-                                      id_vars = id_vars,
-                                      vars_in_subgroup = vars_in_subgroup,
-                                      label_col = label_col,
-                                      meta_data = meta_data,
-                                      meta_data_segment =
-                                        seg_in_segment[[segment]],
-                                      meta_data_dataframe =
-                                        dfr_in_segment[[segment]],
-                                      meta_data_cross_item =
-                                        cil_in_segment[[segment]],
-                                      meta_data_item_computation =
-                                        computed_in_segment[[segment]],
-                                      strata_column = strata_column)
-
-                 md_seg <- overview_vars_md$md_complete
-                 attr(md_seg, "normalized") <- TRUE
-                 attr(md_seg, "version") <- 2
-                 return(md_seg)
-               })
-
-
-      #create resp_vars_in_segment = character(0)
-      resp_vars_in_segment <-
-        lapply(setNames(segmentNames, nm = segmentNames),
-               function(segment) {
-                 x <- character(0)
-               })
-    }
-
-
-
+    segment_items <- util_report_by_segment_items(
+      segment_names = segment_names,
+      meta_data = meta_data,
+      segment_column = segment_column,
+      resp_vars = if (!missing(resp_vars)) resp_vars else NULL,
+      id_vars = id_vars,
+      vars_in_subgroup = vars_in_subgroup,
+      label_col = label_col,
+      seg_in_segment = seg_in_segment,
+      dfr_in_segment = dfr_in_segment,
+      cil_in_segment = cil_in_segment,
+      computed_in_segment = computed_in_segment,
+      strata_column = strata_column
+    )
+    vars_in_segment <- segment_items$vars_in_segment
+    md_in_segment <- segment_items$md_in_segment
+    resp_vars_in_segment <- segment_items$resp_vars_in_segment
+    rm(segment_items)
   } else {
     #### 2nd case: the segment_column is not present (NULL),----
     # include all variables and all metadata in category all_variables
@@ -1759,16 +1322,11 @@ dq_report_by <- function(study_data,
     computed_in_segment <- list(all_variables = meta_data_item_computation)
 
     # Prepare metadata at the segment level
-    try(util_expect_data_frame(meta_data_segment,
-                               col_names = list(STUDY_SEGMENT = is.character)),
-        silent = TRUE)
-    # if not present, create an empty one
-    if (!is.data.frame(meta_data_segment)) {
-      util_message("No segment level metadata %s found",
-                   dQuote(meta_data_segment))
-      meta_data_segment <- data.frame(STUDY_SEGMENT =
-                                        unique(meta_data$STUDY_SEGMENT))
-    }
+    meta_data_segment <- util_ensure_segment_metadata(
+      meta_data_segment = meta_data_segment,
+      meta_data = meta_data,
+      validate_study_segment = TRUE
+    )
     seg_in_segment <- list(all_variables = meta_data_segment)
 
     # prepare the dataframe_level metadata, put all in a list element
@@ -1776,9 +1334,9 @@ dq_report_by <- function(study_data,
     if (is.data.frame(meta_data_dataframe)) {
       dfr_in_segment <- list(all_variables = meta_data_dataframe)
     } else {
-      meta_data_dataframe <- data.frame(DF_NAME = dataframe_names,
-                                        DF_CODE = NA_character_,
-                                        DF_ID_VARS = NA_character_)
+      meta_data_dataframe <- util_dataframe_metadata_for_names(
+        dataframe_names
+      )
       dfr_in_segment <- list(all_variables = meta_data_dataframe)
     }
 
@@ -1787,22 +1345,18 @@ dq_report_by <- function(study_data,
     vars_in_segment <- list(all_variables = meta_data[[VAR_NAMES]])
 
     # create resp_vars_in_segment <- character(0)
-    if(!missing(resp_vars)) {
+    if (!missing(resp_vars)) {
       resp_vars_in_segment <- list(all_variables = resp_vars)
     } else {
       resp_vars_in_segment <- list(all_variables = character(0))
     }
 
 
-
-
-
-
-    #Add all the meta_data (item_level)
+    # Add all the meta_data (item_level)
     md_in_segment <- list(all_variables = meta_data)
 
-    #Addition for progressing bar
-    segmentNames <- "all_variables"
+    # Addition for progressing bar
+    segment_names <- "all_variables"
   }
 
 
@@ -1813,54 +1367,14 @@ dq_report_by <- function(study_data,
   }
 
 
-
-
   # Calculate no. strata for the job progress bar----
   if (is.null(strata_column)) {
     n_strata <- 1
   } else {
-    # Value labels from VALUE_LABEL_TABLE and CODE_LIST_TABLE
-    if (is.na(meta_data[meta_data[VAR_NAMES] == strata_column,
-                        VALUE_LABELS, drop = TRUE]) ||
-        is.null(meta_data[meta_data[VAR_NAMES] == strata_column,
-                          VALUE_LABELS, drop = TRUE])) {
-      value_label_table_name <-
-        meta_data[meta_data[VAR_NAMES] == strata_column,
-                  VALUE_LABEL_TABLE, drop = TRUE]
-
-      try(util_expect_data_frame(value_label_table_name),
-          silent = TRUE)
-      if (!is.data.frame(value_label_table_name)) {
-        try(util_expect_data_frame("CODE_LIST_TABLE"), silent = TRUE)
-        if (!is.data.frame(CODE_LIST_TABLE)) {
-          util_message(sprintf(
-            "No value_label_table_name %s found",
-            dQuote(value_label_table_name)))
-          value_label_table_name <- data.frame(CODE_VALUE = character(0),
-                                               CODE_LABEL = character(0))
-        } else {
-          #select in CODE_LIST_TABLE$VALUE_LABEL_TABLE only the
-          # value_label_table_name
-          value_label_table_name <-
-            CODE_LIST_TABLE[CODE_LIST_TABLE$VALUE_LABEL_TABLE ==
-                              value_label_table_name, , drop = FALSE]
-        }
-      }
-      expected_strata <- setNames(value_label_table_name$CODE_LABEL,
-                                  nm = value_label_table_name$CODE_VALUE)
-    } else {
-      # if value labels are in a column in item_level metadata
-      expected_strata <- unlist(
-        util_parse_assignments(
-          meta_data[meta_data[VAR_NAMES] == strata_column, VALUE_LABELS,
-                    drop = TRUE],
-          split_char = SPLIT_CHAR,
-          split_on_any_split_char = TRUE,
-          multi_variate_text = TRUE
-        )
-      )
-    }
-
+    expected_strata <- util_report_by_expected_strata(
+      meta_data = meta_data,
+      strata_column = strata_column
+    )
 
 
     # in case there is only a data frame as study_data
@@ -1870,20 +1384,27 @@ dq_report_by <- function(study_data,
       tab1 <- util_expect_data_frame(names(list_sd_columns), dont_assign = TRUE)
       original_strata <- unique(tab1[[strata_column]])
       # check if all expected strata are present in the study data
-      if (length(setdiff(names(expected_strata), original_strata)) > 0 ) {
-        util_warning(c("The stratum/strata %s is/are ",
-                       "not present in the study data"),
-                     dQuote(names(expected_strata)[!(names(expected_strata) %in%
-                                                       original_strata)]))
+      if (length(setdiff(names(expected_strata), original_strata)) > 0) {
+        util_warning(
+          c(
+            "The stratum/strata %s is/are ",
+            "not present in the study data"
+          ),
+          dQuote(names(expected_strata)[!(names(expected_strata) %in%
+                  original_strata)])
+        )
       }
       # check if in the study data there are strata not expected
-      #removed NA from check
-      if (length(setdiff(original_strata[!is.na(original_strata)],
-                         names(expected_strata)) > 0 )) {
+      # removed NA from check
+      if (length(setdiff(
+        original_strata[!is.na(original_strata)],
+        names(expected_strata)
+      ) > 0)) {
         util_warning(
           "The stratum/strata %s is/are not present in the metadata",
           dQuote(original_strata[!(original_strata %in%
-                                     names(expected_strata))]))
+                  names(expected_strata))])
+        )
       }
       n_strata <- length(original_strata)
       # in case the there are more dataframes as study_data
@@ -1892,8 +1413,9 @@ dq_report_by <- function(study_data,
       # only dataframes containing variables of this segment
       tab_to_import <-
         vapply(lapply(list_sd_columns, intersect, strata_column),
-               length,
-               FUN.VALUE = integer(1)) > 0
+          length,
+          FUN.VALUE = integer(1)
+        ) > 0
       tab_to_import <- names(tab_to_import[tab_to_import %in% TRUE])
 
       if (length(tab_to_import) == 1) {
@@ -1901,8 +1423,9 @@ dq_report_by <- function(study_data,
         original_strata <- unique(tab1[[strata_column]])
       } else if (length(tab_to_import) > 1) {
         tabs <- lapply(setNames(nm = tab_to_import),
-                       util_expect_data_frame,
-                       dont_assign = TRUE)
+          util_expect_data_frame,
+          dont_assign = TRUE
+        )
         tab1 <- Reduce(function(x, y) {
           merge(x, y, all = TRUE)
         }, tabs)
@@ -1913,15 +1436,17 @@ dq_report_by <- function(study_data,
       # In case in which the DF_CODE and DATAFRAME are present
       # obtain the names of the needed study data and select
       # only dataframes containing variables of strata_column
-      dtf_CODE_of_strata_col <- meta_data[meta_data[[VAR_NAMES]] %in%
-                                            strata_column,
-                                          c(VAR_NAMES, DATAFRAMES),
-                                          drop = FALSE]
+      dtf_code_of_strata_col <- meta_data[
+        meta_data[[VAR_NAMES]] %in%
+          strata_column,
+        c(VAR_NAMES, DATAFRAMES),
+        drop = FALSE
+      ]
 
 
-      dfr_CODE_of_strata_col <- unique(unname(unlist(
+      dfr_code_of_strata_col <- unique(unname(unlist(
         util_parse_assignments(
-          dtf_CODE_of_strata_col$DATAFRAMES,
+          dtf_code_of_strata_col$DATAFRAMES,
           split_char = SPLIT_CHAR,
           multi_variate_text = TRUE
         )
@@ -1929,7 +1454,7 @@ dq_report_by <- function(study_data,
 
       tab_to_import <-
         study_data_withcode[study_data_withcode[[DF_CODE]] %in%
-                              dfr_CODE_of_strata_col, DF_NAME, drop = TRUE]
+          dfr_code_of_strata_col, DF_NAME, drop = TRUE]
 
 
       if (length(tab_to_import) == 1) {
@@ -1937,8 +1462,9 @@ dq_report_by <- function(study_data,
         original_strata <- unique(tab1[[strata_column]])
       } else if (length(tab_to_import) > 1) {
         tabs <- lapply(setNames(nm = tab_to_import),
-                       util_expect_data_frame,
-                       dont_assign = TRUE)
+          util_expect_data_frame,
+          dont_assign = TRUE
+        )
         tab1 <- Reduce(function(x, y) {
           merge(x, y, all = TRUE)
         }, tabs)
@@ -1949,29 +1475,29 @@ dq_report_by <- function(study_data,
 
     # Define the strata in case strata_select is used
     if (!is.null(strata_select)) {
-      #Fix strata_select in case is written as "A | B" instead of c("A", "B")
-      if (length(strata_select) == 1) {
-        strata_select <-
-          unname(unlist(util_parse_assignments(strata_select,
-                                               split_char = SPLIT_CHAR)))
-      }
-
+      strata_select <- util_report_by_selection_values(strata_select)
 
       # if there is a strata_select argument
       if (!is.null(selection_type)) {
         if (selection_type == "value") {
           util_stop_if_not(any(strata_select %in% original_strata),
-                           label =
-                             paste0("No values in the variable correspond ",
-                                    "to the strata_select"))
+            label =
+              paste0(
+                "No values in the variable correspond ",
+                "to the strata_select"
+              )
+          )
           original_strata <-
             original_strata[original_strata %in% strata_select]
           n_strata <- length(original_strata)
-
         } else if (selection_type == "v_label") {
-          util_stop_if_not(any(strata_select %in% expected_strata), label =
-                             paste0("No value label in the variable ",
-                                    "correspond to the strata_select"))
+          util_stop_if_not(any(strata_select %in% expected_strata),
+            label =
+              paste0(
+                "No value label in the variable ",
+                "correspond to the strata_select"
+              )
+          )
           expected_strata <-
             expected_strata[expected_strata %in% strata_select]
           original_strata <-
@@ -1980,33 +1506,47 @@ dq_report_by <- function(study_data,
         } else if (selection_type == "regex") {
           name_pattern_strata <-
             original_strata[grepl(strata_select, original_strata)]
-          name_pattern_strata2 <- expected_strata[grepl(strata_select,
-                                                        expected_strata)]
+          name_pattern_strata2 <- expected_strata[grepl(
+            strata_select,
+            expected_strata
+          )]
 
-          name_pattern_strata <- unique(c(name_pattern_strata,
-                                          names(name_pattern_strata2)))
+          name_pattern_strata <- unique(c(
+            name_pattern_strata,
+            names(name_pattern_strata2)
+          ))
 
-          util_stop_if_not(length(name_pattern_strata) > 0, label =
-                             paste0("No value or value label in the variable",
-                                    " correspond to the strata_select"))
+          util_stop_if_not(length(name_pattern_strata) > 0,
+            label =
+              paste0(
+                "No value or value label in the variable",
+                " correspond to the strata_select"
+              )
+          )
           n_strata <- length(name_pattern_strata)
         }
       } else {
-        #if selection_type is null, try to guess the typed strata
+        # if selection_type is null, try to guess the typed strata
         if (!any(strata_select %in% original_strata)) {
-          #if the strata does not match the list from data
+          # if the strata does not match the list from data
           if (!any(strata_select %in% expected_strata)) {
-            #if the strata does not match the value list labels
+            # if the strata does not match the value list labels
             # if the argument is not present in the level names, check if it is
             # a pattern
             name_pattern_strata <-
               original_strata[grepl(strata_select, original_strata)]
-            name_pattern_strata <- c(name_pattern_strata,
-                                     expected_strata[grepl(strata_select,
-                                                           expected_strata)])
+            name_pattern_strata <- c(
+              name_pattern_strata,
+              expected_strata[grepl(
+                strata_select,
+                expected_strata
+              )]
+            )
             if (length(name_pattern_strata) == 0) {
-              util_error("%s does not corresponds to any strata",
-                         dQuote(strata_select))
+              util_error(
+                "%s does not corresponds to any strata",
+                dQuote(strata_select)
+              )
             } else {
               n_strata <- length(name_pattern_strata)
             }
@@ -2017,7 +1557,6 @@ dq_report_by <- function(study_data,
             original_strata <-
               original_strata[original_strata %in% names(expected_strata)]
             n_strata <- length(original_strata)
-
           }
         } else {
           # if the strata matches a value of the variable in the data
@@ -2030,25 +1569,28 @@ dq_report_by <- function(study_data,
 
     ## Define the strata in case strata_exclude is used
     if (!is.null(strata_exclude)) {
-      if (length(strata_exclude) == 1) {
-        strata_exclude <-
-          unname(unlist(util_parse_assignments(strata_exclude,
-                                               split_char = SPLIT_CHAR)))
-      }
+      strata_exclude <- util_report_by_selection_values(strata_exclude)
       # if there is a strata_exclude argument
       if (!is.null(selection_type)) {
         if (selection_type == "value") {
-          util_stop_if_not(any(strata_exclude %in% original_strata), label =
-                             paste0("No values in the variable correspond",
-                                    " to the strata_exclude"))
+          util_stop_if_not(any(strata_exclude %in% original_strata),
+            label =
+              paste0(
+                "No values in the variable correspond",
+                " to the strata_exclude"
+              )
+          )
           original_strata <-
             original_strata[!(original_strata %in% strata_exclude)]
           n_strata <- length(original_strata)
-
         } else if (selection_type == "v_label") {
-          util_stop_if_not(any(strata_exclude %in% expected_strata), label =
-                             paste0("No value label in the variable ",
-                                    "correspond to the strata_exclude"))
+          util_stop_if_not(any(strata_exclude %in% expected_strata),
+            label =
+              paste0(
+                "No value label in the variable ",
+                "correspond to the strata_exclude"
+              )
+          )
           expected_strata <-
             expected_strata[!(expected_strata %in% strata_exclude)]
           original_strata <-
@@ -2057,41 +1599,50 @@ dq_report_by <- function(study_data,
         } else if (selection_type == "regex") {
           unwanted_seg_orig <-
             original_strata[grepl(strata_exclude, original_strata)]
-          unwanted_seg_label <- expected_strata[grepl(strata_exclude,
-                                                      expected_strata)]
+          unwanted_seg_label <- expected_strata[grepl(
+            strata_exclude,
+            expected_strata
+          )]
           unwanted_seg_label <- original_strata[original_strata %in%
-                                                  names(unwanted_seg_label)]
+              names(unwanted_seg_label)]
           unwanted_seg <- unique(c(unwanted_seg_orig, unwanted_seg_label))
           rm(unwanted_seg_orig, unwanted_seg_label)
 
-          name_pattern_strata	<- setdiff(original_strata, unwanted_seg)
-          util_stop_if_not(length(unwanted_seg) > 0, label =
-                             paste0("No value or value label in the variable",
-                                    " correspond to the strata_exclude"))
+          name_pattern_strata <- setdiff(original_strata, unwanted_seg)
+          util_stop_if_not(length(unwanted_seg) > 0,
+            label =
+              paste0(
+                "No value or value label in the variable",
+                " correspond to the strata_exclude"
+              )
+          )
           n_strata <- length(name_pattern_strata)
         }
-
       } else {
-        #if selection_type is null, try to guess the typed strata
+        # if selection_type is null, try to guess the typed strata
         if (!any(strata_exclude %in% original_strata)) {
-          #if the strata does not match the list from data
+          # if the strata does not match the list from data
           if (!any(strata_exclude %in% expected_strata)) {
-            #if the strata does not match the value list labels
+            # if the strata does not match the value list labels
             # if the argument is not present in the level names, check if it is
             # a pattern
             unwanted_seg_orig <-
               original_strata[grepl(strata_exclude, original_strata)]
-            unwanted_seg_label <- expected_strata[grepl(strata_exclude,
-                                                        expected_strata)]
+            unwanted_seg_label <- expected_strata[grepl(
+              strata_exclude,
+              expected_strata
+            )]
             unwanted_seg_label <- original_strata[original_strata %in%
-                                                    names(unwanted_seg_label)]
+                names(unwanted_seg_label)]
             unwanted_seg <- unique(c(unwanted_seg_orig, unwanted_seg_label))
             rm(unwanted_seg_orig, unwanted_seg_label)
 
-            name_pattern_strata	<- setdiff(original_strata, unwanted_seg)
+            name_pattern_strata <- setdiff(original_strata, unwanted_seg)
             if (length(unwanted_seg) == 0) {
-              util_error("%s does not corresponds to any strata",
-                         dQuote(strata_exclude))
+              util_error(
+                "%s does not corresponds to any strata",
+                dQuote(strata_exclude)
+              )
             } else {
               n_strata <- length(name_pattern_strata)
             }
@@ -2102,7 +1653,6 @@ dq_report_by <- function(study_data,
             original_strata <-
               original_strata[original_strata %in% names(expected_strata)]
             n_strata <- length(original_strata)
-
           }
         } else {
           # if the strata matches a value of the variable in the data
@@ -2116,23 +1666,25 @@ dq_report_by <- function(study_data,
 
   # Create a job to report progress and give it a name ----
   util_setup_rstudio_job("dq_report_by",
-                         n = length(segmentNames) * n_strata)
+    n = length(segment_names) * n_strata
+  )
   # create an extra environment for the progress
   p <- new.env(parent = emptyenv())
   p$i <- 0
-  p$N <- length(segmentNames) * n_strata
+  p$N <- length(segment_names) * n_strata
 
   # OUTER list: split base on segment----
   # Return a list of lists of results. The outer list is for the split based on
   # segment_column e.g., study segments. The inner list is for the strata
   # (split based on the strata_column)
   overall_res <- mapply(
-    #here starts the outer loop by segment_column (by segment or another column)
+    # here starts the outer loop by segment_column (by segment or another
+    # column)
     vars_in_segment = vars_in_segment[order(names(vars_in_segment))],
     cur_seg = sort(names(vars_in_segment)),
     meta_data = md_in_segment[order(names(md_in_segment))],
-    meta_data_dataframe = dfr_in_segment[order(names(dfr_in_segment))] ,
-    seg_in_segment = seg_in_segment[order(names(seg_in_segment))] ,
+    meta_data_dataframe = dfr_in_segment[order(names(dfr_in_segment))],
+    seg_in_segment = seg_in_segment[order(names(seg_in_segment))],
     MoreArgs = list(
       list_sd_columns = list_sd_columns,
       name_of_study_data = name_of_study_data,
@@ -2144,18 +1696,17 @@ dq_report_by <- function(study_data,
     ),
     SIMPLIFY = FALSE,
     FUN = function(vars_in_segment,
-                   cur_seg,
-                   meta_data,
-                   meta_data_dataframe,
-                   list_sd_columns,
-                   seg_in_segment,
-                   name_of_study_data,
-                   call_report_by,
-                   subgroup,
-                   resp_vars_in_segment,
-                   id_vars,
-                   vars_in_subgroup) {
-
+      cur_seg,
+      meta_data,
+      meta_data_dataframe,
+      list_sd_columns,
+      seg_in_segment,
+      name_of_study_data,
+      call_report_by,
+      subgroup,
+      resp_vars_in_segment,
+      id_vars,
+      vars_in_subgroup) {
       attr(meta_data, "normalized") <- TRUE
       attr(meta_data, "version") <- 2
 
@@ -2181,53 +1732,18 @@ dq_report_by <- function(study_data,
         }
         # in case the there are more data frames as study_data
       } else if (length(list_sd_columns) > 1 ||
-                 is.null(list_sd_columns)) {
+          is.null(list_sd_columns)) {
+        dataframe_names_cur_seg <- util_report_by_segment_dataframe_names(
+          vars_in_segment = vars_in_segment,
+          meta_data = meta_data,
+          list_sd_columns = list_sd_columns,
+          study_data_withcode = study_data_withcode
+        )
 
 
-        #if there is CODE_DF the list_sd_columns is set to NULL
-        if (is.null(list_sd_columns)) {
-          # obtain the names of the needed study data and select
-          # only data frames containing variables of this segment
-          vars_in_seg <-
-            meta_data[meta_data[[VAR_NAMES]] %in% vars_in_segment,
-                      c(VAR_NAMES, DATAFRAMES), drop = FALSE]
-
-          dfr_CODE_of_vars_in_seg <- unique(unname(unlist(
-            util_parse_assignments(
-              vars_in_seg$DATAFRAMES,
-              split_char = SPLIT_CHAR,
-              multi_variate_text = TRUE
-            )
-          )))
-
-          dataframe_names_cur_seg <-
-            study_data_withcode[study_data_withcode[[DF_CODE]] %in%
-                                  dfr_CODE_of_vars_in_seg, DF_NAME,
-                                drop = TRUE]
-
-          rm(vars_in_seg, dfr_CODE_of_vars_in_seg)
-        } else {
-          # obtain the names of the needed study data and select
-          # only dataframes containing variables of this segment
-          dataframe_names_cur_seg <-
-            vapply(lapply(list_sd_columns, intersect, vars_in_segment),
-                   length,
-                   FUN.VALUE = integer(1)) > 0
-          dataframe_names_cur_seg <-
-            dataframe_names_cur_seg[dataframe_names_cur_seg %in% TRUE]
-          dataframe_names_cur_seg <-
-            names(dataframe_names_cur_seg)
-        }
-
-
-        # import the study data files matching the names
-        # in the dataframe_level metadata
-        dataframes_cur_seg <-
-          lapply(setNames(nm = dataframe_names_cur_seg),
-                 util_expect_data_frame,
-                 dont_assign = TRUE)
-
-
+        dataframes_cur_seg <- util_report_by_load_segment_dataframes(
+          dataframe_names = dataframe_names_cur_seg
+        )
 
         # create a name for the study data merging all the
         # data frames names, after ordering and making them unique
@@ -2236,346 +1752,133 @@ dq_report_by <- function(study_data,
       }
 
 
-      #THIS IS A REPETITION BUT IT IS NEEDED BECAUSE there may be other
-      # referred variables
-      # Look to the data frame interested by the current segment
-      dfr_in_segment <-
-        lapply(setNames(dataframe_names_cur_seg, nm = dataframe_names_cur_seg),
-               function(xx) {
-                 meta_data_dataframe[meta_data_dataframe[[DF_NAME]] == xx, ,
-                                     FALSE]
-               })
-      dfr_in_segment <-
-        list(dfr = meta_data_dataframe[meta_data_dataframe[[DF_NAME]] %in%
-                                         dataframe_names_cur_seg, , FALSE])
-      names(dfr_in_segment) <- cur_seg
+      dfr_in_segment <- util_report_by_segment_dataframe_metadata(
+        meta_data_dataframe = meta_data_dataframe,
+        dataframe_names = dataframe_names_cur_seg,
+        segment_name = cur_seg
+      )
 
       # Create sd_merge and filter for var in segment if needed----
-      #if there is no need to merge files
+      # if there is no need to merge files
       if (length(list_sd_columns) == 1) {
         sd_merged <- dataframes_cur_seg
-        #Filter for vars_in_segment
-        sd_merged <- sd_merged[ , colnames(sd_merged) %in% vars_in_segment,
-                                drop = FALSE]
-
-
+        sd_merged <- util_report_by_keep_segment_vars(
+          study_data = sd_merged,
+          vars_in_segment = vars_in_segment
+        )
       } else if (length(list_sd_columns) > 1 ||
-                 is.null(list_sd_columns)) {
+          is.null(list_sd_columns)) {
         # there is need to merge files
-        #if the files are specified from user (length(study_data) > 1) or
+        # if the files are specified from user (length(study_data) > 1) or
         # there is no argument study_data
         if (is.null(list_sd_columns)) {
-          #if there is no argument study_data
+          # if there is no argument study_data
           # get id vars of the dataframe level metadata for merging
           # (only from dataframe and NOT from segment)
           dfr_in_segment <- dfr_in_segment[[1]]
-          if (all(is.na(dfr_in_segment$DF_ID_VARS))) {
-            # stop if all column is empty
-            util_warning(
-              paste0("Column %s in dataframe_level ",
-                     "metadata is empty."),
-              sQuote("DF_ID_VARS"))
-          }
+          id_variable <- util_report_by_segment_id_vars(
+            dfr_in_segment = dfr_in_segment,
+            id_vars = id_vars
+          )
 
-          id_variable <- unique(dfr_in_segment[, DF_ID_VARS, drop = TRUE])
-
-          # Add the argument id_vars (works even if null or character(0))
-          id_variable <- unique(c(id_variable, id_vars))
-
-          util_expect_scalar(
-            id_variable,
-            allow_more_than_one = TRUE,
-            allow_null = TRUE,     #It can be an empty id
-            allow_na = TRUE)
-
-          id_variable <-
-            unlist(sapply(id_variable,
-                          function(x) {
-                            util_parse_assignments(
-                              x,
-                              split_char =
-                                c(SPLIT_CHAR),
-                              multi_variate_text =
-                                TRUE,
-                              split_on_any_split_char =
-                                TRUE
-                            )
-                          })) #it also get rid of eventual NA in the id_variable
-          names(id_variable) <- NULL
-          id_variable <- unique(id_variable)
-
-
-          if((DF_CODE) %in% colnames(dfr_in_segment) &&
-             DATAFRAMES %in% colnames(meta_data)) {
+          if ((DF_CODE) %in% colnames(dfr_in_segment) &&
+              DATAFRAMES %in% colnames(meta_data)) {
             # In case there is a DATAFRAMES and DF_CODE, filter the data frames
             # imported in dataframe_cur_seg,
             # so that the var_names comes from the right data frame
-
-            # First create a list with data frame names and list of variables
-            # from metadata
-            # corresponding to that data frame
-            # (needed variables are in vars_in_segment)
-            df1 <-
-              meta_data[meta_data[[VAR_NAMES]] %in%
-                          vars_in_segment, c(VAR_NAMES, DATAFRAMES),
-                        drop = FALSE]
-            dtf_with_expected_vars_from_itemlv <- lapply(
-              setNames(nm = dataframe_names_cur_seg),
-              FUN = function(x) {
-                code_df <-
-                  study_data_withcode[study_data_withcode[[DF_NAME]] %in%
-                                        x, DF_CODE, drop = TRUE]
-                df2 <- df1[grepl(sprintf("\\b(%s)\\b", code_df),
-                                 df1$DATAFRAMES), ]
-                df2[[VAR_NAMES]]
-              }
-            )
-
-            # Filter each data frame imported in dataframe_cur_seg so that the
-            # variables are matching the relative data frame in DATAFRAMES
-            # in item_level md.
-            # This way if a there are variables with the same name
-            # in different data frames,they will be imported only
-            # from the indicated DATAFRAMES in item_level and
-            # not all of them.
-
-            # Add always the id_vars to any data frame
-            # (inside list_vars_DATAFRAMES) more specifically only import
-            # id variables indicate in DF_ID_VARS of data frames and
-            # the argument id_vars
-
-            # Replace the dataframe_cur_seg with the one filtered
-            dataframes_cur_seg <- lapply(
-              setNames(nm = names(dtf_with_expected_vars_from_itemlv)),
-              FUN = function(x) {
-                # get a list of vars for each data frame based on the
-                # DATAFRAMES col in item_level md
-                list_vars_DATAFRAMES <-
-                  dtf_with_expected_vars_from_itemlv[[x]]
-                # get a list of id_vars from data
-                my_id_vars <- dfr_in_segment[dfr_in_segment$DF_NAME == x,
-                                             DF_ID_VARS, drop = TRUE]
-                util_expect_scalar(
-                  my_id_vars,
-                  allow_more_than_one = FALSE,
-                  allow_null = TRUE,
-                  allow_na = TRUE
-                )
-                my_id_vars <- unlist(
-                  util_parse_assignments(
-                    my_id_vars,
-                    split_char =
-                      c(SPLIT_CHAR),
-                    multi_variate_text =
-                      TRUE,
-                    split_on_any_split_char =
-                      TRUE
-                  )
-                )
-
-                names(my_id_vars) <- NULL
-                my_id_vars <- unique(my_id_vars)
-                # if a id_vars is provided as argument, this is added to
-                # all segments
-                my_id_vars <- unique(c(my_id_vars, id_vars))
-
-                #add the id_vars to the list
-                list_vars_DATAFRAMES <- c(list_vars_DATAFRAMES, my_id_vars)
-
-                #get a list of vars for each data frame in dataframes_cur_seg
-                list_vars_curseg <- names(dataframes_cur_seg[[x]])
-                dataframes_cur_seg[[x]] <-
-                  dataframes_cur_seg[[x]][,
-                                          colnames(dataframes_cur_seg[[x]]) %in%
-                                            list_vars_DATAFRAMES, drop = FALSE]
-                dataframes_cur_seg[[x]]
-              }
+            dataframes_cur_seg <- util_report_by_filter_segment_dataframes(
+              dataframes = dataframes_cur_seg,
+              dataframe_names = dataframe_names_cur_seg,
+              dfr_in_segment = dfr_in_segment,
+              meta_data = meta_data,
+              vars_in_segment = vars_in_segment,
+              study_data_withcode = study_data_withcode,
+              id_vars = id_vars
             )
           }
-
         } else {
-          #TODO: check I think this can never happen
-          #if the files are specified from user (length(list_sd_columns) > 1)
           id_variable <- id_vars
         }
 
         # If a segment is empty, do not create a report
-        if (length(dataframes_cur_seg) == 0 ) {
-          util_warning(sprintf("No data available for the segment %s",
-                               sQuote(cur_seg)))
+        if (length(dataframes_cur_seg) == 0) {
+          util_warning(sprintf(
+            "No data available for the segment %s",
+            sQuote(cur_seg)
+          ))
           return(NULL)
         }
 
 
-        #Before merging select only variables in the current segment
-        dataframes_cur_seg <-
-          mapply(dataframes_cur_seg,
-                 MoreArgs = list(vars_in_segment =
-                                   vars_in_segment),
-                 SIMPLIFY = FALSE,
-                 FUN = function(x,
-                                vars_in_segment){
-                   x <- x[, colnames(x) %in% vars_in_segment, drop = FALSE]
-                   return(x)
-                   })
+        # Before merging select only variables in the current segment
+        dataframes_cur_seg <- lapply(
+          dataframes_cur_seg,
+          util_report_by_keep_segment_vars,
+          vars_in_segment = vars_in_segment
+        )
 
-        #Before merging obtain the list of all variables
-        vars_before <- unique(unlist(lapply(names(dataframes_cur_seg),
-                                            FUN = function(x) {
-                                              colnames(dataframes_cur_seg[[x]])
-                                            })))
-
-
-        #if there is no id_vars
-        if(is.null(id_variable) || length(id_variable) == 0 ) {
-          util_warning(c("Because no id variable is available, merging ",
-                         "data frames could have created duplicated rows."))
-          # marge data frame pairwise, without duplicating columns in common
-          sd_merged <- Reduce(function(x, y) {
-            merge(x, y, all = TRUE)
-          }, dataframes_cur_seg)
-        } else {
-          # merge data frame pairwise, without duplicating columns in common
-          sd_merged <- Reduce(function(x, y) {
-            partial_merge <-
-              suppressWarnings(merge(x, y, all = TRUE,
-                                     by = intersect(
-                                       intersect(colnames(x), colnames(y)),
-                                       id_variable),
-                                     suffixes = c("", "")
-              ))
-            partial_merge <-
-              suppressWarnings(util_fix_merge_dups(partial_merge,
-                                                   FALSE))
-            return(partial_merge)
-          }, dataframes_cur_seg)
-        }
-
-        #Check what happens to the variables during the merge
-        if (length(vars_before) > length(colnames(sd_merged))) {
-          util_warning(
-            "Lost %d variables due to mapping problems. %d variables left.",
-            length(vars_before) - length(colnames(sd_merged)),
-            setdiff(vars_before, colnames(sd_merged)),
-            applicability_problem = TRUE
-          )
-        } else if (length(vars_before) < length(colnames(sd_merged))) {
-          util_warning(
-            sprintf("There are duplicated variables due to merging: %s",
-                    dQuote(setdiff(colnames(sd_merged),
-                                   vars_before))),
-            applicability_problem = TRUE
-          )
-        }
+        sd_merged <- util_report_by_merge_segment_dataframes(
+          dataframes = dataframes_cur_seg,
+          id_vars = id_variable
+        )
       }
 
       # Filter sd_merged by subgroup keeping only needed records----
-      if (!is.null(subgroup)) {
-        nrow_df <- nrow(sd_merged)
-        # parse redcap rules to obtain contradiction in an usable way
-        rule <- util_parse_redcap_rule(subgroup)
+      sd_merged <- util_report_by_filter_subgroup(
+        study_data = sd_merged,
+        meta_data = meta_data,
+        subgroup = subgroup
+      )
 
-        sd_merged <- try(sd_merged[util_eval_rule(rule, ds1 = sd_merged,
-                                                  meta_data = meta_data), ],
-                         silent = TRUE)
-        if (inherits(sd_merged, "try-error")) {
-          # if the subgroup selection did not work
-          err <- conditionMessage(attr(sd_merged, "condition"))
-          util_error("The subgroup rule %s was not acceptable: %s",
-                     dQuote(subgroup), err)
-        }
-        if (nrow(sd_merged) == nrow_df) {
-          util_warning(
-            c("The number of cases did not change after applying the",
-              "subgroup filter %s"),
-            dQuote(subgroup))
-        } else if (nrow(sd_merged) == 0 && nrow_df > 0) {
-          util_warning(
-            c(
-              "After using subgroup rule %s, no dataset is left. You may",
-              "have provided an impossible condition, e.g., filtering",
-              "for a variable equal to %s, but the actual levels would be %s."
-            ),
-            dQuote(subgroup),
-            dQuote("females"),
-            dQuote("female")
-          )
-        }
-        rm(nrow_df, rule)
-      }
+      scale_level <- util_amend_scale_level_once(
+        study_data = sd_merged,
+        meta_data = meta_data,
+        label_col = label_col
+      )
+      meta_data <- scale_level$meta_data
+      rm(scale_level)
 
-
+      # Run shared report preparation once for the whole current segment.
+      # Missing-code amendments, computed-variable creation, and metadata
+      # normalization are row-wise/metadata operations; doing them before the
+      # strata split avoids repeating expensive work for every stratum while
+      # still keeping memory use low because strata are stored as row indices.
+      prepared_segment_inputs <- util_prepare_dataquieR_inputs(
+        study_data = sd_merged,
+        meta_data = meta_data,
+        label_col = label_col,
+        meta_data_cross_item = cil_in_segment[[cur_seg]],
+        meta_data_item_computation = computed_in_segment[[cur_seg]],
+        name_of_study_data = name_of_study_data,
+        update_registry = FALSE
+      )
+      sd_merged <- prepared_segment_inputs$study_data
+      meta_data <- prepared_segment_inputs$meta_data
+      meta_data_item_computation_cur_seg <-
+        prepared_segment_inputs$meta_data_item_computation
+      rm(prepared_segment_inputs)
 
       # Define the strata_column ----
-      # if no argument to split present,
-      # create a list anyways with all_observations
-      if (is.null(strata_column) ||
-          !strata_column %in% colnames(sd_merged)) {
-        .sd_list <- list(all_observations = sd_merged)
-      } else if (!is.null(strata_column) &&
-                 strata_column %in% colnames(sd_merged)) {
-        # split the data
-        .sd_list <- split(sd_merged, sd_merged[[strata_column]])
-
-
-        # provide a warning message in case there are NAs in the study data in
-        # the column selected as strata_column
-        if (anyNA(sd_merged[[strata_column]])) {
-          # util_warning(m = sprintf(c("There are %d missing values inside the",
-          #                           " column selected as strata_column"),
-          #                         sum(is.na(sd_merged[[strata_column]])) )
-          # )
-          new_group_NA <- sd_merged[is.na(sd_merged[[strata_column]]), ]
-          list_new_group_NA <- setNames(list(new_group_NA), nm = "NAs_group")
-          .sd_list <- c(.sd_list, list_new_group_NA)
-          rm(new_group_NA, list_new_group_NA)
+      # If no argument to split is present, create a list anyway with
+      # all_observations. Store row indices instead of split data frames:
+      # for large reports, split(data.frame) eagerly creates one data-frame
+      # copy per stratum. The row-index list is tiny and lets us materialize
+      # only the current stratum immediately before calling dq_report2().
+      .sd_list <- util_report_by_strata_rows(
+        study_data = sd_merged,
+        strata_column = strata_column
+      )
+      if (!is.null(strata_column) &&
+          strata_column %in% colnames(sd_merged)) {
+        if (!is.null(strata_select) || !is.null(strata_exclude)) {
+          expected_strata <- util_report_by_expected_strata(
+            meta_data = meta_data,
+            strata_column = strata_column
+          )
         }
 
         ## filtering for the study_data_strata (vector of names or regexp)
         if (!is.null(strata_select)) {
-          # Value labels from VALUE_LABEL_TABLE and CODE_LIST_TABLE
-          if (is.na(meta_data[meta_data[VAR_NAMES] == strata_column,
-                              VALUE_LABELS, drop = TRUE]) ||
-              is.null(meta_data[meta_data[VAR_NAMES] == strata_column,
-                                VALUE_LABELS, drop = TRUE])) {
-            value_label_table_name <- meta_data[meta_data[VAR_NAMES] ==
-                                                  strata_column,
-                                                VALUE_LABEL_TABLE, drop = TRUE]
-
-            try(util_expect_data_frame(value_label_table_name),
-                silent = TRUE)
-            if (!is.data.frame(value_label_table_name)) {
-              try(util_expect_data_frame("CODE_LIST_TABLE"),
-                  silent = TRUE)
-              if (!is.data.frame(CODE_LIST_TABLE)) {
-                util_message(sprintf(
-                  "No value_label_table_name %s found",
-                  dQuote(value_label_table_name)
-                ))
-                value_label_table_name <- data.frame(CODE_VALUE = character(0),
-                                                     CODE_LABEL = character(0))
-              } else {
-                #select in CODE_LIST_TABLE$VALUE_LABEL_TABLE only the value_label_table_name
-                value_label_table_name <-
-                  CODE_LIST_TABLE[CODE_LIST_TABLE$VALUE_LABEL_TABLE ==
-                                    value_label_table_name, , drop = FALSE]
-              }
-            }
-            expected_strata <- setNames(value_label_table_name$CODE_LABEL,
-                                        nm = value_label_table_name$CODE_VALUE)
-          } else {
-            expected_strata <- unlist(
-              util_parse_assignments(
-                meta_data[meta_data[VAR_NAMES] == strata_column,
-                          VALUE_LABELS, drop = TRUE],
-                split_char = SPLIT_CHAR,
-                split_on_any_split_char = TRUE,
-                multi_variate_text = TRUE
-              )
-            )
-          }
-
-
           ## definition of selection_type and strata_select
           if (!is.null(selection_type)) {
             if (selection_type == "value") {
@@ -2584,9 +1887,12 @@ dq_report_by <- function(study_data,
               if (!any(strata_select %in% names(.sd_list))) {
                 # stop if selection does not match any strata
                 util_error(
-                  c("No strata_column stratum matches the",
-                    "provided names: %s"),
-                  dQuote(strata_select))
+                  c(
+                    "No strata_column stratum matches the",
+                    "provided names: %s"
+                  ),
+                  dQuote(strata_select)
+                )
               } else {
                 .sd_list <- .sd_list[strata_select]
                 # in case empty, remove empty from list
@@ -2609,9 +1915,12 @@ dq_report_by <- function(study_data,
                   !any(value_of_strata_select %in% names(.sd_list))) {
                 # stop if selection does not match any strata
                 util_error(
-                  c("No strata_column stratum matches the",
-                    "provided names: %s"),
-                  dQuote(strata_select))
+                  c(
+                    "No strata_column stratum matches the",
+                    "provided names: %s"
+                  ),
+                  dQuote(strata_select)
+                )
               } else {
                 .sd_list <- .sd_list[value_of_strata_select]
                 # in case a strata is not present, remove empty from list
@@ -2628,22 +1937,27 @@ dq_report_by <- function(study_data,
               all_labels_in_sd_list <-
                 expected_strata[names(expected_strata) %in% names(.sd_list)]
               value_of_strata_select <-
-                all_labels_in_sd_list[grepl(strata_select, all_labels_in_sd_list)]
-              if (length(names(.sd_list)[grepl(strata_select,
-                                               names(.sd_list))]) > 0) {
-                #regex match at least one strata
+                all_labels_in_sd_list[grepl(strata_select, all_labels_in_sd_list)] # nolint: line_length_linter.
+              if (length(names(.sd_list)[grepl(
+                strata_select,
+                names(.sd_list)
+              )]) > 0) {
+                # regex match at least one strata
                 .sd_list <- .sd_list[grepl(strata_select, names(.sd_list))]
                 .sd_list <- .sd_list[!is.na(names(.sd_list))]
               } else if (length(names(.sd_list)[names(.sd_list) %in%
-                                                names(value_of_strata_select)]) > 0) {
+                      names(value_of_strata_select)]) > 0) {
                 .sd_list <- .sd_list[names(.sd_list)[names(.sd_list) %in%
-                                                       names(value_of_strata_select)]]
+                      names(value_of_strata_select)]]
                 .sd_list <- .sd_list[!is.na(names(.sd_list))]
               } else {
                 util_error(
-                  c("No strata_column stratum matches the",
-                    "provided regular expression: %s"),
-                  dQuote(strata_select))
+                  c(
+                    "No strata_column stratum matches the",
+                    "provided regular expression: %s"
+                  ),
+                  dQuote(strata_select)
+                )
               }
             }
           } else {
@@ -2656,24 +1970,28 @@ dq_report_by <- function(study_data,
                 "value labels or possible regular expressions"
               )
             )
-            #check if the strata_select matches a names(.sd_list)
+            # check if the strata_select matches a names(.sd_list)
             if (any(strata_select %in% names(.sd_list))) {
               .sd_list <- .sd_list[strata_select]
               # in case present, remove empty from list
               .sd_list <- .sd_list[!is.na(names(.sd_list))]
             } else if (any(strata_select %in% expected_strata)) {
-              #in case the strata_select matches a label of names(.sd_list)
+              # in case the strata_select matches a label of names(.sd_list)
               labels_strata_select <- expected_strata[expected_strata %in%
-                                                        strata_select]
+                  strata_select]
               value_of_strata_select <- names(labels_strata_select)
               .sd_list <- .sd_list[value_of_strata_select]
               # in case present, remove empty from list
               .sd_list <- .sd_list[!is.na(names(.sd_list))]
-            } else if (length(names(.sd_list)[grepl(strata_select,
-                                                    names(.sd_list))]) > 0) {
-              #regex matches a value
-              .sd_list <- .sd_list[names(.sd_list)[grepl(strata_select,
-                                                         names(.sd_list))]]
+            } else if (length(names(.sd_list)[grepl(
+              strata_select,
+              names(.sd_list)
+            )]) > 0) {
+              # regex matches a value
+              .sd_list <- .sd_list[names(.sd_list)[grepl(
+                strata_select,
+                names(.sd_list)
+              )]]
             } else {
               labels_strata_select <-
                 expected_strata[grepl(strata_select, expected_strata)]
@@ -2684,11 +2002,14 @@ dq_report_by <- function(study_data,
                 # in case present, remove empty from list
                 .sd_list <- .sd_list[!is.na(names(.sd_list))]
               } else {
-                #it does not maches any labels or anything else
+                # it does not maches any labels or anything else
                 util_error(
-                  c("No strata_column stratum matches the",
-                    "provided names: %s" ),
-                  dQuote(strata_select))
+                  c(
+                    "No strata_column stratum matches the",
+                    "provided names: %s"
+                  ),
+                  dQuote(strata_select)
+                )
               }
             }
           }
@@ -2696,47 +2017,6 @@ dq_report_by <- function(study_data,
 
         ## remove the strata to exclude
         if (!is.null(strata_exclude)) {
-          # Value labels from VALUE_LABEL_TABLE and CODE_LIST_TABLE
-          if (is.na(meta_data[meta_data[VAR_NAMES] == strata_column,
-                              VALUE_LABELS, drop = TRUE]) ||
-              is.null(meta_data[meta_data[VAR_NAMES] == strata_column,
-                                VALUE_LABELS, drop = TRUE])) {
-            value_label_table_name <- meta_data[meta_data[VAR_NAMES] ==
-                                                  strata_column,
-                                                VALUE_LABEL_TABLE, drop = TRUE]
-
-            try(util_expect_data_frame(value_label_table_name),
-                silent = TRUE)
-            if (!is.data.frame(value_label_table_name)) {
-              try(util_expect_data_frame("CODE_LIST_TABLE"),
-                  silent = TRUE)
-              if (!is.data.frame(CODE_LIST_TABLE)) {
-                util_message(sprintf(
-                  "No value_label_table_name %s found",
-                  dQuote(value_label_table_name)))
-                value_label_table_name <- data.frame(CODE_VALUE = character(0),
-                                                     CODE_LABEL = character(0))
-              } else {
-                #select in CODE_LIST_TABLE$VALUE_LABEL_TABLE only the value_label_table_name
-                value_label_table_name <-
-                  CODE_LIST_TABLE[CODE_LIST_TABLE$VALUE_LABEL_TABLE ==
-                                    value_label_table_name, , drop = FALSE]
-              }
-            }
-            expected_strata <- setNames(value_label_table_name$CODE_LABEL,
-                                        nm = value_label_table_name$CODE_VALUE)
-          } else {
-            expected_strata <- unlist(
-              util_parse_assignments(
-                meta_data[meta_data[VAR_NAMES] == strata_column,
-                          VALUE_LABELS, drop = TRUE],
-                split_char = SPLIT_CHAR,
-                split_on_any_split_char = TRUE,
-                multi_variate_text = TRUE
-              )
-            )
-          }
-
           if (!is.null(selection_type)) {
             if (selection_type == "value") {
               # check if the typed levels exist in the segment_column possible
@@ -2744,16 +2024,22 @@ dq_report_by <- function(study_data,
               if (!any(strata_exclude %in% names(.sd_list))) {
                 # stop if selection does not match any strata
                 util_error(
-                  c("No strata_column stratum matches the",
-                    "strata to exclude: %s"),
-                  dQuote(strata_exclude))
+                  c(
+                    "No strata_column stratum matches the",
+                    "strata to exclude: %s"
+                  ),
+                  dQuote(strata_exclude)
+                )
               } else {
-                #remove strata_exclude elements from list
-                .sd_list <- .sd_list[names(.sd_list) %in% strata_exclude == FALSE]
+                # remove strata_exclude elements from list
+                .sd_list <- .sd_list[names(.sd_list) %in% strata_exclude == FALSE] # nolint: line_length_linter.
                 # stop if removing all strata
                 util_stop_if_not(length(.sd_list) > 0,
-                                 label = paste0("No strata remain after",
-                                                " excluding selected ones"))
+                  label = paste0(
+                    "No strata remain after",
+                    " excluding selected ones"
+                  )
+                )
               }
             } else if (selection_type == "v_label") {
               value_of_strata_select <-
@@ -2765,46 +2051,62 @@ dq_report_by <- function(study_data,
                   !any(value_of_strata_select %in% names(.sd_list))) {
                 # stop if selection does not match any strata
                 util_error(
-                  c("No strata_column stratum matches the",
-                    "strata_exclude: %s"),
-                  dQuote(strata_exclude))
+                  c(
+                    "No strata_column stratum matches the",
+                    "strata_exclude: %s"
+                  ),
+                  dQuote(strata_exclude)
+                )
               } else {
                 .sd_list <- .sd_list[names(.sd_list) %in%
-                                       value_of_strata_select == FALSE]
-                #stop if no strata remain
+                    value_of_strata_select == FALSE]
+                # stop if no strata remain
                 if (length(.sd_list) == 0) {
                   util_error(
-                    c("No strata_column stratum remains",
-                      "after removing strata_exclude: %s"),
-                    dQuote(strata_exclude))
+                    c(
+                      "No strata_column stratum remains",
+                      "after removing strata_exclude: %s"
+                    ),
+                    dQuote(strata_exclude)
+                  )
                 }
               }
             } else if (selection_type == "regex") {
               all_labels_in_sd_list <-
                 expected_strata[names(expected_strata) %in% names(.sd_list)]
               value_of_strata_select <-
-                all_labels_in_sd_list[grepl(strata_exclude,
-                                            all_labels_in_sd_list)]
-              if (length(names(.sd_list)[grepl(strata_exclude,
-                                               names(.sd_list))]) > 0) {
-                #regex match at least one strata - remove the strata
+                all_labels_in_sd_list[grepl(
+                  strata_exclude,
+                  all_labels_in_sd_list
+                )]
+              if (length(names(.sd_list)[grepl(
+                strata_exclude,
+                names(.sd_list)
+              )]) > 0) {
+                # regex match at least one strata - remove the strata
                 .sd_list <- .sd_list[!grepl(strata_exclude, names(.sd_list))]
-                #stop if no strata remain
+                # stop if no strata remain
                 if (length(.sd_list) == 0) {
                   util_error(
-                    c("No strata_column stratum remains",
-                      "after removing strata_exclude: %s"),
-                    dQuote(strata_exclude))
+                    c(
+                      "No strata_column stratum remains",
+                      "after removing strata_exclude: %s"
+                    ),
+                    dQuote(strata_exclude)
+                  )
                 }
               } else if (length(names(.sd_list)[names(.sd_list) %in%
-                                                names(value_of_strata_select)]) > 0) {
+                      names(value_of_strata_select)]) > 0) {
                 .sd_list <- .sd_list[names(.sd_list) %in%
-                                       names(value_of_strata_select) == FALSE]
+                    names(value_of_strata_select) == FALSE]
               } else {
                 util_error(
-                  c("No strata_column stratum matches the",
-                    "provided regular expression: %s"),
-                  dQuote(strata_exclude))
+                  c(
+                    "No strata_column stratum matches the",
+                    "provided regular expression: %s"
+                  ),
+                  dQuote(strata_exclude)
+                )
               }
             }
           } else {
@@ -2817,15 +2119,16 @@ dq_report_by <- function(study_data,
                 "value labels or possible regular expressions"
               )
             )
-            #check if the strata_exclude matches a names(.sd_list)
+            # check if the strata_exclude matches a names(.sd_list)
             if (any(strata_exclude %in% names(.sd_list))) {
-              #remove strata_exclude elements from list
+              # remove strata_exclude elements from list
               .sd_list <- .sd_list[names(.sd_list) %in% strata_exclude == FALSE]
               # stop if removing all strata
               util_stop_if_not(length(.sd_list) > 0,
-                               label = "No strata remain after excluding selected ones")
+                label = "No strata remain after excluding selected ones"
+              )
             } else if (any(strata_exclude %in% expected_strata)) {
-              #in case the strata_exclude matches a label of names(.sd_list)
+              # in case the strata_exclude matches a label of names(.sd_list)
               value_of_strata_select <-
                 expected_strata[expected_strata %in% strata_exclude]
               value_of_strata_select <- names(value_of_strata_select)
@@ -2835,50 +2138,66 @@ dq_report_by <- function(study_data,
                   !any(value_of_strata_select %in% names(.sd_list))) {
                 # stop if selection does not match any strata
                 util_error(
-                  c("No strata_column stratum matches the",
-                    "strata_exclude: %s"),
-                  dQuote(strata_exclude))
+                  c(
+                    "No strata_column stratum matches the",
+                    "strata_exclude: %s"
+                  ),
+                  dQuote(strata_exclude)
+                )
               } else {
                 .sd_list <- .sd_list[names(.sd_list) %in%
-                                       value_of_strata_select == FALSE]
-                #stop if no strata remain
+                    value_of_strata_select == FALSE]
+                # stop if no strata remain
                 if (length(.sd_list) == 0) {
                   util_error(
-                    c("No strata_column stratum remains",
-                      "after removing strata_exclude: %s"),
-                    dQuote(strata_exclude))
+                    c(
+                      "No strata_column stratum remains",
+                      "after removing strata_exclude: %s"
+                    ),
+                    dQuote(strata_exclude)
+                  )
                 }
               }
             } else {
-              #in case no matches found for value or v_label try regex
+              # in case no matches found for value or v_label try regex
               all_labels_in_sd_list <-
                 expected_strata[names(expected_strata) %in% names(.sd_list)]
               value_of_strata_select <-
-                all_labels_in_sd_list[grepl(strata_exclude,
-                                            all_labels_in_sd_list)]
-              #if the regex matches a value
-              if (length(names(.sd_list)[grepl(strata_exclude,
-                                               names(.sd_list))]) > 0) {
-                #regex match at least one strata - remove the strata
+                all_labels_in_sd_list[grepl(
+                  strata_exclude,
+                  all_labels_in_sd_list
+                )]
+              # if the regex matches a value
+              if (length(names(.sd_list)[grepl(
+                strata_exclude,
+                names(.sd_list)
+              )]) > 0) {
+                # regex match at least one strata - remove the strata
                 .sd_list <- .sd_list[!grepl(strata_exclude, names(.sd_list))]
-                #stop if no strata remain
+                # stop if no strata remain
                 if (length(.sd_list) == 0) {
                   util_error(
-                    c("No strata_column stratum remains",
-                      "after removing strata_exclude: %s"),
-                    dQuote(strata_exclude))
+                    c(
+                      "No strata_column stratum remains",
+                      "after removing strata_exclude: %s"
+                    ),
+                    dQuote(strata_exclude)
+                  )
                 }
-                #if the regex matches a v_label
+                # if the regex matches a v_label
               } else if (length(names(.sd_list)[names(.sd_list) %in%
-                                                names(value_of_strata_select)]) > 0) {
+                      names(value_of_strata_select)]) > 0) {
                 .sd_list <- .sd_list[names(.sd_list) %in%
-                                       names(value_of_strata_select) == FALSE]
+                    names(value_of_strata_select) == FALSE]
               } else {
-                #if the regex also has no matches
+                # if the regex also has no matches
                 util_error(
-                  c("No strata_column stratum matches the",
-                    "provided strata_exclude: %s"),
-                  dQuote(strata_exclude))
+                  c(
+                    "No strata_column stratum matches the",
+                    "provided strata_exclude: %s"
+                  ),
+                  dQuote(strata_exclude)
+                )
               }
             }
           }
@@ -2898,22 +2217,26 @@ dq_report_by <- function(study_data,
           sd_merged = sd_merged,
           name_of_study_data = name_of_study_data,
           call_report_by = call_report_by,
-          resp_vars_in_segment = resp_vars_in_segment
+          resp_vars_in_segment = resp_vars_in_segment,
+          meta_data_item_computation_cur_seg =
+            meta_data_item_computation_cur_seg
         ),
         SIMPLIFY = FALSE,
         FUN = function(sd,
-                       sdn,
-                       md,
-                       sd_merged,
-                       name_of_study_data,
-                       call_report_by,
-                       resp_vars_in_segment) {
-
+          sdn,
+          md,
+          sd_merged,
+          name_of_study_data,
+          call_report_by,
+          resp_vars_in_segment,
+          meta_data_item_computation_cur_seg) {
           # import a list containing original study data (too long), and
           # new assigned names, in case it was created in a previous apply,
           # otherwise create an empty one
           if (exists("..INFO_SD_NAME_FOR_REPORT", .dataframe_environment())) {
-            info_sd_name <- prep_get_data_frame("..INFO_SD_NAME_FOR_REPORT")
+            info_sd_name <- prep_get_data_frame("..INFO_SD_NAME_FOR_REPORT",
+              keep_types = TRUE
+            )
             info_sd_name <- as.list(info_sd_name)
           } else {
             info_sd_name <- list()
@@ -2926,11 +2249,13 @@ dq_report_by <- function(study_data,
           util_message(sprintf(
             "Segment %s, Stratum %s..",
             sQuote(cur_seg),
-            sQuote(level_name)))
+            sQuote(level_name)
+          ))
           progress_msg(sprintf(
             "Segment %s, Stratum %s...",
             sQuote(cur_seg),
-            sQuote(level_name)))
+            sQuote(level_name)
+          ))
           # update the progress bar
           p$i <- p$i + 1
           progress(100 * p$i / p$N)
@@ -2940,7 +2265,8 @@ dq_report_by <- function(study_data,
             msg = sprintf(
               "Segment %s, Stratum %s...",
               sQuote(cur_seg),
-              sQuote(level_name))
+              sQuote(level_name)
+            )
           )
 
           # add the study data name that are too long to a list
@@ -2948,11 +2274,11 @@ dq_report_by <- function(study_data,
           # new assigned names
           if (!is.null(name_of_study_data) && (
             startsWith(name_of_study_data, "https://") ||
-            startsWith(name_of_study_data, "http://") ||
-            startsWith(name_of_study_data, "ftp://") ||
-            startsWith(name_of_study_data, "ftps://") ||
-            startsWith(name_of_study_data, "dbx://") ||
-            nchar(name_of_study_data) > 20
+              startsWith(name_of_study_data, "http://") ||
+              startsWith(name_of_study_data, "ftp://") ||
+              startsWith(name_of_study_data, "ftps://") ||
+              startsWith(name_of_study_data, "dbx://") ||
+              nchar(name_of_study_data) > 20
           )) {
             # if not already present in the list,
             # add the name to a general list for the overview
@@ -2960,16 +2286,17 @@ dq_report_by <- function(study_data,
                 unlist(info_sd_name, use.names = FALSE)) {
               info_sd_name <-
                 c(info_sd_name, setNames(as.list(name_of_study_data),
-                                         nm = paste0("SD", length(
-                                           info_sd_name
-                                         ) + 1)))
+                  nm = paste0("SD", length(
+                    info_sd_name
+                  ) + 1)
+                ))
             }
 
             # add the name to a local list for the report
             info_sd_name_vector <- setNames(names(info_sd_name), info_sd_name)
             info_sd_name_vector <-
               info_sd_name_vector[names(info_sd_name_vector) ==
-                                    name_of_study_data]
+                name_of_study_data]
             # turn it to a list to be used as arg. in dq_report2
             info_sd_name_per_report <-
               setNames(as.list(names(info_sd_name_vector)), info_sd_name_vector)
@@ -2977,7 +2304,8 @@ dq_report_by <- function(study_data,
             info_sd_name_vector <- NULL
             info_sd_name_per_report <- NULL
           }
-          #use abbreviation SD# instead of study data file names in folder names
+          # use abbreviation SD# instead of study data file names in folder
+          # names
           if (!is.null(info_sd_name_vector)) {
             name_of_study_data <- info_sd_name_vector[name_of_study_data]
           }
@@ -2997,8 +2325,10 @@ dq_report_by <- function(study_data,
           # update the cache with the new list info_sd_name for the overview
           if (length(info_sd_name) != 0) {
             ..INFO_SD_NAME_FOR_REPORT <- data.frame(info_sd_name)
-            prep_add_data_frames("..INFO_SD_NAME_FOR_REPORT" =
-                                   ..INFO_SD_NAME_FOR_REPORT)
+            prep_add_data_frames(
+              "..INFO_SD_NAME_FOR_REPORT" =
+                ..INFO_SD_NAME_FOR_REPORT
+            )
           }
           title_report <-
             paste0("Data quality report on ", level_name, ".", cur_seg)
@@ -3018,11 +2348,13 @@ dq_report_by <- function(study_data,
             ))
           }
 
-          #in case of study_data being used as argument indicating the name of
+          # in case of study_data being used as argument indicating the name of
           # the data frame, saved it here to prevent its change in the cache
           # during running the function dq_report2, and restored after
           if ("study_data" %in% names(.dataframe_environment())) {
-            saved_study_data <- prep_get_data_frame("study_data")
+            saved_study_data <- prep_get_data_frame("study_data",
+              keep_types = TRUE
+            )
           } else {
             saved_study_data <- NULL
           }
@@ -3039,12 +2371,16 @@ dq_report_by <- function(study_data,
           }
 
 
-          # If a segment is empty, do not create a report
-          if (nrow(sd) == 0 || is.null(sd)) {
-            util_warning(sprintf("No data available to create the report %s",
-                                 sQuote(title_report)))
+          # If a segment is empty, do not create a report.
+          if (is.null(sd) || length(sd) == 0) {
+            util_warning(sprintf(
+              "No data available to create the report %s",
+              sQuote(title_report)
+            ))
             return(NULL)
           }
+          sd <- sd_merged[sd, , drop = FALSE]
+          sd <- util_mark_dataquieR_inputs_prepared(sd)
 
           allowed_args <- names(formals(dataquieR::dq_report2))
 
@@ -3065,7 +2401,7 @@ dq_report_by <- function(study_data,
               meta_data_cross_item = cil_in_segment[[cur_seg]],
               meta_data_segment = seg_in_segment[[cur_seg]],
               meta_data_dataframe = dfr_in_segment[[1]],
-              meta_data_item_computation = computed_in_segment[[cur_seg]],
+              meta_data_item_computation = meta_data_item_computation_cur_seg,
               label_col = label_col,
               split_segments = split_segments,
               user_info = ui,
@@ -3083,41 +2419,44 @@ dq_report_by <- function(study_data,
           args$output_dir <- NULL
 
           # create the different sub-reports ----
-          r <- try(
+          r <- try(local({
+            .dataquieR_report_call_override <- call_report_by_overview
             do.call(dq_report2, args)
-          )
+          }))
 
-          ###Check here if it is an error, put r <- NULL, empty report()
+          ### Check here if it is an error, put r <- NULL, empty report()
           attr(r, "label_modification_text") <- trimws(paste(
-            attr(r, "label_modification_text"),
+            util_attr(r, "label_modification_text", exact = TRUE),
             mod_label$label_modification_text
           ))
 
           attr(r, "label_modification_table") <-
-            rbind(attr(r, "label_modification_table"),
-                  mod_label$label_modification_table)
+            rbind(
+              util_attr(r, "label_modification_table", exact = TRUE),
+              mod_label$label_modification_table
+            )
 
 
           # Define subgroup for technical information
           if (!is.null(subgroup)) {
-            Subgroup_info <- subgroup
+            subgroup_info <- subgroup
           } else {
-            Subgroup_info <- "Not specified"
+            subgroup_info <- "Not specified"
           }
 
           # Add information in the "Technical information" part of the report
           attr(r, "properties") <- c(
-            attr(r, "properties"),
+            util_attr(r, "properties", exact = TRUE),
             list(
               Study_data = name_of_study_data,
               Segment = cur_seg,
               Stratum = level_name,
-              Subgroup = Subgroup_info
+              Subgroup = subgroup_info
             )
           )
 
-          rm(sd_merged, sd, md, Subgroup_info)
-          #remove the files creating by the dq_report function from the cache
+          rm(sd_merged, sd, md, subgroup_info)
+          # remove the files creating by the dq_report function from the cache
           new_dataframes <- prep_list_dataframes()
           names_to_remove <- setdiff(new_dataframes, old_dataframes)
           suppressMessages(prep_remove_from_cache(names_to_remove))
@@ -3128,216 +2467,123 @@ dq_report_by <- function(study_data,
           }
           gc()
 
-          # in case an output directory is defined, save reports and delete them ----
-          if (length(output_dir) == 1 && dir.exists(output_dir)) {
-            if (inherits(r, "try-error")) {
-              #check if instead of the report there is an error
-              util_warning(
-                "Could not compute report for %s: %s.",
-                dQuote(sdn),
-                sQuote(conditionMessage(attr(
-                  r, "condition")))
-              )
-            } else {
-              # Save the report as R object
-              s_res <-
-                try(prep_save_report(r, file.path(output_dir, gsub(
-                  "[^a-zA-Z0-9_\\.]",
-                  "",
-                  sprintf("report_%s.dq2", sdn)
-                ))))
-              if (inherits(s_res, "try-error")) {
-                # if the report could not be saved
-                # gives a warning
-                util_warning(
-                  "Could not save report for %s: %s.",
-                  dQuote(sdn),
-                  sQuote(conditionMessage(attr(
-                    s_res, "condition")))
-                )
-              }
-              # remove object to reduce memory use
-              rm(s_res)
-
-              # Save the summaries for a quick overview of all the reports ----
-              obj <- summary(r)
-              this <- attr(obj, "this")
-              this$stratum <- level_name
-              this$used_data_file <- name_of_study_data
-              this$segment <- cur_seg #not for combining
-              this$sdn <- sdn
-              attr(obj, "this") <- this
-
-              s_res <-
-                try(saveRDS(obj, file.path(output_dir, gsub(
-                  "[^a-zA-Z0-9_\\.]",
-                  "",
-                  sprintf("report_summary_%s.RDS", sdn)
-                ))))
-              if (inherits(s_res, "try-error")) {
-                # if the summary could not be saved
-                util_warning(
-                  "Could not save report summary for %s: %s.",
-                  dQuote(sdn),
-                  sQuote(conditionMessage(attr(
-                    s_res, "condition")))
-                )
-              }
-              obj <- NULL
-              try({
-                obj  <- util_setup_dashboard(r,
-                                             make_links = FALSE,
-                                             return_table_only = TRUE)
-                if (!is.null(obj)) {
-                  attr(obj, "name_of_study_data") <- name_of_study_data
-                  attr(obj, "level_name") <- level_name
-                }
-              })
-              # paste0(name_of_study_data, dashboard$Variables, level_name)
-              s_res <-
-                try(saveRDS(obj, file.path(output_dir, gsub(
-                  "[^a-zA-Z0-9_\\.]",
-                  "",
-                  sprintf("report_dashboard_%s.RDS", sdn)
-                ))))
-              if (inherits(s_res, "try-error")) {
-                # if the summary could not be saved
-                util_warning(
-                  "Could not save report dashboard table for %s: %s.",
-                  dQuote(sdn),
-                  sQuote(conditionMessage(attr(
-                    s_res, "condition")))
-                )
-              }
-              # remove object to reduce memory use
-              rm(s_res)
-              .dir <- file.path(output_dir,
-                                gsub("[^a-zA-Z0-9_\\.]", "",
-                                     sprintf("report_%s", sdn)))
-              dir.create(.dir,
-                         showWarnings = FALSE,
-                         recursive = TRUE)
-              if (!dir.exists(.dir)) {
-                # warning if the directory could not be created
-                util_warning(
-                  paste0("Could not create directory %s. ",
-                         "No output for this segment"),
-                  dQuote(.dir))
-              }
-              # prepare the folder for saving the rendered report html file
-              if (also_print) {
-                if (dir.exists(.dir)) {
-                  # these two arguments may be passed to the print function
-                  pass_args <- dots[names(dots) %in%
-                                      c("cores", "block_load_factor")]
-                  # save the rendered html files in the directory
-                  p_res <- util_try_with_trace(rlang::eval_bare(
-                    rlang::call2(print.dataquieR_resultset2,
-                                 r,
-                                 dir = .dir,
-                                 view = FALSE,
-                                 disable_plotly = disable_plotly,
-                                 by_report = TRUE,
-                                 !!!pass_args
-                    )
-                  ))
-                  #creating the back link
-                  if (inherits(p_res, "try-error")) {
-                    if (isTRUE(getOption("dataquieR.traceback",
-                                         dataquieR.traceback_default))) {
-                      util_warning(util_condition_from_try_error(p_res))
-                    }
-                    # gives a warning if the report could not be rendered
-                    util_warning(
-                      "Could not create HTML report for %s: %s.",
-                      dQuote(.dir),
-                      sQuote(conditionMessage(
-                        attr(p_res, "condition")))
-                    )
-                  }
-                  rm(p_res)
-                }
-              }
-            }
-            # remove the reports to reduce memory use
-            rm(r)
-            gc()
-            return(invisible(NULL))
-          } else {
-            #if no output directory is indicated, return the report
-            return(r)
-          }
+          attr(r, "report_by_info") <- list(
+            sdn = sdn,
+            level_name = level_name,
+            name_of_study_data = name_of_study_data,
+            cur_seg = cur_seg
+          )
+          report_output <- util_report_by_output(
+            r = r,
+            output_dir = output_dir,
+            sdn = sdn,
+            level_name = level_name,
+            name_of_study_data = name_of_study_data,
+            cur_seg = cur_seg,
+            also_print = also_print,
+            dots = dots,
+            disable_plotly = disable_plotly,
+            advanced_options = advanced_options,
+            html_table_backend = html_table_backend,
+            view_meta_data = meta_data,
+            force_overwrite = force_overwrite
+          )
+          rm(r)
           gc()
+          return(report_output)
         }
       )
     }
   )
 
-  if (!missing(output_dir) && dir.exists(output_dir)) {
-    maybe <- function(x) {
-      if (exists(x, envir = parent.frame())) {
-        setNames(list(rlang::maybe_missing(get(x, envir = parent.frame()))),
-                 nm = x)
-      } else {
-        list()
-      }
-    }
-    saveRDS(
-      c(
-        maybe("strata_column"),
-        maybe("segment_column"),
-        maybe("strata_column_label"),
-        maybe("subgroup"),
-        maybe("mod_label"),
-        maybe("disable_plotly"),
-        maybe("title"),
-        maybe("start_time"),
-        maybe("rep_id"),
-        maybe("subtitle"),
-        maybe("author"),
-        maybe("user_info"),
-        maybe("by_call")
-      ),
-      file = file.path(output_dir, "report_by_meta.RDS")
+  report_by_meta_names <- c(
+    "strata_column",
+    "segment_column",
+    "strata_column_label",
+    "subgroup",
+    "mod_label",
+    "disable_plotly",
+    "advanced_options",
+    "html_table_backend",
+    "title",
+    "start_time",
+    "rep_id",
+    "subtitle",
+    "author",
+    "user_info",
+    "by_call",
+    "call_report_by",
+    "call_report_by_overview"
+  )
+  if (has_output_dir && dir.exists(output_dir)) {
+    call_report_by_overview <- util_compact_dq_report_by_call_from_env(
+      environment()
+    )
+    util_report_by_meta(
+      output_dir = output_dir,
+      names = report_by_meta_names
     )
   }
 
   # create the html overview page that links all sub-reports created -----
-  if (!missing(output_dir) && also_print) {
+  if (has_output_dir && also_print) {
     util_create_report_by_overview(
       output_dir = output_dir
     )
   }
   prep_purge_data_frame_cache()
 
-  if (util_really_rstudio()) {
-    rstudioapi::executeCommand("activateConsole")
+  report_files <- if (has_output_dir) {
+    sort(list.files(output_dir, pattern = "^report_.*[.]dq2$"))
+  } else {
+    character()
+  }
+  if (has_output_dir) {
+    stored_meta <- readRDS(file.path(output_dir, "report_by_meta.RDS"))
+    stored_meta$report_files <- report_files
+    saveRDS(stored_meta, file.path(output_dir, "report_by_meta.RDS"))
+  }
+  report_by_meta <- if (has_output_dir) {
+    list()
+  } else {
+    util_report_by_meta_values(report_by_meta_names, environment())
+  }
+  overall_res <- util_new_dataquieR_report_by(
+    overall_res,
+    output_dir = output_dir,
+    meta = report_by_meta,
+    report_files = report_files
+  )
+  if (has_output_dir) {
+    util_message(
+      paste0(
+        "The returned report bundle is disk-backed. Keep %s readable ",
+        "to print the bundle later."
+      ),
+      dQuote(output_dir)
+    )
   }
 
-  if (missing(output_dir)) {
+  if (!has_output_dir) {
     if (view) {
       return(overall_res)
     } else {
       return(invisible(overall_res))
     }
   } else {
-    if (view && also_print) {
-      # util_view_file(content_file) done by exit handler
-      return(overall_res)
-    } else {
-      return(invisible(overall_res))
-    }
+    # util_view_file(content_file) is handled by the HTML progress exit hook.
+    return(invisible(overall_res))
   }
-
 }
 
 # return a list of .hi, .hp, and .hm, the handles for the
 # progress hooks for init, progress and progress-messages
-# so use it as follows:
-# .hi <- .hp <- .hm <- NULL
-# list2env(util_init_html_progress(...), envir = environent)
+# Use list2env() locally to bind the returned progress hooks if needed.
+#' Internal helper: init html progress
+#'
+#' @noRd
 util_init_html_progress <- function(output_dir, content_file, title, view,
-                                    rep_id, start_time = Sys.time()) {
+  rep_id, start_time = Sys.time(), logo_rel = "logo.png") {
   util_seed_last_error()
   force(start_time)
   packageName <- utils::packageName()
@@ -3346,11 +2592,13 @@ util_init_html_progress <- function(output_dir, content_file, title, view,
   hook_store$percent <- 0
   hook_store$status <- "Initializing"
   hook_store$msg <- ""
+  hook_store$finished <- FALSE
+  completion_file <- file.path(output_dir, ".report", "render-complete")
 
   hook <- function(n = hook_store$n,
-                   percent = hook_store$percent,
-                   status = hook_store$status,
-                   msg = hook_store$msg) {
+    percent = hook_store$percent,
+    status = hook_store$status,
+    msg = hook_store$msg) {
     if (!missing(n)) {
       hook_store$n <- n
     }
@@ -3366,76 +2614,114 @@ util_init_html_progress <- function(output_dir, content_file, title, view,
     util_write_index_html(
       content_file,
       util_index_loading_lines(
-        title  = title,
+        title = title,
         message = hook_store$status,
-        detail  = hook_store$msg,
+        detail = hook_store$msg,
         reload_ms = 1200L,
         n = hook_store$n,
-        percent = hook_store$percent
+        percent = hook_store$percent,
+        logo_rel = logo_rel
       )
     )
-    util_write_renderinfo_js_json(output_dir = output_dir,
-                                  rep_id = rep_id,
-                                  start_time = start_time,
-                                  end_time = Sys.time())
+    util_write_renderinfo_js_json(
+      output_dir = output_dir,
+      rep_id = rep_id,
+      start_time = start_time,
+      end_time = Sys.time()
+    )
   }
 
-  .hi <- prep_register_progress_hook(type = "init",
-                                     hook)
+  .hi <- prep_register_progress_hook(
+    type = "init",
+    hook
+  )
   withr::defer_parent(prep_deregister_progress_hook(.hi, verbose = FALSE))
-  .hp <- prep_register_progress_hook(type = "progress",
-                                     hook)
+  .hp <- prep_register_progress_hook(
+    type = "progress",
+    hook
+  )
   withr::defer_parent(prep_deregister_progress_hook(.hp, verbose = FALSE))
-  .hm <- prep_register_progress_hook(type = "msg",
-                                     hook)
+  .hm <- prep_register_progress_hook(
+    type = "msg",
+    hook
+  )
   withr::defer_parent(prep_deregister_progress_hook(.hm, verbose = FALSE))
 
   if (!dir.exists(file.path(output_dir, ".report"))) {
     if (!dir.create(file.path(output_dir, ".report"))) {
-      util_error("Could not create %s for HTML output",
-                 dQuote(file.path(output_dir, ".report")))
+      util_error(
+        "Could not create %s for HTML output",
+        dQuote(file.path(output_dir, ".report"))
+      )
     }
   }
+  unlink(completion_file, force = TRUE)
 
-  file.copy(system.file("logos",
-                        "dataquieR_48x48.png",
-                        package = packageName),
-            file.path(output_dir, ".report", "logo.png"))
+  file.copy(
+    system.file("logos",
+      "dataquieR_48x48.png",
+      package = packageName
+    ),
+    file.path(output_dir, ".report", "logo.png")
+  )
+
+  util_write_index_html(
+    content_file,
+    util_index_loading_lines(
+      title = title,
+      message = hook_store$status,
+      detail = hook_store$msg,
+      reload_ms = 1200L,
+      n = hook_store$n,
+      percent = hook_store$percent,
+      logo_rel = logo_rel
+    )
+  )
+  util_write_renderinfo_js_json(
+    output_dir = output_dir,
+    rep_id = rep_id,
+    start_time = start_time,
+    end_time = Sys.time()
+  )
+  withr::defer_parent({
+    cl <- ""
+    cl <- suppressWarnings(try(readLines(content_file), silent = TRUE))
+    report_file <- file.path(output_dir, ".report", "report.html")
+    report_written <- file.exists(report_file) &&
+      isTRUE(file.info(report_file)$size > 0L)
+    index_finished <- any(grepl(fixed = TRUE, "<!-- done -->", cl))
+    if (report_written && !index_finished) {
+      util_write_index_html(
+        content_file,
+        util_index_redirect_lines(
+          title = title,
+          target_rel = ".report/report.html",
+          delay_ms = 300L,
+          logo_rel = logo_rel
+        )
+      )
+    } else if (!isTRUE(hook_store$finished) && !file.exists(completion_file) &&
+        !index_finished) {
+      util_write_index_html(
+        content_file,
+        util_index_error_lines(
+          title = title,
+          message = "Report was not created... it was cancelled or an error occurred.", # nolint: line_length_linter.
+          logo_rel = logo_rel
+        )
+      )
+      # Use dirname(content_file) and util_pretty_vector_string() locally when
+      # debugging missing done markers.
+      unlink(file.path(
+        dirname(content_file), ".report", "renderinfo.js"
+      )) # this is the marker for an error
+    }
+  })
 
   if (view) {
-    util_write_index_html(
-      content_file,
-      util_index_loading_lines(
-        title  = title,
-        message = hook_store$status,
-        detail  = hook_store$msg,
-        reload_ms = 1200L,
-        n = hook_store$n,
-        percent = hook_store$percent
-      )
-    )
-    util_write_renderinfo_js_json(output_dir = output_dir,
-                                  rep_id = rep_id,
-                                  start_time = start_time,
-                                  end_time = Sys.time())
-    withr::defer_parent({
-      cl <- ""
-      cl <- suppressWarnings(try(readLines(content_file), silent = TRUE))
-      if (!any(grepl(fixed = TRUE, "<!-- done -->", cl))) {
-        util_write_index_html(
-          content_file,
-          util_index_error_lines(
-            title = title,
-            message = "Report was not created... it was cancelled or an error occurred."
-          )
-        )
-        #print(dirname(content_file))
-        # util_message("Could not find done in %s: %s", dQuote(content_file), util_pretty_vector_string(cl))
-        unlink(file.path(dirname(content_file), "renderinfo.js")) # this is the marker for an error
-      }
-    })
     if (util_works_in_rs_viewer(content_file)) {
-      # RStudio has a deadlock, if the autorefresh runs in its viewer, whatever, we have progressbars there, anyways.
+      # RStudio has a deadlock, if the autorefresh runs in its viewer,
+      # whatever, we have progressbars there, anyways.
       withr::defer_parent({
         cl <- ""
         cl <- suppressWarnings(try(readLines(content_file), silent = TRUE))
@@ -3444,7 +2730,8 @@ util_init_html_progress <- function(output_dir, content_file, title, view,
             p <- NULL
             try(p <- rlang::last_error(), silent = TRUE)
             rlang::abort("Cancelled.",
-                         parent = p)
+              parent = p
+            )
           } else {
             util_error("Cancelled.")
           }
@@ -3456,21 +2743,37 @@ util_init_html_progress <- function(output_dir, content_file, title, view,
       util_view_file(content_file)
     }
   }
-  list(.hi = .hi,
-       .hp = .hp,
-       .hm = .hm)
+  list(
+    .hi = .hi,
+    .hp = .hp,
+    .hm = .hm,
+    .hf = function() {
+      hook_store$finished <- TRUE
+      if (!file.create(completion_file)) {
+        util_error("Could not write report completion marker")
+      }
+      invisible(completion_file)
+    }
+  )
 }
 
+#' Internal helper: seed last error
+#'
+#' @noRd
 util_seed_last_error <- function(context = "pipeline phase started") {
-  cnd <- attr(try(
+  cnd <- util_attr(try(
     rlang::abort(
       message = context,
       class = "my_last_error_sentinel"
-    ), silent = TRUE
-  ), "condition")
+    ),
+    silent = TRUE
+  ), "condition", exact = TRUE)
   rlang::entrace(cnd)
 }
 
+#' Internal helper: is last error sentinel
+#'
+#' @noRd
 util_is_last_error_sentinel <- function() {
   err <- tryCatch(rlang::last_error(), error = function(e) NULL)
   inherits(err, "my_last_error_sentinel")

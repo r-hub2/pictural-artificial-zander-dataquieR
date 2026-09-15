@@ -2,14 +2,35 @@ test_that("nres works", {
   skip_on_cran() # slow, errors unlikely
   skip_if_not_installed("stringdist")
 
-  skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
-  prep_load_workbook_like_file("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx")
-  withr::defer(prep_purge_data_frame_cache())
-  # item_level <- prep_get_data_frame("item_level")
-  # item_level$MISSING_LIST_TABLE <- NULL
-  # prep_add_data_frames(item_level)
+  study_data <- data.frame(
+    id = 1:4,
+    x = c(1L, 2L, NA_integer_, 4L),
+    y = c("a", "b", "a", NA),
+    stringsAsFactors = FALSE
+  )
+  meta_data <- data.frame(
+    VAR_NAMES = c("id", "x", "y"),
+    LABEL = c("id", "x", "y"),
+    DATA_TYPE = c(DATA_TYPES$INTEGER, DATA_TYPES$INTEGER, DATA_TYPES$STRING),
+    SCALE_LEVEL = c(
+      SCALE_LEVELS$NOMINAL,
+      SCALE_LEVELS$RATIO,
+      SCALE_LEVELS$NOMINAL
+    ),
+    MISSING_LIST = c(SPLIT_CHAR, SPLIT_CHAR, SPLIT_CHAR),
+    JUMP_LIST = c(SPLIT_CHAR, SPLIT_CHAR, SPLIT_CHAR),
+    stringsAsFactors = FALSE
+  )
+
   report <-
-    dq_report2("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", dimensions = c("int"), label_col = "LABEL",
-               cores = NULL, filter_result_slots = NULL);
-  expect_equal(nres(report), 13)
+    suppressWarnings(suppressMessages(dq_report2(
+      study_data = study_data,
+      item_level = meta_data,
+      dimensions = c("int"),
+      label_col = LABEL,
+      cores = NULL,
+      filter_result_slots = NULL
+    )))
+
+  expect_equal(nres(report), 7)
 })

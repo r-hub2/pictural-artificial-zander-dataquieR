@@ -28,6 +28,13 @@ test_that("util_disjunct_var_sets catches multiple overlaps", {
   )
 })
 
+test_that("util_disjunct_var_sets labels unnamed direct arguments", {
+  expect_error(
+    util_disjunct_var_sets(c("a", "b"), c("b", "c")),
+    regexp = "Overlap in the arguments .*c\\(\"a\", \"b\"\\).*"
+  )
+})
+
 test_that("no-dots: caller *_vars disjoint", {
   f <- function(resp_vars, co_vars) util_disjunct_var_sets()
   expect_silent(f(c("a", "b"), c("c", "d")))
@@ -36,24 +43,60 @@ test_that("no-dots: caller *_vars disjoint", {
 test_that("no-dots: caller *_vars overlap", {
   f <- function(resp_vars, co_vars) util_disjunct_var_sets()
   expect_error(f(c("a", "b"), c("b", "c")),
-               regexp = "Overlap in the arguments")
+    regexp = "Overlap in the arguments"
+  )
 })
 
 test_that("defaults are used when not passed", {
-  f_ok <- function(resp_vars = c("a"), co_vars = c("b"))
+  f_ok <- function(resp_vars = c("a"), co_vars = c("b")) {
     util_disjunct_var_sets()
-  f_bad <- function(resp_vars = c("a"), co_vars = c("a"))
+  }
+  f_bad <- function(resp_vars = c("a"), co_vars = c("a")) {
     util_disjunct_var_sets()
+  }
   expect_silent(f_ok())
   expect_error(f_bad(), regexp = "Overlap in the arguments .*a.*")
 })
 
+test_that("matched caller arguments are used after bindings are removed", {
+  f_bad <- function(resp_vars, co_vars) {
+    rm(resp_vars, co_vars)
+    util_disjunct_var_sets()
+  }
+
+  expect_error(
+    f_bad(c("a"), c("a")),
+    regexp = "Overlap in the arguments .*resp_vars.*co_vars.*a.*"
+  )
+})
+
+test_that("caller defaults are used after local bindings are removed", {
+  f_bad <- function(resp_vars = "a", co_vars = "a") {
+    rm(resp_vars, co_vars)
+    util_disjunct_var_sets()
+  }
+
+  expect_error(
+    f_bad(),
+    regexp = "Overlap in the arguments .*resp_vars.*co_vars.*a.*"
+  )
+})
+
 test_that("NULL/empty defaults => nothing to check", {
   f1 <- function(resp_vars = NULL, co_vars = NULL) util_disjunct_var_sets()
-  f2 <- function(resp_vars = character(), co_vars = character())
+  f2 <- function(resp_vars = character(), co_vars = character()) {
     util_disjunct_var_sets()
+  }
   expect_silent(f1())
   expect_silent(f2())
+})
+
+test_that("missing caller arguments without defaults are ignored", {
+  f <- function(resp_vars, co_vars = "a", group_vars = "b") {
+    util_disjunct_var_sets()
+  }
+
+  expect_silent(f())
 })
 
 test_that("caller has no *_vars formals", {
@@ -63,7 +106,8 @@ test_that("caller has no *_vars formals", {
 
 test_that("caller body overrides defaults (env wins)", {
   f_ok <- function(resp_vars = c("a"), co_vars = c("a")) {
-    resp_vars <- "a"; co_vars <- "b"
+    resp_vars <- "a"
+    co_vars <- "b"
     util_disjunct_var_sets()
   }
   f_bad <- function(resp_vars = c("a"), co_vars = c("b")) {

@@ -11,8 +11,9 @@
 #' @concept data_management
 #' @noRd
 util_bQuote <- function(x) {
-  if (length(x) == 0)
+  if (length(x) == 0) {
     return(character(0))
+  }
   nna <- !is.na(x)
   x[nna] <- gsub("\\", "\\\\", x[nna], fixed = TRUE)
   x[nna] <- gsub("`", "\\`", x[nna], fixed = TRUE)

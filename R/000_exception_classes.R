@@ -2,7 +2,6 @@
 #' variable labels
 #' @noRd
 LONG_LABEL_EXCEPTION <- "LONG_LABEL_EXCEPTION"
-# FIXME: Use some exception class everywhere with some hierarchical concept for these classes
 
 #' An exception class assigned for exceptions caused by trying to apply
 #' a non-applicable indicator function, which is not caused by deficient

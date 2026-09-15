@@ -2,6 +2,18 @@
   position: relative;
 }
 
+/* DT2 loads its own Jost-based typography after the report menu CSS.  Keep the
+   table dependency on the report base font without changing table widths. */
+.dt-container,
+.dt-container table.dataTable,
+.dt-container table.dataTable th,
+.dt-container table.dataTable td,
+.dt-container button,
+.dt-container input,
+.dt-container select {
+  font-family: inherit !important;
+}
+
 .colheader span {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
@@ -58,12 +70,121 @@ table.myDT * {
     margin:0px!important;
 }
 
+table.myDT td.max_60vw,
+table.myDT th.max_60vw {
+    max-width: 60vw;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+table.myDT td.dq-readable-text,
+table.myDT th.dq-readable-text {
+    min-width: min(16em, 60vw);
+}
+
+table.myDT td.max_60vw pre,
+table.myDT th.max_60vw pre {
+    white-space: normal;
+    overflow-x: visible;
+}
+
 button.dq-hidden-col {
   display: none !important;
 }
 
 button.dq-hidden-col.dq-show {
   display: inline-block !important;
+}
+
+.dq-internal-computed-metadata-table
+  .dq-internal-computed-toggle-control {
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding-left: 0 !important;
+}
+
+.dq-internal-computed-metadata-table .table_result {
+  overflow: visible;
+}
+
+.content:has(.dq-internal-computed-metadata-table) {
+  overflow: visible;
+}
+
+.dq-internal-computed-metadata-table .dq-metadata-table-controls {
+  position: sticky;
+  top: var(--dq-metadata-sticky-top, 0);
+  z-index: 8;
+  background: white;
+  padding-block: 0.25em;
+  width: 100%;
+}
+
+.dq-internal-computed-metadata-table .dq-internal-computed-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  white-space: nowrap;
+  font-weight: normal;
+}
+
+.dq-internal-computed-metadata-table .dq-internal-computed-toggle input {
+  margin: 0;
+}
+
+table.myDT span.dtcc div.dtcc-searchNumber > div input,
+table.myDT span.dtcc div.dtcc-searchDateTime > div input {
+    padding-left: 46px !important;
+    padding-right: 24px !important;
+}
+
+table.myDT span.dtcc div.dtcc-searchText > div input {
+    padding-right: 46px !important;
+}
+
+.dq-table-tool-separator {
+  border-left: 1px solid #999;
+  display: inline-block;
+  height: 1.8em;
+  margin: 0 0.7em 0.35em 0.5em;
+  vertical-align: middle;
+}
+
+.dq-column-filter-toggle {
+  align-items: center;
+  background: #f4f4f4;
+  border: 1px solid #999;
+  border-radius: 2px;
+  cursor: pointer;
+  box-sizing: border-box;
+  display: inline-flex;
+  line-height: 1.25;
+  margin-bottom: 0.35em;
+  min-height: 2.25em;
+  padding: 0.4em 0.75em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.dq-column-filter-toggle input {
+  margin: 0 0.25em 0 0;
+  vertical-align: middle;
+}
+
+button.dq-content-filter-tools {
+  min-width: 6.5em;
+}
+
+tr.dq-deferred-column-filters th {
+  padding: 0.2em 0.3em !important;
+}
+
+tr.dq-deferred-column-filters input[type="search"] {
+  box-sizing: border-box;
+  min-width: 6em;
+  width: 100%;
 }
 
 /* TODO: FIND OUT; WHAT EXACTLY:

@@ -13,25 +13,26 @@
 util_find_indicator_function_in_callers <- function(symbol = "resp_vars") {
   n <- 1
   found <- FALSE
-  try({
-    while (!any( rlang::call_name(rlang::caller_call(n)) %in%
-                 names(.indicator_or_descriptor))) {
-    # while (!any( rlang::call_name(rlang::caller_call(n)) %in%
-    #              names(.indicator_or_descriptor)) ||
-    #        # find ony, if resp_vars are in the call, so not missing, but you still could write ...(resp_vars = ,)
-    #        !any(symbol %in% rlang::call_args_names(rlang::caller_call(n)))) {
-#      str(rlang::call_args(rlang::caller_call(n)))
-      n <- n + 1
-    }
-    found <- TRUE
-  }, silent = TRUE)
+  try(
+    {
+      while (!any(rlang::call_name(rlang::caller_call(n)) %in%
+            names(.indicator_or_descriptor))) {
+        # Historical stricter caller filter removed here in commit 214dd76a7d.
+        # It only accepted calls containing the requested symbol.
+        n <- n + 1
+      }
+      found <- TRUE
+    },
+    silent = TRUE
+  )
   if (found) {
-    r <- withr::with_language("en", try(dynGet(symbol,
-                inherits = TRUE,
-                ifnotfound = NULL,
-                minframe = n), silent = TRUE)) # n - 1 is relative to my caller, but for dynGet from here, it fits
+    r <- util_with_english_language_if_possible(try(dynGet(symbol,
+          inherits = TRUE,
+          ifnotfound = NULL,
+          minframe = n
+        ), silent = TRUE)) # n - 1 is relative to my caller, but for dynGet from here, it fits # nolint: line_length_linter.
     if (inherits(r, "try-error")) {
-      cnd <- attr(r, "condition")
+      cnd <- util_attr(r, "condition", exact = TRUE)
       if (conditionMessage(cnd) ==
           sprintf("argument \"%s\" is missing, with no default", symbol)) {
         return(NULL)
@@ -42,5 +43,16 @@ util_find_indicator_function_in_callers <- function(symbol = "resp_vars") {
     return(r)
   } else {
     return(NULL)
+  }
+}
+
+#' Internal helper: with english language if possible
+#'
+#' @noRd
+util_with_english_language_if_possible <- function(expr) {
+  if (nzchar(Sys.getenv("LC_ALL", unset = ""))) {
+    force(expr)
+  } else {
+    withr::with_language("en", expr)
   }
 }

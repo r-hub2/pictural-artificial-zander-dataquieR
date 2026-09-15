@@ -19,11 +19,10 @@
 #'     `DATA_TYPE`
 #' @export
 prep_compare_meta_with_study <- function(study_data,
-         label_col,
-         item_level = "item_level",
-         meta_data = item_level,
-         meta_data_v2) {
-
+  label_col,
+  item_level = "item_level",
+  meta_data = item_level,
+  meta_data_v2) {
   util_maybe_load_meta_data_v2()
 
   prep_prepare_dataframes(
@@ -32,13 +31,15 @@ prep_compare_meta_with_study <- function(study_data,
     .adjust_data_type = FALSE,
     .amend_scale_level = FALSE,
     .apply_factor_metadata = FALSE,
-    )
+  )
 
   prov <- meta_data
 
   suppressMessages(suppressWarnings(
-    pred <- prep_study2meta(study_data = study_data,
-                            guess_missing_codes = TRUE)
+    pred <- prep_study2meta(
+      study_data = study_data,
+      guess_missing_codes = TRUE
+    )
   ))
 
   rownames(pred) <- pred$VAR_NAMES
@@ -46,8 +47,8 @@ prep_compare_meta_with_study <- function(study_data,
 
   both <- intersect(rownames(pred), rownames(prov))
 
-  pred <- pred[both, , FALSE]
-  prov <- prov[both, , FALSE]
+  pred <- pred[both, , drop = FALSE]
+  prov <- prov[both, , drop = FALSE]
 
   dt_error <- both[pred$DATA_TYPE != prov$DATA_TYPE]
   sl_error <- both[pred$SCALE_LEVEL != prov$SCALE_LEVEL]

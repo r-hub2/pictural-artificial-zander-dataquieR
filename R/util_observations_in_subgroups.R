@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Utility function observations in subgroups
 #'
 #' This function uses `!is.na` to count the number of non-missing observations in subgroups of
@@ -16,6 +17,7 @@
 #' @family robustness_functions
 #' @concept data_management
 #' @noRd
+# nolint end
 util_observations_in_subgroups <- function(x, rvs) {
   if (dim(x)[1] == 0) {
     x[1, ] <- t(rep(NA, length(x)))

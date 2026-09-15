@@ -13,7 +13,9 @@ util_suppress_output <- function(expr, warns) {
   if (missing(warns)) warns <- new.env(parent = emptyenv())
   warns$warns <- list()
   sink(type = "output", file = nullfile())
-  on.exit((function(){sink()})())
+  withr::defer({
+    sink()
+  })
   withCallingHandlers(
     invisible(force(eval(expr, envir = parent.frame()))),
     warning = function(w) {

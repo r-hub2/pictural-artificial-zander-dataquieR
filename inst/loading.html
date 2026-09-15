@@ -5,7 +5,21 @@
 </div>
 
 <script type="text/javascript">
-$( window ).on( "load", function() {
-  $('#loading-ani').fadeOut()
-})
+window.hideDataquieRLoading = function(immediate) {
+  var loading = $('#loading-ani');
+  loading.stop(true, true);
+  if (immediate) {
+    loading.hide();
+  } else {
+    loading.fadeOut();
+  }
+};
+
+$(window).on("load pageshow", function() {
+  window.hideDataquieRLoading(false);
+});
+
+if (document.readyState === "complete") {
+  window.hideDataquieRLoading(true);
+}
 </script>

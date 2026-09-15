@@ -25,8 +25,9 @@ util_get_concept_info <- function(filename, ...) {
   cl[[2]] <- NULL
   cl$x <- dfr
   r <- try(eval(cl,
-       envir = parent.frame(),
-       enclos = environment()), silent = TRUE)
+      envir = parent.frame(),
+      enclos = environment()
+    ), silent = TRUE)
   if (util_is_try_error(r)) {
     util_warning(r)
     r <- NULL

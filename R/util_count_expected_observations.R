@@ -28,19 +28,26 @@
 #' @concept process
 #' @noRd
 util_count_expected_observations <- function(resp_vars, study_data, meta_data,
-                                             label_col = LABEL,
-                                             expected_observations =
-                                               c("HIERARCHY",
-                                                 "ALL",
-                                                 "SEGMENT")) {
+  label_col = LABEL,
+  expected_observations =
+    c(
+      "HIERARCHY",
+      "ALL",
+      "SEGMENT"
+    )) {
   vapply(resp_vars, function(rv) {
-    sum(util_observation_expected(rv = rv,
-                                  study_data = study_data,
-                                  meta_data = meta_data,
-                                  label_col = label_col,
-                                  expected_observations =
-                                    expected_observations),
-        na.rm = TRUE)
+    sum(
+      util_observation_expected(
+        rv = rv,
+        study_data = study_data,
+        meta_data = meta_data,
+        label_col = label_col,
+        expected_observations =
+          expected_observations
+      ),
+      na.rm = TRUE
+    )
   },
-  FUN.VALUE = integer(1))
+  FUN.VALUE = integer(1)
+  )
 }

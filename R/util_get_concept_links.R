@@ -1,5 +1,7 @@
+#' Internal helper: get concept links
+#'
+#' @noRd
 util_get_concept_links <- function(fkt) {
-
   # generates pages with navigation menu
   # load concept to get current indicator links in reports
 
@@ -27,7 +29,7 @@ util_get_concept_links <- function(fkt) {
   # create un-ordered item list for each indicator
   links <- mapply(
     get_links,
-    indicator_id   = fkt2concept$PublicID,
+    indicator_id = fkt2concept$PublicID,
     indicator_name = fkt2concept$Name,
     SIMPLIFY = FALSE
   )

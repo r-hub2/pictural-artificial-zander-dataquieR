@@ -30,14 +30,13 @@ attributes of study data}
 \item{strata_vars}{\link{variable} the name of a variable used for stratification,
 defaults to NULL for not grouping output}
 
-\item{group_vars}{\link{variable} the name of a variable used for grouping,
-defaults to \emph{NULL} for not grouping output}
+\item{group_vars}{\link{variable list} the names of the grouping variables}
 
 \item{label_col}{\link{variable attribute} the name of the column in the metadata
 with labels of variables}
 
-\item{threshold_value}{\link{numeric} from=0 to=100. a numerical value ranging
-from 0-100}
+\item{threshold_value}{\link{numeric} from=0 to=100. An optional legacy threshold.
+If omitted, grading rules determine the colors.}
 
 \item{direction}{\link{enum} low | high. "high" or "low", i.e. are deviations
 above/below the threshold critical. This argument is deprecated and replaced by \emph{color_gradient_direction}.}
@@ -75,16 +74,22 @@ if you specify \code{meta_data_v2}.}
 
 \item{segment_level}{\link{data.frame} alias for \code{meta_data_segment}}
 
-\item{meta_data_segment}{\link{data.frame} Segment level metadata. Optional.}
+\item{meta_data_segment}{\link{data.frame} Segment level metadata. Optional.
+\link{GRADING_RULESET} selects the ruleset for each \link{STUDY_SEGMENT}; missing
+assignments use ruleset \code{0}.}
 }
 \value{
 a list with:
 \itemize{
-\item \code{ResultData}: data frame about segment missingness
-\item \code{SummaryPlot}: ggplot2 heatmap plot: a heatmap-like graphic that
-highlights critical values depending on the respective
-threshold_value and direction.
-\item \code{ReportSummaryTable}: data frame underlying \code{SummaryPlot}
+\item \code{ResultData}: data frame about segment missingness. Unless an explicit
+legacy threshold is active, it includes the effective
+\link{GRADING_RULESET} for every segment.
+\item \code{SummaryPlot}: visual summary of segment missingness. An explicitly
+supplied legacy threshold is applied to this plot.
+\item \code{ReportSummaryTable}: data frame underlying \code{SummaryPlot} for calls
+without grouping or stratification. Its colors
+follow grading rules or an explicitly supplied
+legacy threshold.
 }
 }
 \description{
@@ -117,17 +122,11 @@ missingness rates.
 \details{
 \subsection{Implementation and use of thresholds}{
 
-This implementation uses one threshold to discriminate critical from
-non-critical values. If direction is above than all values below the
-threshold_value are normal (displayed in dark blue in the plot and flagged
-with GRADING = 0 in the dataframe). All values above the threshold_value are
-considered critical. The more they deviate from the threshold the displayed
-color shifts to dark red. All critical values are highlighted with GRADING =
-1 in the summary data frame. By default, highest values are always shown in
-dark red irrespective of the absolute deviation.
-
-If direction is below than all values above the threshold_value are normal
-(displayed in dark blue, GRADING = 0).
+Without an explicit \code{threshold_value}, segment-missingness percentages are
+colored using the grading rules. An explicitly supplied threshold activates
+the legacy binary threshold display. If the direction is \code{above}, values
+below the threshold are normal and values above the threshold are critical.
+For \code{below}, the interpretation is reversed.
 }
 
 \subsection{Hint}{

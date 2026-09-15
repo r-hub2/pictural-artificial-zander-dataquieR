@@ -14,14 +14,13 @@
 #' @noRd
 
 util_sigmagap <- function(x) {
-
   # sd
   xsd <- sd(x, na.rm = TRUE)
   xmu <- mean(x, na.rm = TRUE)
 
   # dataframe of original values and their distances
   ints <- data.frame(RN = seq_along(x), VALUE = x)
-  ints <- ints[order(ints$VALUE), ]
+  ints <- ints[order(ints$VALUE), , drop = FALSE]
   ints$int <- c(0, diff(ints$VALUE))
   ints$sigmagap <- ifelse(ints$int > xsd, 1, 0)
 
@@ -37,7 +36,7 @@ util_sigmagap <- function(x) {
   }
 
   # order to original seq of data
-  ints <- ints[order(ints$RN), ]
+  ints <- ints[order(ints$RN), , drop = FALSE]
 
   xbin <- ints$sigmagap
 

@@ -20,8 +20,9 @@ prep_list_voc()
 prep_get_data_frame("<ICD10>")
 my_voc <-
   tibble::tribble(
-    ~ voc, ~ url,
-    "test", "data:datasets|iris|Species+Sepal.Length")
+    ~voc, ~url,
+    "test", "data:datasets|iris|Species+Sepal.Length"
+  )
 prep_add_data_frames(`<>` = my_voc)
 prep_list_dataframes()
 prep_list_voc()
@@ -29,8 +30,9 @@ prep_get_data_frame("<test>")
 prep_get_data_frame("<ICD10>")
 my_voc <-
   tibble::tribble(
-    ~ voc, ~ url,
-    "ICD10", "data:datasets|iris|Species+Sepal.Length")
+    ~voc, ~url,
+    "ICD10", "data:datasets|iris|Species+Sepal.Length"
+  )
 prep_add_data_frames(`<>` = my_voc)
 prep_list_dataframes()
 prep_list_voc()

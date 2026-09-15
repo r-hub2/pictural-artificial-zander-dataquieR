@@ -27,23 +27,28 @@ util_string_is_not_categorical <- function(vec) {
   vec_uniq <- unique(vec)
   # free-text fields can contain very long strings
   long_elements <- max(nchar(vec_uniq,
-                             type = "bytes", # must also work for wrong encoding
-                             allowNA = TRUE,
-                             keepNA = FALSE)) > 100
+      type = "bytes", # must also work for wrong encoding
+      allowNA = TRUE,
+      keepNA = FALSE
+    )) > 100
   # JSON, XML or similar elements contain more punctuation symbols and possibly
   # space characters than expected for categorical variables
   many_non_alphanum_char <- median(
-    vapply(vec_uniq, FUN.VALUE = numeric(1),
-         function(vv) {
-           sum(
-             grepl('[[:punct:]|[:space:]]',
-                   unlist(strsplit(vv, split = ""))
-                   )
-             ) / nchar(vv,
-                       type = "bytes", # must also work for wrong encoding
-                       allowNA = TRUE,
-                       keepNA = FALSE)
-         })
+    vapply(vec_uniq,
+      FUN.VALUE = numeric(1),
+      function(vv) {
+        sum(
+          grepl(
+            "[[:punct:]|[:space:]]",
+            unlist(strsplit(vv, split = ""))
+          )
+        ) / nchar(vv,
+          type = "bytes", # must also work for wrong encoding
+          allowNA = TRUE,
+          keepNA = FALSE
+        )
+      }
+    )
   ) > 0.4
   # For categorical variables, we expect a low proportion of unique values. So
   # if there are only few duplicates, the vector is most likely not a

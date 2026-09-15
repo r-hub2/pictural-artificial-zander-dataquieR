@@ -27,23 +27,36 @@ util_disjunct_var_sets <- function(...) {
     }
     names(arg_list) <- arg_names
   } else {
-    caller_fn   <- rlang::caller_fn()
-    caller_env  <- rlang::caller_env()
+    caller_fn <- rlang::caller_fn()
+    caller_env <- rlang::caller_env()
     caller_call <- rlang::caller_call()
-    if (is.null(caller_fn) || is.null(caller_call)) return(invisible(NULL))
+    if (is.null(caller_fn) || is.null(caller_call)) {
+      return(invisible(NULL))
+    }
 
     formals_list <- formals(caller_fn)
     var_args <- grep("_vars$", names(formals_list), value = TRUE)
-    if (length(var_args) == 0L) return(invisible(NULL))
+    if (length(var_args) == 0L) {
+      return(invisible(NULL))
+    }
 
     matched_call <- rlang::call_match(caller_call, caller_fn)
     matched_args <- rlang::call_args(matched_call)
 
     resolve_one <- function(nm) {
-      if (rlang::env_has(caller_env, nm, inherit = TRUE)) {
-        return(get(nm, envir = caller_env, inherits = TRUE))
+      has_local_binding <- rlang::env_has(
+        caller_env, nm, inherit = FALSE
+      )
+      binding_is_missing <- has_local_binding && isTRUE(
+        eval(call("missing", as.name(nm)), envir = caller_env)
+      )
+      if (has_local_binding && !binding_is_missing) {
+        return(
+          get(nm, envir = caller_env, inherits = FALSE)
+        )
       }
-      if (nm %in% names(matched_args)) {
+      if (nm %in% names(matched_args) &&
+          !rlang::is_missing(matched_args[[nm]])) {
         return(rlang::eval_bare(matched_args[[nm]], env = caller_env))
       }
       def <- formals_list[[nm]]
@@ -55,9 +68,13 @@ util_disjunct_var_sets <- function(...) {
 
     vals <- lapply(var_args, resolve_one)
     names(vals) <- var_args
-    keep <- !vapply(vals, function(x) is.null(x) || length(x) == 0L,
-                    logical(1))
-    if (!any(keep)) return(invisible(NULL))
+    keep <- !vapply(
+      vals, function(x) is.null(x) || length(x) == 0L,
+      logical(1)
+    )
+    if (!any(keep)) {
+      return(invisible(NULL))
+    }
     arg_list <- vals[keep]
   }
 
@@ -67,8 +84,10 @@ util_disjunct_var_sets <- function(...) {
   overlaps <- lapply(pairs, function(ix) {
     ov <- intersect(arg_list[[ix[1]]], arg_list[[ix[2]]])
     if (length(ov) > 0L) {
-      list(args = c(arg_names[[ix[1]]], arg_names[[ix[2]]]),
-           values = ov)
+      list(
+        args = c(arg_names[[ix[1]]], arg_names[[ix[2]]]),
+        values = ov
+      )
     } else {
       NULL
     }
@@ -79,8 +98,10 @@ util_disjunct_var_sets <- function(...) {
     problematic_args <- unique(unlist(lapply(overlaps, `[[`, "args")))
     problematic_vals <- unique(unlist(lapply(overlaps, `[[`, "values")))
     util_error(
-      c("Overlap in the arguments %s. %s cannot be parts of more than one ",
-        "argument."),
+      c(
+        "Overlap in the arguments %s. %s cannot be parts of more than one ",
+        "argument."
+      ),
       util_pretty_vector_string(problematic_args),
       util_pretty_vector_string(problematic_vals, n_max = 5),
       applicability_problem = TRUE

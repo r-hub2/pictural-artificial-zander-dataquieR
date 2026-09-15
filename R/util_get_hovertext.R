@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Import vector of hover text for tables in the report
 #'
 #' @param x name of the tables. They are `meta_data`,
@@ -12,14 +13,17 @@
 #' @family html
 #' @concept reporting
 #' @noRd
+# nolint end
 util_get_hovertext <- function(x) {
   f <- system.file(paste0("hovertext", ".rds"), package = "dataquieR")
   if (exists(f, .concept_chache, mode = "list")) {
     list_of_hover_metadata <- get(f, .concept_chache, mode = "list")
   } else {
     if (0 != file.access(f, 4)) {
-      util_error("Cannot read file %s. Internal error.",
-                 dQuote("metadata-hovertext"))
+      util_error(
+        "Cannot read file %s. Internal error.",
+        dQuote("metadata-hovertext")
+      )
     }
     list_of_hover_metadata <- readRDS(f)
     assign(f, list_of_hover_metadata, .concept_chache)

@@ -17,38 +17,58 @@ util_normalize_clt <- function(meta_data) {
     FUN.VALUE = logical(1),
     setNames(nm = na.omit(unique(meta_data[[CODE_LIST_TABLE]]))),
     function(tb) {
-      if (util_empty(tb)) return(FALSE)
+      if (util_empty(tb)) {
+        return(FALSE)
+      }
       tb <- try(prep_get_data_frame(tb), silent = TRUE)
-      if (util_is_try_error(tb)) return(FALSE)
+      if (util_is_try_error(tb)) {
+        return(FALSE)
+      }
       "MISSING" %in% tb[[CODE_CLASS]] ||
         "JUMP" %in% tb[[CODE_CLASS]]
-    })
+    }
+  )
   is_vlt <- vapply(
     FUN.VALUE = logical(1),
     setNames(nm = na.omit(unique(meta_data[[CODE_LIST_TABLE]]))),
     function(tb) {
-      if (util_empty(tb)) return(FALSE)
+      if (util_empty(tb)) {
+        return(FALSE)
+      }
       tb <- try(prep_get_data_frame(tb), silent = TRUE)
-      if (util_is_try_error(tb)) return(FALSE)
+      if (util_is_try_error(tb)) {
+        return(FALSE)
+      }
       (!(CODE_CLASS %in% names(tb))) || "VALUE" %in% tb[[CODE_CLASS]]
-    })
+    }
+  )
   if (any(!util_empty(meta_data[[MISSING_LIST_TABLE]][is_mlt[
-    meta_data[[CODE_LIST_TABLE]]]]))) {
-    util_message(c("Found %s where also %s has been assigned, discarding %s",
-                   "for such items"),
-                 sQuote(MISSING_LIST_TABLE),
-                 sQuote(CODE_LIST_TABLE),
-                 sQuote(MISSING_LIST_TABLE),
-                 applicability_problem = TRUE)
+    meta_data[[CODE_LIST_TABLE]]
+  ]]))) {
+    util_message(
+      c(
+        "Found %s where also %s has been assigned, discarding %s",
+        "for such items"
+      ),
+      sQuote(MISSING_LIST_TABLE),
+      sQuote(CODE_LIST_TABLE),
+      sQuote(MISSING_LIST_TABLE),
+      applicability_problem = TRUE
+    )
   }
   if (any(!util_empty(meta_data[[VALUE_LABEL_TABLE]][is_vlt[
-    meta_data[[CODE_LIST_TABLE]]]]))) {
-    util_message(c("Found %s where also %s has been assigned, discarding %s",
-                   "for such items"),
-                 sQuote(VALUE_LABEL_TABLE),
-                 sQuote(CODE_LIST_TABLE),
-                 sQuote(VALUE_LABEL_TABLE),
-                 applicability_problem = TRUE)
+    meta_data[[CODE_LIST_TABLE]]
+  ]]))) {
+    util_message(
+      c(
+        "Found %s where also %s has been assigned, discarding %s",
+        "for such items"
+      ),
+      sQuote(VALUE_LABEL_TABLE),
+      sQuote(CODE_LIST_TABLE),
+      sQuote(VALUE_LABEL_TABLE),
+      applicability_problem = TRUE
+    )
   }
   code_list_table <- meta_data[[CODE_LIST_TABLE]]
   code_list_table[util_empty(code_list_table)] <- "//**//??"

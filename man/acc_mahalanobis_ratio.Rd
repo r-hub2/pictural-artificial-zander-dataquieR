@@ -18,28 +18,27 @@ acc_mahalanobis_ratio(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable} the names of the computed variable
-containing \code{Mahalanobis} distance ratio}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
-\item{label_col}{\link{variable attribute} the name of the column in the
-metadata containing the labels of
-the variables}
+\item{label_col}{\link{variable attribute} the name of the column in the metadata
+with labels of variables}
 
 \item{item_level}{\link{data.frame} the data frame that contains metadata
 attributes of study data}
 
 \item{meta_data}{\link{data.frame} old name for \code{item_level}}
 
-\item{meta_data_v2}{\link{character} path or file name of the workbook like
-metadata file, see
+\item{meta_data_v2}{\link{character} path to workbook like metadata file, see
 \code{\link{prep_load_workbook_like_file}} for details.
 \strong{ALL LOADED DATAFRAMES WILL BE PURGED},
 using \code{\link{prep_purge_data_frame_cache}},
-if you specify \code{meta_data_v2}}
+if you specify \code{meta_data_v2}.}
 
-\item{meta_data_cross_item}{\link{data.frame} -- Cross-item level metadata}
+\item{meta_data_cross_item}{\link{data.frame} -- optional: Cross-item level
+metadata}
 
 \item{cross_item_level}{\link{data.frame} alias for \code{meta_data_cross_item}}
 
@@ -82,6 +81,8 @@ of a theoretical chi-square distribution with degrees of freedom
 equals to the number of variables used to calculate the
 \code{Mahalanobis} distance (\verb{Mayrhofer and Filzmoser}, 2023)
 }
+
+\code{resp_vars} must name the computed \code{Mahalanobis} distance ratio variable.
 }
 
 \seealso{

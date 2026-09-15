@@ -48,7 +48,8 @@ dq_report2(
   name_of_study_data,
   dt_adjust = as.logical(getOption("dataquieR.dt_adjust", dataquieR.dt_adjust_default)),
   output_dir = NULL,
-  force_overwrite = FALSE
+  force_overwrite = FALSE,
+  dir = NULL
 )
 }
 \arguments{
@@ -62,8 +63,8 @@ with labels of variables}
 
 \item{meta_data_segment}{\link{data.frame} -- optional: Segment level metadata}
 
-\item{meta_data_dataframe}{\link{data.frame} -- optional: Data frame level
-metadata}
+\item{meta_data_dataframe}{\link{data.frame} the data frame that contains the
+metadata for the data frame level}
 
 \item{meta_data_cross_item}{\link{data.frame} -- optional: Cross-item level
 metadata}
@@ -96,9 +97,23 @@ If dimensions is equal to NULL or "all", all dimensions
 will be covered.}
 
 \item{cores}{\link{integer} number of cpu cores to use or a named list with
-arguments for \link[parallelMap:parallelStart]{parallelMap::parallelStart} or NULL,
-if parallel has already been started by the caller.
-Can also be a cluster.}
+arguments for the internal parallel backend
+(\code{util_parallel_start}) or NULL, if parallel has
+already been started by the caller. Can also be a
+cluster. In RStudio, caller-created clusters may hang
+during HTML report finalization while thumbnail and
+embedded HTML files are written. Prefer passing a number, e.g.,
+\code{cores = 4}, or a backend list, e.g.,
+\code{cores = list(mode = "socket", cpus = 4)}, so
+\code{dataquieR} can create and stop the cluster itself.
+Alternatively run the same command outside RStudio
+(on Windows start R from the Start menu, on macOS open
+Terminal and run R, on Linux run R in a terminal).
+To force a caller-owned
+cluster in RStudio, set
+\code{options(dataquieR.force_rstudio_user_cluster = TRUE)}
+or pass
+\code{advanced_options = list(dataquieR.force_rstudio_user_cluster = TRUE)}.}
 
 \item{ignore_empty_vars}{\link{enum} TRUE | FALSE | auto. See
 \link{dataquieR.ignore_empty_vars}.}
@@ -125,10 +140,8 @@ comments, title, ...}
 
 \item{debug_parallel}{\link{logical} print blocks currently evaluated in parallel}
 
-\item{resp_vars}{\link{variable list} the name of the measurement variables
-for the report. If missing, all variables
-will be used. Only item level indicator
-functions are filtered, so far.}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{filter_indicator_functions}{\link{character} regular expressions, only
 if an indicator function's name
@@ -169,7 +182,7 @@ R \code{parallel} back-ends
 this manual, only for the mode \code{queue} the argument
 \code{step} is supported, which gives the number of
 function calls that are run by one worker at a time.
-the default is 15, which gives on most of the tested
+the default is 6, which gives on most of the tested
 systems a good balance between synchronization
 overhead and idling workers.}
 
@@ -224,6 +237,8 @@ written to the path \code{output_dir}}
 
 \item{force_overwrite}{\link{logical} force to overwrite \code{output_dir}, even if it
 exists}
+
+\item{dir}{\link{character} alias for \code{output_dir}.}
 }
 \value{
 a \link{dataquieR_resultset2} that can be
@@ -233,6 +248,9 @@ a \link{dataquieR_resultset2} that can be
 Generate a full DQ report, v2
 }
 \details{
+If \code{resp_vars} is set, only item-level indicator functions are filtered by
+the selected measurement variables so far.
+
 See \link{dq_report_by} for a way to generate stratified or splitted reports
 easily.
 }

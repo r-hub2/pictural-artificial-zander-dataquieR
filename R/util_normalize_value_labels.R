@@ -12,25 +12,29 @@
 #' prep_purge_data_frame_cache()
 #' prep_load_workbook_like_file("meta_data_v2")
 #' util_normalize_value_labels()
-#' prep_add_data_frames(test_labs =
-#'   tibble::tribble(~ CODE_VALUE, ~ CODE_LABEL, 17L, "Test", 19L, "Test",
-#'     17L, "TestX"))
+#' prep_add_data_frames(
+#'   test_labs =
+#'     tibble::tribble(
+#'       ~CODE_VALUE, ~CODE_LABEL, 17L, "Test", 19L, "Test",
+#'       17L, "TestX"
+#'     )
+#' )
 #' il <- prep_get_data_frame("item_level")
 #' if (!VALUE_LABEL_TABLE %in% colnames(il)) {
-#'   il$VALUE_LABEL_TABLE <- NA_character_
+#'   il[[VALUE_LABEL_TABLE]] <- NA_character_
 #' }
-#' il$VALUE_LABEL_TABLE[[1]] <- "test_labs"
-#' il$VALUE_LABELS[[1]] <- "17 = TestY"
+#' il[[VALUE_LABEL_TABLE]][[1]] <- "test_labs"
+#' il[[VALUE_LABELS]][[1]] <- "17 = TestY"
 #' prep_add_data_frames(item_level = il)
 #' util_normalize_value_labels()
 #' }
 #'
 util_normalize_value_labels <- function(meta_data = "item_level",
-                                        max_value_label_len =
-                                          getOption(
-                                            "dataquieR.MAX_VALUE_LABEL_LEN",
-                                      dataquieR.MAX_VALUE_LABEL_LEN_default)) {
-
+  max_value_label_len =
+    getOption(
+      "dataquieR.MAX_VALUE_LABEL_LEN",
+      dataquieR.MAX_VALUE_LABEL_LEN_default
+    )) {
   util_expect_data_frame(meta_data)
 
   if (!any(c(VALUE_LABELS, VALUE_LABEL_TABLE) %in% colnames(meta_data))) {
@@ -38,55 +42,72 @@ util_normalize_value_labels <- function(meta_data = "item_level",
   }
 
   util_expect_scalar(max_value_label_len,
-                     check_type = is.numeric,
-                     error_message = sprintf("%s must be a numeric value",
-                                             sQuote("dataquieR.MAX_VALUE_LABEL_LEN")))
+    check_type = is.numeric,
+    error_message = sprintf(
+      "%s must be a numeric value",
+      sQuote("dataquieR.MAX_VALUE_LABEL_LEN")
+    )
+  )
 
   if (VALUE_LABELS %in% colnames(meta_data)) {
     if (VALUE_LABEL_TABLE %in% colnames(meta_data) &&
-        any(!util_empty(meta_data[!util_empty(meta_data[[VALUE_LABELS]]),
-                                  VALUE_LABEL_TABLE]))) {
+      any(!util_empty(meta_data[
+        !util_empty(meta_data[[VALUE_LABELS]]),
+        VALUE_LABEL_TABLE
+        , drop = TRUE]))) {
       util_warning(
         "Cannot mix %s and %s, trying to fix, but expect inconsistencies.",
         sQuote(VALUE_LABELS),
-        sQuote(VALUE_LABEL_TABLE), applicability_problem = TRUE)
+        sQuote(VALUE_LABEL_TABLE),
+        applicability_problem = TRUE
+      )
 
       # load all data frames
       invisible(lapply(
         meta_data[!util_empty(meta_data[[VALUE_LABEL_TABLE]]),
-                  VALUE_LABEL_TABLE, drop = TRUE], prep_get_data_frame))
+          VALUE_LABEL_TABLE,
+          drop = TRUE
+        ], prep_get_data_frame
+      ))
     }
 
     md <- meta_data
-    md <- md[!duplicated(md[[VALUE_LABELS]]), , FALSE]
+    md <- md[!duplicated(md[[VALUE_LABELS]]), , drop = FALSE]
 
-    def_cats <- setNames(lapply(util_parse_assignments(md[[VALUE_LABELS]],
-                                       split_on_any_split_char = FALSE,
-                                       split_char = c(SPLIT_CHAR, '<'),
-                                       multi_variate_text = TRUE),
-                                function(x) {
-      if (length(x) > 0) {
-        r <- data.frame(CODE_VALUE = names(x),
-                   CODE_LABEL = unlist(unname(x), recursive = FALSE),
-                   row.names = NULL,
-                   check.rows = FALSE,
-                   check.names = FALSE,
-                   fix.empty.names = FALSE,
-                   stringsAsFactors = FALSE)
-      } else {
-        r <- data.frame(CODE_VALUE = character(0),
-                   CODE_LABEL = character(0),
-                   row.names = NULL,
-                   check.rows = FALSE,
-                   check.names = FALSE,
-                   fix.empty.names = FALSE,
-                   stringsAsFactors = FALSE)
+    def_cats <- setNames(lapply(
+      util_parse_assignments(md[[VALUE_LABELS]],
+        split_on_any_split_char = FALSE,
+        split_char = c(SPLIT_CHAR, "<"),
+        multi_variate_text = TRUE
+      ),
+      function(x) {
+        if (length(x) > 0) {
+          r <- data.frame(
+            CODE_VALUE = names(x),
+            CODE_LABEL = unlist(unname(x), recursive = FALSE),
+            row.names = NULL,
+            check.rows = FALSE,
+            check.names = FALSE,
+            fix.empty.names = FALSE,
+            stringsAsFactors = FALSE
+          )
+        } else {
+          r <- data.frame(
+            CODE_VALUE = character(0),
+            CODE_LABEL = character(0),
+            row.names = NULL,
+            check.rows = FALSE,
+            check.names = FALSE,
+            fix.empty.names = FALSE,
+            stringsAsFactors = FALSE
+          )
+        }
+        if (util_attr(x, "split_char", exact = TRUE) == "<") {
+          r[[CODE_ORDER]] <- rank(r[[CODE_VALUE]], ties.method = "random")
+        }
+        return(r)
       }
-      if (attr(x, "split_char") == '<') {
-        r[[CODE_ORDER]] <- rank(r[[CODE_VALUE]], ties.method = "random")
-      }
-      return(r)
-    }), nm = md[[VALUE_LABELS]])
+    ), nm = md[[VALUE_LABELS]])
 
     names(def_cats) <- .util_generate_value_label_table_name(names(def_cats))
 
@@ -95,8 +116,10 @@ util_normalize_value_labels <- function(meta_data = "item_level",
         names(def_cats)[names(def_cats) %in% prep_list_dataframes()]
       for (vlt in already) {
         def_cats[[vlt]] <-
-          util_combine_value_label_tables(prep_get_data_frame(vlt),
-                                          def_cats[[vlt]])
+          util_combine_value_label_tables(
+            prep_get_data_frame(vlt),
+            def_cats[[vlt]]
+          )
       }
     }
 
@@ -114,12 +137,14 @@ util_normalize_value_labels <- function(meta_data = "item_level",
   # fix records with VALUE_LABELS and VALUE_LABEL_TABLE
   both <-
     !util_empty(meta_data[[VALUE_LABELS]]) &
-      !util_empty(meta_data[[VALUE_LABEL_TABLE]])
+    !util_empty(meta_data[[VALUE_LABEL_TABLE]])
 
   for (i in which(both)) {
     orig_nm <- meta_data[[VALUE_LABEL_TABLE]][[i]]
-    cmbd_nm <- paste0(orig_nm, "_",
-                       VALUE_LABELS)
+    cmbd_nm <- paste0(
+      orig_nm, "_",
+      VALUE_LABELS
+    )
 
     vlnm <-
       .util_generate_value_label_table_name(meta_data[[VALUE_LABELS]][[i]])
@@ -127,13 +152,18 @@ util_normalize_value_labels <- function(meta_data = "item_level",
     vldf <- def_cats[[vlnm]]
 
     if ((cmbd_nm %in% prep_list_dataframes())) {
-
       exdf <- prep_get_data_frame(cmbd_nm)
 
-      testdf <- merge(vldf, exdf, by = intersect(c(CODE_VALUE, CODE_ORDER), # FIXME: CODE_ORDER: honor its values, not only its existence
-                                                 intersect(colnames(vldf),
-                                                           colnames(exdf))),
-                      all = TRUE)
+      testdf <- merge(vldf, exdf,
+        by = intersect(
+          c(CODE_VALUE, CODE_ORDER),
+          intersect(
+            colnames(vldf),
+            colnames(exdf)
+          )
+        ),
+        all = TRUE
+      )
 
       if (nrow(testdf) != nrow(exdf) || nrow(testdf) != nrow(vldf)) {
         # util_warning(
@@ -148,23 +178,26 @@ util_normalize_value_labels <- function(meta_data = "item_level",
     prep_add_data_frames(data_frame_list = setNames(
       list(x = util_combine_value_label_tables(
         prep_get_data_frame(orig_nm),
-        vldf)),
+        vldf
+      )),
       nm = cmbd_nm
     ))
-
   }
 
-  meta_data[!util_empty(meta_data[[VALUE_LABELS]]),
-            VALUE_LABEL_TABLE] <-
+  meta_data[
+    !util_empty(meta_data[[VALUE_LABELS]]),
+    VALUE_LABEL_TABLE
+  ] <-
     .util_generate_value_label_table_name(
-      meta_data[!util_empty(meta_data[[VALUE_LABELS]]), VALUE_LABELS])
+      meta_data[!util_empty(meta_data[[VALUE_LABELS]]), VALUE_LABELS, drop = TRUE] # nolint: line_length_linter.
+    )
 
   meta_data[[VALUE_LABELS]] <- NULL
 
   is_too_long <- function(x) {
     nchar(x) > max_value_label_len
   }
-  to_fix <- unique(meta_data[[VALUE_LABEL_TABLE]]) # TODO: Standardized voc;
+  to_fix <- unique(meta_data[[VALUE_LABEL_TABLE]])
   to_fix <- to_fix[!is.na(to_fix)]
   lapply(to_fix, function(vlt) {
     cur_df <- try(prep_get_data_frame(vlt), silent = TRUE)
@@ -178,11 +211,14 @@ util_normalize_value_labels <- function(meta_data = "item_level",
           any(is_too_long(cur_df[[CODE_LABEL]]))) {
         cur_df[is_too_long(cur_df[[CODE_LABEL]]), CODE_LABEL] <-
           util_abbreviate_unique(
-            cur_df[is_too_long(cur_df[[CODE_LABEL]]), CODE_LABEL],
-            max_value_label_len = max_value_label_len)
+            cur_df[is_too_long(cur_df[[CODE_LABEL]]), CODE_LABEL, drop = TRUE],
+            max_value_label_len = max_value_label_len
+          )
       }
-      prep_add_data_frames(data_frame_list =
-                             setNames(list(cur_df), nm = vlt))
+      prep_add_data_frames(
+        data_frame_list =
+          setNames(list(cur_df), nm = vlt)
+      )
       # } else if (util_is_try_error(cur_df)) { this will be shown anyways
       #   util_warning("Could not find value label table %s",
       #                applicability_problem = TRUE)
@@ -190,9 +226,9 @@ util_normalize_value_labels <- function(meta_data = "item_level",
   })
 
   meta_data
-
 }
 
+# nolint start: line_length_linter.
 #' Combine two value lists
 #'
 #' @param vlt1 [value_label_table]
@@ -203,25 +239,35 @@ util_normalize_value_labels <- function(meta_data = "item_level",
 #' @examples
 #' \dontrun{
 #' util_combine_value_label_tables(
-#'   tibble::tribble(~ CODE_VALUE, ~ CODE_LABEL, 17L, "Test", 19L, "Test", 17L, "TestX"),
-#'   tibble::tribble(~ CODE_VALUE, ~ CODE_LABEL, 17L, "Test", 19L, "Test", 17L, "TestX"))
+#'   tibble::tribble(~CODE_VALUE, ~CODE_LABEL, 17L, "Test", 19L, "Test", 17L, "TestX"),
+#'   tibble::tribble(~CODE_VALUE, ~CODE_LABEL, 17L, "Test", 19L, "Test", 17L, "TestX")
+#' )
 #' }
+# nolint end
 util_combine_value_label_tables <- function(vlt1, vlt2) {
   vlt <- unique(util_rbind(vlt1, vlt2))
   if (any(duplicated(vlt[[CODE_VALUE]]))) {
-    # util_warning(c("Duplicated %ss detected: %s. Fixing",
-    #                "by merging the labels"),
-    #              sQuote(CODE_VALUE),
-    #              util_pretty_vector_string(
-    #                unique(vlt[[CODE_VALUE]][duplicated(vlt[[CODE_VALUE]])])
-    #              ),
-    #              applicability_problem = TRUE)
-    dups <- split(vlt, vlt[[CODE_VALUE]])
+    # Historical duplicated-CODE_VALUE warning removed here.
+    dups <- split(vlt, factor(vlt[[CODE_VALUE]],
+        levels = unique(vlt[[CODE_VALUE]])
+      ))
     dups <- lapply(dups, function(dup) {
-      dup[[CODE_LABEL]] <-
-        common_label <- paste(dup[[CODE_LABEL]],
-                              collapse = sprintf(" %s ", SPLIT_CHAR))
-      dup
+      merged <- dup[1L, , drop = FALSE]
+      if (CODE_LABEL %in% colnames(dup)) {
+        labels <- unique(dup[[CODE_LABEL]][!util_empty(dup[[CODE_LABEL]])])
+        merged[[CODE_LABEL]] <- paste(labels,
+          collapse = sprintf(" %s ", SPLIT_CHAR)
+        )
+      }
+      other_cols <- setdiff(colnames(dup), c(CODE_VALUE, CODE_LABEL))
+      for (col in other_cols) {
+        values <- dup[[col]]
+        values <- values[!util_empty(values)]
+        if (length(values) > 0) {
+          merged[[col]] <- values[[1L]]
+        }
+      }
+      merged
     })
     vlt <- unique(util_rbind(data_frames_list = dups))
   }
@@ -229,13 +275,16 @@ util_combine_value_label_tables <- function(vlt1, vlt2) {
   vlt
 }
 
+#' Internal helper: util generate value label table name
+#'
+#' @noRd
 .util_generate_value_label_table_name <- function(vl) {
-
   res <- util_parse_assignments(
     vl,
     split_on_any_split_char = FALSE,
-    split_char = c(SPLIT_CHAR, '<'),
-    multi_variate_text = TRUE)
+    split_char = c(SPLIT_CHAR, "<"),
+    multi_variate_text = TRUE
+  )
 
   first_labs <- vapply(res, function(res_i) {
     suff <- ifelse(length(res_i) > 2, "...", "")
@@ -244,11 +293,56 @@ util_combine_value_label_tables <- function(vlt1, vlt2) {
   }, FUN.VALUE = character(1))
 
   hashes <- vapply(res, function(res_i) {
-    hash <- substr(rlang::hash(res_i), 1, 5) # TODO: don't ignore hash collisions
+    hash <- substr(.util_stable_value_label_hash(res_i), 1, 5)
   }, FUN.VALUE = character(1))
 
   res <- paste0("LABS_", first_labs, "::", hashes)
   return(res)
 }
 
-# TODO: Also work with only one sheet featuring columns CODE_LABEL, CODE_VALUE, CODE_ORDER and VALUE_LABEL_TABLE
+#' Internal helper: util stable value label hash
+#'
+#' @noRd
+.util_stable_value_label_hash <- function(value_labels) {
+  values <- unlist(unname(value_labels),
+    recursive = FALSE,
+    use.names = FALSE
+  )
+  values <- enc2utf8(as.character(values))
+  keys <- names(value_labels)
+  if (is.null(keys)) {
+    keys <- rep("", length(values))
+  }
+  keys <- enc2utf8(as.character(keys))
+
+  payload <- paste(
+    sprintf(
+      "%d:%s=%d:%s",
+      nchar(keys, type = "bytes"),
+      keys,
+      nchar(values, type = "bytes"),
+      values
+    ),
+    collapse = "\n"
+  )
+  .util_stable_hash32(payload)
+}
+
+#' Internal helper: util stable hash32
+#'
+#' @noRd
+.util_stable_hash32 <- function(x) {
+  bytes <- as.integer(charToRaw(enc2utf8(paste(x, collapse = "\n"))))
+  hash <- 0
+  for (byte in bytes) {
+    hash <- (hash * 131 + byte) %% 4294967296
+  }
+  hex_digits <- c(0:9, letters[1:6])
+  out <- character(8)
+  for (i in 8:1) {
+    digit <- hash %% 16
+    out[[i]] <- hex_digits[[digit + 1]]
+    hash <- floor(hash / 16)
+  }
+  paste0(out, collapse = "")
+}

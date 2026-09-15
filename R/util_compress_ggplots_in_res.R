@@ -1,4 +1,5 @@
 ################################################################################
+# nolint start: line_length_linter.
 #' Remove specific classes from a ggplot `plot_env` environment
 #'
 #' Useful to remove large objects before writing to disk with `qs` or `rds`.
@@ -10,14 +11,15 @@
 #' @seealso [HERE](https://github.com/tidyverse/ggplot2/issues/3619#issuecomment-628021555)
 #'
 #' @noRd
+# nolint end
 util_compress_ggplots_in_res <- function(r) {
-  if (isTRUE(attr(r, "from_ReportSummaryTable"))) {
-    return(NULL) # never store plots of reportsummarytables, because the original objects are already in the report
+  if (isTRUE(util_attr(r, "from_ReportSummaryTable", exact = TRUE))) {
+    return(NULL) # never store plots of reportsummarytables, because the original objects are already in the report # nolint: line_length_linter.
   }
   if (util_is_gg_plot(r)) {
     r$plot_env <- emptyenv()
-    # https://stackoverflow.com/questions/75698707/how-to-extract-variable-names-from-aes-mapping-in-r/75699079#75699079
-    #mv <- unique(unlist(lapply(r$mapping, all.vars))) # does not work for quosures .data[["variable_name"]] - gives '.data' instead of 'variable_name'
+    # https://stackoverflow.com/questions/75698707/how-to-extract-variable-names-from-aes-mapping-in-r/75699079#75699079 # nolint: line_length_linter.
+    # Historical all.vars() mapping extraction does not handle .data quosures.
     mv <- unique(unlist(lapply(r$mapping, function(ll) {
       quo_ll_map <- rlang::quo_get_expr(ll)
       if (".data" %in% as.character(quo_ll_map)) {
@@ -26,28 +28,36 @@ util_compress_ggplots_in_res <- function(r) {
         all.vars(ll)
       }
     })))
-    mv <- unique(c(mv,
-                   unlist(lapply(r$layers,
-                                 function(lly)  {
-                                   lapply(lly$mapping, function(ll) {
-                                     quo_ll_map <- NULL
-                                     try(quo_ll_map <- rlang::quo_get_expr(ll),
-                                         silent = TRUE)
-                                     if (".data" %in% as.character(quo_ll_map)) { #TODO: also handle the data in the geoms layers
-                                       colnames(r$data)[which(colnames(r$data) %in%
-                                                                as.character(quo_ll_map))]
-                                     } else {
-                                       all.vars(ll)
-                                     }
-                                   })
-                                 }))))
-    mv <- c(mv, "facet", "resp_var_adj") # keep column facet as used in util_margins_nom, column resp_var_adj is used in ..._lm, ..._bin, ..._poi
+    mv <- unique(c(
+      mv,
+      unlist(lapply(
+        r$layers,
+        function(lly) {
+          lapply(lly$mapping, function(ll) {
+            quo_ll_map <- NULL
+            try(quo_ll_map <- rlang::quo_get_expr(ll),
+              silent = TRUE
+            )
+            if (".data" %in% as.character(quo_ll_map)) {
+              colnames(r$data)[which(colnames(r$data) %in%
+                    as.character(quo_ll_map))]
+            } else {
+              all.vars(ll)
+            }
+          })
+        }
+      ))
+    ))
+    mv <- c(mv, "facet", "resp_var_adj") # keep column facet as used in util_margins_nom, column resp_var_adj is used in ..._lm, ..._bin, ..._poi # nolint: line_length_linter.
 
     if ("facet" %in% names(r)) {
       facet_v <- NULL
-      try({
-        facet_v <- r$facet$vars()
-      }, silent = TRUE)
+      try(
+        {
+          facet_v <- r$facet$vars()
+        },
+        silent = TRUE
+      )
       if (is.character(facet_v) && length(facet_v) > 0) {
         mv <- c(mv, facet_v)
       }

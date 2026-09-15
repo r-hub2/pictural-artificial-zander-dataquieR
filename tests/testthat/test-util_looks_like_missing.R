@@ -1,7 +1,7 @@
 test_that("util_looks_like_missing works", {
   skip_on_cran()
   expected <- rep(FALSE, 100)
-  #expected[c(88, 89, 98, 99)] <- TRUE
+  # Some older heuristics marked 88, 89, 98, and 99 as missing.
   expect_equal(
     util_looks_like_missing(1:100, n_rules = 0),
     expected = expected
@@ -9,11 +9,14 @@ test_that("util_looks_like_missing works", {
   expected <- c(TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE)
   expect_equal(
     util_looks_like_missing(c(99999, 99, 8, 888, -999, 9.99, 8.9898),
-      n_rules = 0),
-    expected = expected)
+      n_rules = 0
+    ),
+    expected = expected
+  )
   expected <- rep(FALSE, 100)
   expect_equal(util_looks_like_missing(1:100),
-               expected = expected)
+    expected = expected
+  )
   expected <- c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE)
   expect_equal(
     util_looks_like_missing(c(99999, 99, 8, 888, -999, 9.99, 8.9898)),
@@ -32,5 +35,13 @@ test_that("util_looks_like_missing works", {
     util_looks_like_missing(c(Inf, -Inf, NA, NaN)),
     rep(TRUE, 4)
   )
+})
 
+test_that("util_looks_like_missing rejects non-numeric vectors", {
+  skip_on_cran()
+
+  expect_error(
+    util_looks_like_missing(c("missing", "observed")),
+    "works only on numeric vectors"
+  )
 })

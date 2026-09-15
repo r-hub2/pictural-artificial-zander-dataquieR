@@ -18,11 +18,8 @@ prep_map_labels(
 \arguments{
 \item{x}{\link{character} variable names, character vector, see parameter from}
 
-\item{item_level}{\link{data.frame} metadata data frame, if, as a \code{dataquieR}
-developer, you do not have
-\strong{item-level-metadata}, you should use
-\code{util_map_labels()} instead to avoid consistency
-checks on for item-level \code{meta_data}.}
+\item{item_level}{\link{data.frame} the data frame that contains metadata
+attributes of study data}
 
 \item{to}{\link{character} variable attribute to map to}
 
@@ -52,7 +49,7 @@ a character vector with:
 Map variables to certain attributes, e.g. by default their labels.
 }
 \details{
-This function basically calls \code{colnames(study_data) <- meta_data$LABEL},
+This function basically calls \code{colnames(study_data) <- meta_data[[LABEL]]},
 ensuring correct merging/joining of study data columns to the corresponding
 metadata rows, even if the orders differ. If a variable/study_data-column
 name is not found in \code{meta_data[[from]]} (default \code{from = VAR_NAMES}),
@@ -68,11 +65,15 @@ all \code{HARD_LIMITS} from the metadata.
 meta_data <- prep_create_meta(
   VAR_NAMES = c("ID", "SEX", "AGE", "DOE"),
   LABEL = c("Pseudo-ID", "Gender", "Age", "Examination Date"),
-  DATA_TYPE = c(DATA_TYPES$INTEGER, DATA_TYPES$INTEGER, DATA_TYPES$INTEGER,
-                 DATA_TYPES$DATETIME),
+  DATA_TYPE = c(
+    DATA_TYPES$INTEGER, DATA_TYPES$INTEGER, DATA_TYPES$INTEGER,
+    DATA_TYPES$DATETIME
+  ),
   MISSING_LIST = ""
 )
-stopifnot(all(prep_map_labels(c("AGE", "DOE"), meta_data) == c("Age",
-                                                 "Examination Date")))
+stopifnot(all(prep_map_labels(c("AGE", "DOE"), meta_data) == c(
+  "Age",
+  "Examination Date"
+)))
 }
 }

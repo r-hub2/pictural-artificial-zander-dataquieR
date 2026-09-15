@@ -7,7 +7,8 @@
 dq_report(...)
 }
 \arguments{
-\item{...}{Deprecated}
+\item{...}{Deprecated. Use \code{\link[=dq_report2]{dq_report2()}}. Its \code{cores} argument controls
+parallel report computation and rendering.}
 }
 \value{
 Deprecated

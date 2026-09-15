@@ -7,10 +7,13 @@
 prep_valuelabels_from_data(resp_vars = colnames(study_data), study_data)
 }
 \arguments{
-\item{resp_vars}{\link{variable} names of the variables to fetch the value labels
-from the data}
+\item{resp_vars}{\link{variable list} the names of variables to inspect in
+\code{study_data}. If missing, all variables in
+\code{study_data} will be used.}
 
-\item{study_data}{\link{data.frame} the data frame that contains the measurements}
+\item{study_data}{\link{data.frame} study data inspected to derive metadata.
+Only data frames are supported, not URLs or
+file names.}
 }
 \value{
 a \link{list} with:

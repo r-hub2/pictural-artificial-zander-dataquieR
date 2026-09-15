@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Format numeric values with adaptive rounding
 #'
 #' Round numbers with a reasonable number of decimal places depending on magnitude.
@@ -12,17 +13,23 @@
 #' @family data_management
 #' @concept data_management
 #' @noRd
-util_round_to_decimal_places <- function (x, digits = 3) {
+# nolint end
+util_round_to_decimal_places <- function(x, digits = 3) {
+  util_expect_scalar(
+    arg_name = x, allow_more_than_one = TRUE,
+    allow_null = TRUE, allow_na = TRUE,
+    check_type = is.numeric
+  )
 
-  util_expect_scalar(arg_name = x, allow_more_than_one = TRUE,
-                     allow_null = TRUE, allow_na = TRUE,
-                     check_type = is.numeric)
+  util_expect_scalar(
+    arg_name = digits, allow_more_than_one = FALSE,
+    allow_null = FALSE, allow_na = FALSE,
+    check_type = is.numeric
+  )
 
-  util_expect_scalar(arg_name = digits, allow_more_than_one = FALSE,
-                     allow_null = FALSE, allow_na = FALSE,
-                     check_type = is.numeric)
-
-  if (length(x) == 0) return(character(0))
+  if (length(x) == 0) {
+    return(character(0))
+  }
 
   y_abs <- abs(x)
   finite <- is.finite(y_abs) & y_abs > 0
@@ -51,12 +58,3 @@ util_round_to_decimal_places <- function (x, digits = 3) {
 
   return(y)
 }
-# TODO: Discuss
-# guess_digits <- function(x, digs = getOption("digits", 4)) {
-#   max(nchar(zapsmall(abs(x - floor(x)), digits = digs)) - 2, 0)
-# }
-#
-# round(vector, xtable::xdigits(vector))
-# or format() -- this is, what R uses
-# format(3.66666654, digits = 2)
-

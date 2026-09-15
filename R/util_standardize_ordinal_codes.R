@@ -9,17 +9,24 @@
 #' @return [integer()] `n` values in `{1, ..., maxlevel_new}`
 #' @noRd
 util_standardize_ordinal_codes <- function(codes, maxlevel_old, maxlevel_new) {
-  util_expect_scalar(maxlevel_old, check_type = util_is_numeric_in(min = 2,
-                                                                   whole_num = TRUE,
-                                                                   finite = TRUE))
-  util_expect_scalar(maxlevel_new, check_type = util_is_numeric_in(min = 2,
-                                                                   whole_num = TRUE,
-                                                                   finite = TRUE))
+  util_expect_scalar(maxlevel_old, check_type = util_is_numeric_in(
+    min = 2,
+    whole_num = TRUE,
+    finite = TRUE
+  ))
+  util_expect_scalar(maxlevel_new, check_type = util_is_numeric_in(
+    min = 2,
+    whole_num = TRUE,
+    finite = TRUE
+  ))
   util_expect_scalar(codes,
-                     allow_more_than_one = TRUE,
-                     check_type = util_is_numeric_in(min = 1,
-                                                     max = maxlevel_old,
-                                                     whole_num = TRUE,
-                                                     finite = TRUE))
+    allow_more_than_one = TRUE,
+    check_type = util_is_numeric_in(
+      min = 1,
+      max = maxlevel_old,
+      whole_num = TRUE,
+      finite = TRUE
+    )
+  )
   as.integer(round((codes - 1) * ((maxlevel_new - 1) / (maxlevel_old - 1))) + 1)
 }

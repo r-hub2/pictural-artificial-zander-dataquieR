@@ -11,7 +11,8 @@
 #'
 #' @return [character]`(1)` with the fitting function name or [NA_character_]
 #' @examples
-#' \dontrun{ # internal function
+#' \dontrun{
+#' # internal function
 #' util_map_by_largest_prefix(
 #'   "acc_distributions_loc_ecdf_observer_time",
 #'   names(dataquieR:::.manual$titles)
@@ -34,16 +35,17 @@
 #' @concept concept
 #' @noRd
 util_map_by_largest_prefix <- function(
-    needle,
-    haystack,
-    split_char = "_",
-    remove_var_suffix = TRUE
-    ) {
+  needle,
+  haystack,
+  split_char = "_",
+  remove_var_suffix = TRUE
+) {
   util_expect_scalar(needle, check_type = is.character)
   util_expect_scalar(remove_var_suffix, check_type = is.logical)
   util_expect_scalar(haystack,
-                     check_type = is.character,
-                     allow_more_than_one = TRUE)
+    check_type = is.character,
+    allow_more_than_one = TRUE
+  )
   if (is.null(names(haystack))) {
     haystack <- setNames(nm = haystack)
   }

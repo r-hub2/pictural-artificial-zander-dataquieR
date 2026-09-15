@@ -59,9 +59,11 @@ out_segment <- int_all_datastructure_segment(
 )
 
 study_data <- cars
-meta_data <- dataquieR::prep_create_meta(VAR_NAMES = c("speedx", "distx"),
+meta_data <- dataquieR::prep_create_meta(
+  VAR_NAMES = c("speedx", "distx"),
   DATA_TYPE = c("integer", "integer"), MISSING_LIST = "|", JUMP_LIST = "|",
-  STUDY_SEGMENT = c("Intro", "Ex"))
+  STUDY_SEGMENT = c("Intro", "Ex")
+)
 
 out_segment <- int_all_datastructure_segment(
   meta_data_segment = "meta_data_segment",

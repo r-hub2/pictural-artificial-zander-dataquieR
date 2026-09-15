@@ -10,5 +10,5 @@ the older one used by \link{con_contradictions} is described
 \href{https://dataquality.qihs.uni-greifswald.de/VIN_con_impl_contradictions.html#Example_output}{here}.
 }
 \seealso{
-\link{meta_data_cross}
+\link{meta_data_cross_item}
 }

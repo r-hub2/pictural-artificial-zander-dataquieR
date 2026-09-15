@@ -52,18 +52,20 @@
 #' https://dataquality.qihs.uni-greifswald.de/VIN_com_impl_unit_missingness.html
 #' )
 com_unit_missingness <- function(id_vars = NULL,
-                                 strata_vars = NULL,
-                                 label_col,
-                                 study_data,
-                                 item_level = "item_level",
-                                 meta_data = item_level,
-                                 meta_data_v2) { # TODO: Discuss, if this function can be fully removed?
+  strata_vars = NULL,
+  label_col,
+  study_data,
+  item_level = "item_level",
+  meta_data = item_level,
+  meta_data_v2) {
 
   util_maybe_load_meta_data_v2()
   # map study and metadata
   prep_prepare_dataframes()
-  ds1_labelled <- prep_prepare_dataframes(.apply_factor_metadata_inadm = TRUE,
-                                          .internal = FALSE)
+  ds1_labelled <- prep_prepare_dataframes(
+    .apply_factor_metadata_inadm = TRUE,
+    .internal = FALSE
+  )
 
   part_vars <- meta_data[[PART_VAR]]
 
@@ -80,11 +82,13 @@ com_unit_missingness <- function(id_vars = NULL,
 
   if (is.null(id_vars)) {
     util_message(
-      c("No ID-variables specified, all variables are",
-        "considered to be measurements."),
+      c(
+        "No ID-variables specified, all variables are",
+        "considered to be measurements."
+      ),
       applicability_problem = TRUE,
       intrinsic_applicability_problem = TRUE
-      )
+    )
   }
 
   # initialize result dataframe
@@ -108,9 +112,11 @@ com_unit_missingness <- function(id_vars = NULL,
       )
       leave_out <- union(leave_out, strata_vars)
     }
-    sumdf1$Unit_missing <- as.integer(apply(ds1[, -which(names(ds1) %in%
-                                                           leave_out)], 1,
-                                            function(x) all(is.na(x))))
+    sumdf1$Unit_missing <- as.integer(apply(
+      ds1[, -which(names(ds1) %in%
+            leave_out), drop = TRUE], 1,
+      function(x) all(is.na(x))
+    ))
   } else {
     sumdf1$Unit_missing <- as.integer(apply(ds1, 1, function(x) all(is.na(x))))
   }
@@ -118,25 +124,36 @@ com_unit_missingness <- function(id_vars = NULL,
   UMR <- data.frame(
     "N" = sum(sumdf1$Unit_missing, na.rm = TRUE),
     "%" = round(sum(sumdf1$Unit_missing, na.rm = TRUE) / dim(sumdf1)[1] * 100,
-                digits = 2)
+      digits = 2
+    )
   )
+  attr(UMR$N, DATA_TYPE) <- DATA_TYPES$INTEGER
+  attr(UMR[[2L]], DATA_TYPE) <- DATA_TYPES$FLOAT
 
   # summarize for strata_vars
   if (!(is.null(strata_vars))) {
     sumdf1[, setdiff(strata_vars, part_vars)] <-
       ds1_labelled[, setdiff(strata_vars, part_vars), FALSE]
 
-    sumdf2 <- as.data.frame.matrix(table(sumdf1[[strata_vars]],
-                                         sumdf1$Unit_missing))
+    sumdf2 <- as.data.frame.matrix(table(
+      sumdf1[[strata_vars]],
+      sumdf1$Unit_missing
+    ))
     if (!any(sumdf1$Unit_missing, na.rm = TRUE)) {
       sumdf2$N_UNIT_MISSINGS <- 0
     }
     colnames(sumdf2) <- c("N_OBS", "N_UNIT_MISSINGS")
     sumdf2[[strata_vars]] <- rownames(sumdf2)
     rownames(sumdf2) <- NULL
-    sumdf2 <- sumdf2[, c(strata_vars, c("N_OBS", "N_UNIT_MISSINGS"))]
+    sumdf2 <- sumdf2[, c(strata_vars, c("N_OBS", "N_UNIT_MISSINGS")), drop = FALSE] # nolint: line_length_linter.
     sumdf2$"N_UNIT_MISSINGS_(%)" <- round(sumdf2$N_UNIT_MISSINGS /
-                                            sumdf2$N_OBS * 100, digits = 2)
+        sumdf2$N_OBS * 100, digits = 2)
+    for (cl in intersect(strata_vars, colnames(sumdf2))) {
+      attr(sumdf2[[cl]], DATA_TYPE) <- DATA_TYPES$STRING
+    }
+    attr(sumdf2$N_OBS, DATA_TYPE) <- DATA_TYPES$INTEGER
+    attr(sumdf2$N_UNIT_MISSINGS, DATA_TYPE) <- DATA_TYPES$INTEGER
+    attr(sumdf2$`N_UNIT_MISSINGS_(%)`, DATA_TYPE) <- DATA_TYPES$FLOAT
   }
 
   if (!(is.null(strata_vars))) {

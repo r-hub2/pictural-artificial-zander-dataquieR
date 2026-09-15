@@ -13,11 +13,16 @@
 #' dq_report2("study_data", meta_data_v2 = "~/tmp/mls.xlsx")
 #' }
 util_add_computed_internals <- function(meta_data_item_computation,
-                                        meta_data_cross_item,
-                                        meta_data,
-                                        label_col) {
+  meta_data_cross_item,
+  meta_data,
+  label_col) {
   if (missing(meta_data_cross_item)) {
-    meta_data_cross_item <- NULL
+    meta_data_cross_item <- data.frame()
+  }
+  input_check_labels <- if (CHECK_LABEL %in% colnames(meta_data_cross_item)) {
+    as.character(meta_data_cross_item[[CHECK_LABEL]])
+  } else {
+    rep(NA_character_, nrow(meta_data_cross_item))
   }
   suppressWarnings(suppressMessages(
     meta_data_cross_item <- util_normalize_cross_item(
@@ -67,13 +72,13 @@ util_add_computed_internals <- function(meta_data_item_computation,
     to_add <- lapply(rows, function(rw, e) {
       parsed <- suppressWarnings(
         tryCatch(
-          util_parse_interval(meta_data_cross_item[rw, ssi_col]),
+          util_parse_interval(meta_data_cross_item[rw, ssi_col, drop = TRUE]),
           warning = function(w) {
             util_warning(
               "Invalid interval in column %s at row %d: %s - %s.",
               ssi_col,
               rw,
-              meta_data_cross_item[rw, ssi_col],
+              meta_data_cross_item[rw, ssi_col, drop = TRUE],
               conditionMessage(w),
               applications_problem = TRUE
             )
@@ -85,54 +90,67 @@ util_add_computed_internals <- function(meta_data_item_computation,
         return(NULL)
       }
 
-      check_id <- meta_data_cross_item[rw, CHECK_ID]
-      hard_limits <- meta_data_cross_item[rw, ssi_col]
-      check_label <- meta_data_cross_item[rw, CHECK_LABEL]
-      scale_name <- meta_data_cross_item[rw, SCALE_NAME]
-      scale_acronym <- meta_data_cross_item[rw, SCALE_ACRONYM]
+      check_id <- meta_data_cross_item[rw, CHECK_ID, drop = TRUE]
+      hard_limits <- meta_data_cross_item[rw, ssi_col, drop = TRUE]
+      check_label <- meta_data_cross_item[rw, CHECK_LABEL, drop = TRUE]
+      technical_check_label <- input_check_labels[[rw]]
+      if (util_empty(technical_check_label)) {
+        technical_check_label <- paste0("Check #", rw)
+      }
+      scale_name <- meta_data_cross_item[rw, SCALE_NAME, drop = TRUE]
+      scale_acronym <- meta_data_cross_item[rw, SCALE_ACRONYM, drop = TRUE]
       computed_variable_role <- COMPUTED_VARIABLE_ROLES[[ssi_col]]
       if (!length(computed_variable_role)) {
         util_error(
-          c("Internal error, sorry, please report: Detected unkown",
-            "computed varialbe role: %s"),
+          c(
+            "Internal error, sorry, please report: Detected unkown",
+            "computed varialbe role: %s"
+          ),
           ssi_col
         )
       }
 
-      study_segment <- util_free_varname(
-        meta_data,
-        paste0("COMPUTED_", tech_prefix),
-        target = STUDY_SEGMENT,
-        also_not = e$given_seg
-      )
+      if (util_free_varname(meta_data,
+          ".COMPUTED__ssi", target = STUDY_SEGMENT,
+          also_not = meta_data[[STUDY_SEGMENT]]) ==
+          ".COMPUTED__ssi_1"
+      ) {
+        util_error(m = paste0(
+          ".COMPUTED__ssi is an internal technical segment name,",
+          " please do not use it as STUDY_SEGMENT name"
+        ))
+      }
+      study_segment <- ".COMPUTED__ssi"
+
       e$given_seg <- c(e$given_seg, study_segment)
 
       prefix <- tech_prefix
       if (!!length(scale_name) && !util_empty(scale_name)) {
         prefix <- paste0(prefix, "_", scale_name)
-      } else if (!!length(check_label) && !util_empty(check_label)) {
-        prefix <- paste0(prefix, "_", check_label)
+      } else if (!!length(technical_check_label) &&
+          !util_empty(technical_check_label)) {
+        prefix <- paste0(prefix, "_", technical_check_label)
       } else if (!!length(scale_acronym) && !util_empty(scale_acronym)) {
         prefix <- paste0(prefix, "_", scale_acronym)
       }
       var_names <- util_free_varname(
-        meta_data, prefix, target = VAR_NAMES, also_not = e$given
+        meta_data, prefix,
+        target = VAR_NAMES, also_not = e$given
       )
       e$given <- c(e$given, var_names)
 
-      prefix <- paste0(human_prefix_from_menu_label, ": ")
-      if (!!length(scale_name) && !util_empty(scale_name)) {
-        prefix <- paste0(prefix, scale_name)
-        if (!!length(check_label) && !util_empty(check_label)) {
-          prefix <- paste0(prefix, " (", check_label, ")")
-        }
-      } else if (!!length(check_label) && !util_empty(check_label)) {
-        prefix <- paste0(prefix, check_label)
+      group_title <- util_generate_pages_ssi_cross_item_titles(
+        meta_data_cross_item[rw, , drop = FALSE]
+      )[["short_title"]]
+      if (util_empty(group_title)) {
+        group_title <- paste0("Check #", rw)
       }
+      prefix <- paste(human_prefix_from_result_caption, group_title, sep = ".")
       label <- util_free_varname(
-        meta_data, prefix, target = LABEL, also_not = e$given_lab
+        meta_data, prefix,
+        target = LABEL, also_not = e$given_lab
       )
-      e$given_lab <- c(e$given_lab, var_names)
+      e$given_lab <- c(e$given_lab, label)
 
       long_prefix <- human_prefix_from_result_caption
       if (!!length(scale_name) && !util_empty(scale_name)) {
@@ -140,38 +158,43 @@ util_add_computed_internals <- function(meta_data_item_computation,
       }
       if (!!length(scale_acronym) && !util_empty(scale_acronym) &&
           !!length(check_label) && !util_empty(check_label)) {
-        long_prefix <- paste0(long_prefix, " (", scale_acronym, " -- ",
-                              check_label, ")")
+        long_prefix <- paste0(
+          long_prefix, " (", scale_acronym, " -- ",
+          check_label, ")"
+        )
       } else if (!!length(check_label) && !util_empty(check_label)) {
         long_prefix <- paste0(long_prefix, " (", check_label, ")")
       } else if (!!length(scale_acronym) && !util_empty(scale_acronym)) {
         long_prefix <- paste0(long_prefix, " (", scale_acronym, ")")
       }
       long_label <- util_free_varname(
-        meta_data, long_prefix, target = LONG_LABEL, also_not = e$given_llab
+        meta_data, long_prefix,
+        target = LONG_LABEL, also_not = e$given_llab
       )
-      e$given_llab <- c(e$given_llab, var_names)
+      e$given_llab <- c(e$given_llab, long_label)
 
       var_expr <- paste(
         collapse = ", ",
         paste0("[", util_parse_assignments(
-          meta_data_cross_item[rw, VARIABLE_LIST_ORDER]), "]")
+          meta_data_cross_item[rw, VARIABLE_LIST_ORDER, drop = TRUE]
+        ), "]")
       )
 
       rule_filled <- rule_template
       rule_filled <- gsub("!!!VAR_NAMES", var_expr, rule_filled, fixed = TRUE)
 
       if (!is.na(extra_col)) {
-        extra_args <- NA
-        if (extra_col %in% colnames(meta_data_cross_item))
-        if (util_empty(meta_data_cross_item[rw, extra_col])) {
-          extra_args <- "[.]"
-        } else {
-          extra_args <-
-            util_parse_assignments(meta_data_cross_item[rw, extra_col])
+        extra_args <- "[.]"
+        if (extra_col %in% colnames(meta_data_cross_item)) {
+          if (!util_empty(meta_data_cross_item[rw, extra_col, drop = TRUE])) {
+            extra_args <-
+              util_parse_assignments(meta_data_cross_item[rw, extra_col, drop = TRUE]) # nolint: line_length_linter.
+          }
         }
         rule_filled <- gsub(paste0("!!!", extra_col), extra_args,
-                            rule_filled, fixed = TRUE)
+          rule_filled,
+          fixed = TRUE
+        )
       }
 
       computation_rule <- rule_filled
@@ -196,9 +219,12 @@ util_add_computed_internals <- function(meta_data_item_computation,
     to_add <- Filter(Negate(is.null), to_add)
 
     .meta_data_item_computation_internal <- util_rbind(
-      data_frames_list = lapply(lapply(to_add, `[`, tolower(
-        c(VAR_NAMES, COMPUTATION_RULE, DATA_PREPARATION, CHECK_ID))),
-        as.data.frame)
+      data_frames_list = lapply(
+        lapply(to_add, `[`, tolower(
+          c(VAR_NAMES, COMPUTATION_RULE, DATA_PREPARATION, CHECK_ID)
+        )),
+        as.data.frame
+      )
     )
     colnames(.meta_data_item_computation_internal) <-
       toupper(colnames(.meta_data_item_computation_internal))
@@ -231,6 +257,49 @@ util_add_computed_internals <- function(meta_data_item_computation,
     )
     colnames(.meta_data_internal) <- toupper(colnames(.meta_data_internal))
     meta_data_internal <- util_rbind(meta_data_internal, .meta_data_internal)
+  }
+
+  if (nrow(meta_data_item_computation_internal) > 0) {
+    internal_key <- paste(
+      meta_data_item_computation_internal[[VAR_NAMES]],
+      meta_data_item_computation_internal[[CHECK_ID]],
+      meta_data_item_computation_internal[[COMPUTATION_RULE]],
+      sep = "\r"
+    )
+    meta_data_item_computation_internal <-
+      meta_data_item_computation_internal[!duplicated(internal_key), ,
+        drop = FALSE]
+    internal_key <- paste(
+      meta_data_item_computation_internal[[VAR_NAMES]],
+      meta_data_item_computation_internal[[CHECK_ID]],
+      meta_data_item_computation_internal[[COMPUTATION_RULE]],
+      sep = "\r"
+    )
+    if (nrow(meta_data_item_computation) > 0 &&
+        all(c(VAR_NAMES, CHECK_ID, COMPUTATION_RULE) %in%
+            names(meta_data_item_computation))) {
+      existing_key <- paste(
+        meta_data_item_computation[[VAR_NAMES]],
+        meta_data_item_computation[[CHECK_ID]],
+        meta_data_item_computation[[COMPUTATION_RULE]],
+        sep = "\r"
+      )
+      meta_data_item_computation_internal <-
+        meta_data_item_computation_internal[
+          !(internal_key %in% existing_key),
+          ,
+          drop = FALSE
+        ]
+    }
+  }
+
+  if (nrow(meta_data_internal) > 0) {
+    meta_data_internal <- meta_data_internal[
+      !duplicated(meta_data_internal[[VAR_NAMES]]) &
+        !(meta_data_internal[[VAR_NAMES]] %in% meta_data[[VAR_NAMES]]),
+      ,
+      drop = FALSE
+    ]
   }
 
   list(

@@ -1,12 +1,69 @@
+skip_on_cran()
+
+test_that("acc_distributions decorator hard-fails on relevant metadata duplicates", { # nolint: line_length_linter.
+  study_data <- data.frame(a = c(1, 2, 3, 4))
+  meta_data <- prep_create_meta(
+    VAR_NAMES = "a",
+    DATA_TYPE = DATA_TYPES$INTEGER,
+    LABEL = "A",
+    MISSING_LIST = ""
+  )
+  duplicated_meta_data <- rbind(meta_data, meta_data)
+  duplicated_meta_data[[LABEL]][2] <- "Duplicate label"
+
+  expect_error(
+    acc_distributions(
+      resp_vars = "a",
+      study_data = study_data,
+      meta_data = duplicated_meta_data
+    ),
+    "Found duplicated"
+  )
+})
+
+test_that("acc_distributions decorator tolerates identical relevant metadata duplicates", { # nolint: line_length_linter.
+  study_data <- data.frame(a = c(1, 2, 3, 4))
+  meta_data <- prep_create_meta(
+    VAR_NAMES = "a",
+    DATA_TYPE = DATA_TYPES$INTEGER,
+    LABEL = "A",
+    MISSING_LIST = ""
+  )
+  duplicated_meta_data <- rbind(meta_data, meta_data)
+
+  conditions <- new.env(parent = emptyenv())
+  conditions$values <- character(0)
+  result <- withCallingHandlers(
+    acc_distributions(
+      resp_vars = "a",
+      study_data = study_data,
+      meta_data = duplicated_meta_data
+    ),
+    warning = function(w) {
+      conditions$values <- c(conditions$values, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    },
+    message = function(m) {
+      conditions$values <- c(conditions$values, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    }
+  )
+  expect_type(result, "list")
+  expect_true("SummaryPlotList" %in% names(result))
+  expect_false(any(grepl("duplicated|Duplicates in", conditions$values)))
+})
+
 test_that("acc_distributions catches unsuitable input and works otherwise", {
   skip_on_cran() # slow, errors obvious
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
-  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData")
-  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE)
+  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData") # nolint: line_length_linter.
+  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE) # nolint: line_length_linter.
 
   meta_data <-
-    prep_scalelevel_from_data_and_metadata(study_data = study_data,
-                                           meta_data = meta_data)
+    prep_scalelevel_from_data_and_metadata(
+      study_data = study_data,
+      meta_data = meta_data
+    )
 
   # data type mismatch between study data and metadata will be converted
   # -> runs without problems
@@ -15,19 +72,20 @@ test_that("acc_distributions catches unsuitable input and works otherwise", {
   md0 <- meta_data
   expect_silent(
     res1 <- acc_distributions(
-        resp_vars ="v00000",
-        study_data = sd0, meta_data = md0)
+      resp_vars = "v00000",
+      study_data = sd0, meta_data = md0
+    )
   )
 
   # all values NA
   sd0 <- study_data
   sd0$v00000 <- NA_real_
   expect_error(
-      res1 <-
-        acc_distributions(
-          resp_vars <- "v00000",
-          study_data = sd0, meta_data = md0)
-    ,
+    res1 <-
+      acc_distributions(
+        resp_vars <- "v00000",
+        study_data = sd0, meta_data = md0
+      ),
     regexp =
       "Variable .+v00000.+resp_vars.+ has only NA observations",
     perl = TRUE
@@ -40,13 +98,15 @@ test_that("acc_distributions catches unsuitable input and works otherwise", {
   expect_error(
     res1 <-
       acc_distributions(
-       resp_vars <- "v00000",
-       study_data = sd0, meta_data = md0)
-   ,
-   regexp =
-     paste("Variable .+v00000.+resp_vars.+ has fewer distinct values",
-           "than required"),
-   perl = TRUE
+        resp_vars <- "v00000",
+        study_data = sd0, meta_data = md0
+      ),
+    regexp =
+      paste(
+        "Variable .+v00000.+resp_vars.+ has fewer distinct values",
+        "than required"
+      ),
+    perl = TRUE
   )
   # warning if there are other variables that can be used by the function
   expect_message2(
@@ -54,18 +114,23 @@ test_that("acc_distributions catches unsuitable input and works otherwise", {
       res1 <-
         acc_distributions(
           resp_vars <- c("v00000", "v00002"),
-          study_data = sd0, meta_data = md0),
+          study_data = sd0, meta_data = md0
+        ),
       regexp = "In .+resp_vars.+ variables .+v00000.+ were excluded.",
-      perl = TRUE),
-    regexp = paste("Variable .+v00000.+resp_vars.+ has fewer distinct values",
-                   "than required"),
+      perl = TRUE
+    ),
+    regexp = paste(
+      "Variable .+v00000.+resp_vars.+ has fewer distinct values",
+      "than required"
+    ),
     perl = TRUE
   )
 
   # check that only suitable variables are selected
   expect_warning(suppressMessages(
     res1 <-
-      acc_distributions(study_data = study_data, meta_data = meta_data)))
+      acc_distributions(study_data = study_data, meta_data = meta_data)
+  ))
   expect_true("SummaryPlotList" %in% names(res1))
   expect_equal(
     length(res1$SummaryPlotList),
@@ -82,7 +147,8 @@ test_that("acc_distributions catches unsuitable input and works otherwise", {
     suppressWarnings(suppressMessages(
       res1 <-
         acc_distributions(
-          study_data = sd0, meta_data = md0)
+          study_data = sd0, meta_data = md0
+        )
     )),
     regexp =
       "No suitable variables were defined for acc_distributions."
@@ -92,16 +158,21 @@ test_that("acc_distributions catches unsuitable input and works otherwise", {
 test_that("acc_distributions works with label_col", {
   skip_on_cran() # slow, errors obvious
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
-  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData")
-  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE)
+  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData") # nolint: line_length_linter.
+  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE) # nolint: line_length_linter.
   meta_data <-
-    prep_scalelevel_from_data_and_metadata(study_data = study_data,
-                                           meta_data = meta_data)
+    prep_scalelevel_from_data_and_metadata(
+      study_data = study_data,
+      meta_data = meta_data
+    )
 
   expect_warning(suppressMessages(
     res1 <-
-      acc_distributions(study_data = study_data, meta_data = meta_data,
-                        label_col = LABEL)))
+      acc_distributions(
+        study_data = study_data, meta_data = meta_data,
+        label_col = LABEL
+      )
+  ))
   expect_true("SummaryPlotList" %in% names(res1))
   expect_equal(
     length(res1$SummaryPlotList),
@@ -113,11 +184,13 @@ test_that("acc_distributions works with label_col", {
 test_that("acc_distributions robust with miss-codes", {
   skip_on_cran() # slow test.
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
-  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData")
-  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE)
+  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData") # nolint: line_length_linter.
+  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE) # nolint: line_length_linter.
   meta_data <-
-    prep_scalelevel_from_data_and_metadata(study_data = study_data,
-                                           meta_data = meta_data)
+    prep_scalelevel_from_data_and_metadata(
+      study_data = study_data,
+      meta_data = meta_data
+    )
 
   md0 <- meta_data
   sd0 <- study_data
@@ -125,36 +198,50 @@ test_that("acc_distributions robust with miss-codes", {
   sd0$v00003[[6]] <- 9999999
   expect_silent(
     res1 <-
-      acc_distributions(resp_vars = "v00003",
-      study_data = sd0, meta_data = md0))
+      acc_distributions(
+        resp_vars = "v00003",
+        study_data = sd0, meta_data = md0
+      )
+  )
   sd0$v00003[[6]] <- 10000000
   expect_silent(
     res1 <-
-      acc_distributions(resp_vars = "v00003",
-                        study_data = sd0, meta_data = md0))
+      acc_distributions(
+        resp_vars = "v00003",
+        study_data = sd0, meta_data = md0
+      )
+  )
 })
 
 test_that("acc_distributions is robust to other issues", {
   skip_on_cran() # slow, errors obvious
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
-  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData")
-  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE)
+  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData") # nolint: line_length_linter.
+  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE) # nolint: line_length_linter.
   meta_data <-
-    prep_scalelevel_from_data_and_metadata(study_data = study_data,
-                                           meta_data = meta_data)
+    prep_scalelevel_from_data_and_metadata(
+      study_data = study_data,
+      meta_data = meta_data
+    )
 
   # proportion check works with integers without value labels:
   expect_silent(
-    res_int <- acc_distributions_prop(resp_vars = "ITEM_4_0",
-                                      study_data = study_data,
-                                      meta_data = meta_data,
-                                      label_col = LABEL))
+    res_int <- acc_distributions_prop(
+      resp_vars = "ITEM_4_0",
+      study_data = study_data,
+      meta_data = meta_data,
+      label_col = LABEL
+    )
+  )
   # proportion check works with value labels specified:
   expect_silent(
-    res_val <- acc_distributions_prop(resp_vars = "SEX_0",
-                                      study_data = study_data,
-                                      meta_data = meta_data,
-                                      label_col = LABEL))
+    res_val <- acc_distributions_prop(
+      resp_vars = "SEX_0",
+      study_data = study_data,
+      meta_data = meta_data,
+      label_col = LABEL
+    )
+  )
 
   md0 <- meta_data
   sd0 <- study_data
@@ -163,77 +250,97 @@ test_that("acc_distributions is robust to other issues", {
   sd0$v00000[which(sd0$v00000 == 5)] <- 2
   expect_silent(
     res1 <-
-      acc_distributions(resp_vars = "v00000",
-                        study_data = sd0, meta_data = md0)
+      acc_distributions(
+        resp_vars = "v00000",
+        study_data = sd0, meta_data = md0
+      )
   )
   skip_if_not_installed("vdiffr")
   skip_on_cran()
-  expect_doppelganger2("empty_cat5",
-                              res1$SummaryPlotList$v00000)
+  expect_doppelganger2(
+    "empty_cat5",
+    res1$SummaryPlotList$v00000
+  )
 
   # use non-consecutive codes for categories
   sd0$v00000[which(sd0$v00000 == 3)] <- 33
-  sd0$v00000[which(sd0$v00000 %in% c(2,4))] <- 111
+  sd0$v00000[which(sd0$v00000 %in% c(2, 4))] <- 111
   md0$VALUE_LABEL_TABLE[which(md0$VAR_NAMES == "v00000")] <- ""
   md0$VALUE_LABELS[which(md0$VAR_NAMES == "v00000")] <-
     "33 = Berlin | 1 = Hamburg | 111 = Cologne"
 
   {
-    res2 <- acc_distributions_prop(resp_vars = "v00000",
-                                   study_data = sd0, meta_data = md0)
-  } %>%
+    res2 <- acc_distributions_prop(
+      resp_vars = "v00000",
+      study_data = sd0, meta_data = md0
+    )
+  } %>% # nolint: brace_linter
     expect_warning(regexp = "Cannot mix")
 
   skip_if_not_installed("vdiffr")
   skip_on_cran()
-  expect_doppelganger2("non_consecutive_codes_work",
-                              res2$SummaryPlotList$v00000)
+  expect_doppelganger2(
+    "non_consecutive_codes_work",
+    res2$SummaryPlotList$v00000
+  )
 
   # only few different float values, should still produce a histogram
   # (here with four bars, a bar chart would have five bars)
   sl <- meta_data$SCALE_LEVEL
   prep_purge_data_frame_cache()
-  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData")
+  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData") # nolint: line_length_linter.
   meta_data[[SCALE_LEVEL]] <- sl
-  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE)
+  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE) # nolint: line_length_linter.
   md0 <- meta_data
   sd0 <- study_data
   sd0$v00009 <- rep(c(19.2, 19.9, 22.5, 25.7, 29.4), each = 600)
   expect_silent(
-    res3 <- acc_distributions_loc(resp_vars = "v00009",
-                                  study_data = sd0, meta_data = md0)
+    res3 <- acc_distributions_loc(
+      resp_vars = "v00009",
+      study_data = sd0, meta_data = md0
+    )
   )
   skip_if_not_installed("vdiffr")
   skip_on_cran()
-  expect_doppelganger2("few_float_values",
-                              res3$SummaryPlotList$v00009)
+  expect_doppelganger2(
+    "few_float_values",
+    res3$SummaryPlotList$v00009
+  )
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
-  prep_load_workbook_like_file("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx")
+  prep_load_workbook_like_file("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx") # nolint: line_length_linter.
   md0 <- prep_meta_data_v1_to_item_level_meta_data()
   md0 <-
-    prep_scalelevel_from_data_and_metadata(study_data = study_data,
-                                           meta_data = md0)
+    prep_scalelevel_from_data_and_metadata(
+      study_data = study_data,
+      meta_data = md0
+    )
 
   sd0 <- study_data
   md0 <-
-    prep_scalelevel_from_data_and_metadata(study_data = sd0,
-                                           meta_data = md0)
+    prep_scalelevel_from_data_and_metadata(
+      study_data = sd0,
+      meta_data = md0
+    )
   md1 <- md0
   md1[md1$LABEL == "SEX_0", VALUE_LABELS] <-
     "0 = females | 1 = males"
   suppressWarnings(sd0$v00002 <- as.character(util_study_var2factor(
-    "SEX_0", study_data = sd0, code_name = c(VALUE_LABELS),
-    meta_data = md1, include_sysmiss = FALSE)[["SEX_0"]]
-  ))
+    "SEX_0",
+    study_data = sd0, code_name = c(VALUE_LABELS),
+    meta_data = md1, include_sysmiss = FALSE
+  )[["SEX_0"]]))
   expect_error(
-    acc_distributions(study_data = sd0, meta_data = md0, resp_vars = "SEX_0",
-                      label_col = "LABEL")
+    acc_distributions(
+      study_data = sd0, meta_data = md0, resp_vars = "SEX_0",
+      label_col = "LABEL"
+    )
   )
 
   md0[[DATA_TYPE]][md0[[LABEL]] == "SEX_0"] <- "string"
   expect_silent(
-    acc_distributions(study_data = sd0, meta_data = md0, resp_vars = "SEX_0",
-                      label_col = "LABEL")
+    acc_distributions(
+      study_data = sd0, meta_data = md0, resp_vars = "SEX_0",
+      label_col = "LABEL"
+    )
   )
 })
-

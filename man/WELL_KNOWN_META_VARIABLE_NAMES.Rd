@@ -47,6 +47,7 @@
 \alias{LOCATION_RANGE}
 \alias{LOCATION_METRIC}
 \alias{PROPORTION_RANGE}
+\alias{REPEATED_MEASURES_VARS}
 \alias{LOCATION_LIMIT_LOW}
 \alias{LOCATION_LIMIT_UP}
 \alias{INCL_LOCATION_LIMIT_LOW}
@@ -57,6 +58,8 @@
 \alias{INCL_PROPORTION_LIMIT_UP}
 \alias{RECODE_CASES}
 \alias{RECODE_CONTROL}
+\alias{EVENT_LEVELS}
+\alias{CONTROL_LEVELS}
 \alias{GRADING_RULESET}
 \alias{STANDARDIZED_VOCABULARY_TABLE}
 \alias{DATAFRAMES}
@@ -65,6 +68,7 @@
 \alias{N_RULES}
 \alias{EXTENDED_DATA_TYPE}
 \alias{COMPUTED_VARIABLE_ROLE}
+\alias{ITEM_TYPE}
 \title{Well-known metadata column names, names of metadata columns}
 \usage{
 WELL_KNOWN_META_VARIABLE_NAMES
@@ -130,6 +134,7 @@ environment directly, i.e. they are available directly by their names too:
 \item \link{LOCATION_RANGE}
 \item \link{LOCATION_METRIC}
 \item \link{PROPORTION_RANGE}
+\item \link{REPEATED_MEASURES_VARS}
 \item \link{LOCATION_LIMIT_LOW}
 \item \link{LOCATION_LIMIT_UP}
 \item \link{INCL_LOCATION_LIMIT_LOW}
@@ -140,6 +145,8 @@ environment directly, i.e. they are available directly by their names too:
 \item \link{INCL_PROPORTION_LIMIT_UP}
 \item \link{RECODE_CASES}
 \item \link{RECODE_CONTROL}
+\item \link{EVENT_LEVELS}
+\item \link{CONTROL_LEVELS}
 \item \link{GRADING_RULESET}
 \item \link{STANDARDIZED_VOCABULARY_TABLE}
 \item \link{DATAFRAMES}
@@ -148,6 +155,7 @@ environment directly, i.e. they are available directly by their names too:
 \item \link{N_RULES}
 \item \link{EXTENDED_DATA_TYPE}
 \item \link{COMPUTED_VARIABLE_ROLE}
+\item \link{ITEM_TYPE}
 }
 }
 \examples{

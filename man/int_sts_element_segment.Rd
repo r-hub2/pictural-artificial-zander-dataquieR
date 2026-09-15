@@ -13,7 +13,7 @@ int_sts_element_segment(
 )
 }
 \arguments{
-\item{study_data}{\link{data.frame} the data frame that contains the measurements, mandatory.}
+\item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
 \item{item_level}{\link{data.frame} the data frame that contains metadata
 attributes of study data}
@@ -42,8 +42,6 @@ if applicable, \code{ALL} otherwise
 }
 \description{
 Depends on \code{dataquieR.ELEMENT_MISSMATCH_CHECKTYPE} option,
-see there -- # TODO: Rind out, how to document and link
-it here using \code{Roxygen}.
 }
 \details{
 \link{Indicator}
@@ -51,25 +49,31 @@ it here using \code{Roxygen}.
 \examples{
 \dontrun{
 study_data <- cars
-meta_data <- dataquieR::prep_create_meta(VAR_NAMES = c("speedx", "distx"),
+meta_data <- dataquieR::prep_create_meta(
+  VAR_NAMES = c("speedx", "distx"),
   DATA_TYPE = c("integer", "integer"), MISSING_LIST = "|", JUMP_LIST = "|",
-  STUDY_SEGMENT = c("Intro", "Ex"))
+  STUDY_SEGMENT = c("Intro", "Ex")
+)
 options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "none")
 int_sts_element_segment(study_data, meta_data)
 options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "exact")
 int_sts_element_segment(study_data, meta_data)
 study_data <- cars
-meta_data <- dataquieR::prep_create_meta(VAR_NAMES = c("speedx", "distx"),
+meta_data <- dataquieR::prep_create_meta(
+  VAR_NAMES = c("speedx", "distx"),
   DATA_TYPE = c("integer", "integer"), MISSING_LIST = "|", JUMP_LIST = "|",
-  STUDY_SEGMENT = c("Intro", "Intro"))
+  STUDY_SEGMENT = c("Intro", "Intro")
+)
 options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "none")
 int_sts_element_segment(study_data, meta_data)
 options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "exact")
 int_sts_element_segment(study_data, meta_data)
 study_data <- cars
-meta_data <- dataquieR::prep_create_meta(VAR_NAMES = c("speed", "distx"),
+meta_data <- dataquieR::prep_create_meta(
+  VAR_NAMES = c("speed", "distx"),
   DATA_TYPE = c("integer", "integer"), MISSING_LIST = "|", JUMP_LIST = "|",
-  STUDY_SEGMENT = c("Intro", "Intro"))
+  STUDY_SEGMENT = c("Intro", "Intro")
+)
 options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "none")
 int_sts_element_segment(study_data, meta_data)
 options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "exact")

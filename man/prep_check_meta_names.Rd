@@ -47,8 +47,10 @@ hierarchical.
 }
 \examples{
 \dontrun{
-prep_check_meta_names(data.frame(VAR_NAMES = 1, DATA_TYPE = 2,
-                      MISSING_LIST = 3))
+prep_check_meta_names(data.frame(
+  VAR_NAMES = 1, DATA_TYPE = 2,
+  MISSING_LIST = 3
+))
 
 prep_check_meta_names(
   data.frame(
@@ -91,15 +93,17 @@ prep_check_meta_names(
     END_DIGIT_CHECK = "END_DIGIT_CHECK",
     VARIABLE_ORDER = "VARIABLE_ORDER", LONG_LABEL =
       "LONG_LABEL", recode = "recode",
-      MISSING_LIST_TABLE = "MISSING_LIST_TABLE"
+    MISSING_LIST_TABLE = "MISSING_LIST_TABLE"
   ),
   OPTIONAL
 )
 
 # Next one will fail
 try(
-  prep_check_meta_names(data.frame(VAR_NAMES = 1, DATA_TYPE = 2,
-    MISSING_LIST = 3), TECHNICAL)
+  prep_check_meta_names(data.frame(
+    VAR_NAMES = 1, DATA_TYPE = 2,
+    MISSING_LIST = 3
+  ), TECHNICAL)
 )
 }
 }

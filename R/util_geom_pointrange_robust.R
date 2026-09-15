@@ -7,12 +7,12 @@
 #' @inheritParams ggplot2::geom_pointrange
 #' @noRd
 util_geom_pointrange_robust <- function(mapping = NULL, data = NULL,
-                                        stat = "identity",
-                                        position = "identity",
-                                        ...,
-                                        na.rm = TRUE,
-                                        show.legend = NA,
-                                        inherit.aes = TRUE) {
+  stat = "identity",
+  position = "identity",
+  ...,
+  na.rm = TRUE,
+  show.legend = NA,
+  inherit.aes = TRUE) {
   if (!identical(na.rm, TRUE)) {
     util_error("Cannot call util_geom_pointrange_robust with na.rm = FALSE")
   }
@@ -69,6 +69,7 @@ GeomPointrangeRobust <- local({
     envir = ee
   )
 })
+# nolint start: line_length_linter.
 #' Internally used point-range
 #'
 #' @param data the data returned by `ggplot2::ggplot_build()`
@@ -79,8 +80,9 @@ GeomPointrangeRobust <- local({
 #' @param ... currently ignored
 #'
 #' @export
+# nolint end
 to_basic.GeomPointrangeRobust <- function(data, prestats_data, layout, params,
-                                          p, ...) {
+  p, ...) {
   for (nm in c("xmin", "xmax", "ymin", "ymax")) {
     if (nm %in% names(data) && is.numeric(data[[nm]])) {
       x <- data[[nm]]

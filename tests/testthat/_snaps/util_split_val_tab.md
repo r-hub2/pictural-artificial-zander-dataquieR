@@ -110,93 +110,93 @@
       104      88880                               JUMP 88880         NA
       105      88890                               JUMP 88890         NA
                          VALUE_LABEL_TABLE CODE_CLASS CODE_INTERPRET
-      1    LABS_(-Inf,20 (20,30]...::8d957      VALUE           <NA>
-      2    LABS_(-Inf,20 (20,30]...::8d957      VALUE           <NA>
-      3    LABS_(-Inf,20 (20,30]...::8d957      VALUE           <NA>
-      4      LABS_Berlin Hamburg...::97896      VALUE           <NA>
-      5      LABS_Berlin Hamburg...::97896      VALUE           <NA>
-      6      LABS_Berlin Hamburg...::97896      VALUE           <NA>
-      7      LABS_Berlin Hamburg...::97896      VALUE           <NA>
-      8      LABS_Berlin Hamburg...::97896      VALUE           <NA>
-      9      LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      10     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      11     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      12     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      13     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      14     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      15     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      16     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      17     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      18     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      19     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      20     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      21     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      22     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      23     LABS_SR_120 USR_125...::be858      VALUE           <NA>
-      24    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      25    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      26    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      27    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      28    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      29    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      30    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      31    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      32    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      33    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      34    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      35    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      36    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      37    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      38    LABS_USR_101 USR_103...::f7ae9      VALUE           <NA>
-      39    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      40    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      41    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      42    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      43    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      44    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      45    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      46    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      47    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      48    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      49    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      50    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      51    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      52    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      53    LABS_USR_121 USR_123...::c993d      VALUE           <NA>
-      54  LABS_below 10 [10-30k)...::7c9d1      VALUE           <NA>
-      55  LABS_below 10 [10-30k)...::7c9d1      VALUE           <NA>
-      56  LABS_below 10 [10-30k)...::7c9d1      VALUE           <NA>
-      57  LABS_below 10 [10-30k)...::7c9d1      VALUE           <NA>
-      58  LABS_below 10 [10-30k)...::7c9d1      VALUE           <NA>
-      59  LABS_below 10 [10-30k)...::7c9d1      VALUE           <NA>
-      60      LABS_excellen good...::dfd3a      VALUE           <NA>
-      61      LABS_excellen good...::dfd3a      VALUE           <NA>
-      62      LABS_excellen good...::dfd3a      VALUE           <NA>
-      63      LABS_excellen good...::dfd3a      VALUE           <NA>
-      64      LABS_excellen good...::dfd3a      VALUE           <NA>
-      65         LABS_females males::8a1bf      VALUE           <NA>
-      66         LABS_females males::8a1bf      VALUE           <NA>
-      67     LABS_never 1-2d a w...::9f0f5      VALUE           <NA>
-      68     LABS_never 1-2d a w...::9f0f5      VALUE           <NA>
-      69     LABS_never 1-2d a w...::9f0f5      VALUE           <NA>
-      70     LABS_never 1-2d a w...::9f0f5      VALUE           <NA>
-      71     LABS_never 1-2d a w...::9f0f5      VALUE           <NA>
-      72                LABS_no yes::cde3d      VALUE           <NA>
-      73                LABS_no yes::cde3d      VALUE           <NA>
-      74      LABS_none vegetari...::ba106      VALUE           <NA>
-      75      LABS_none vegetari...::ba106      VALUE           <NA>
-      76      LABS_none vegetari...::ba106      VALUE           <NA>
-      77   LABS_pre-prim primary...::66ffb      VALUE           <NA>
-      78   LABS_pre-prim primary...::66ffb      VALUE           <NA>
-      79   LABS_pre-prim primary...::66ffb      VALUE           <NA>
-      80   LABS_pre-prim primary...::66ffb      VALUE           <NA>
-      81   LABS_pre-prim primary...::66ffb      VALUE           <NA>
-      82   LABS_pre-prim primary...::66ffb      VALUE           <NA>
-      83   LABS_pre-prim primary...::66ffb      VALUE           <NA>
-      84     LABS_single married...::5eb6b      VALUE           <NA>
-      85     LABS_single married...::5eb6b      VALUE           <NA>
-      86     LABS_single married...::5eb6b      VALUE           <NA>
-      87     LABS_single married...::5eb6b      VALUE           <NA>
+      1    LABS_(-Inf,20 (20,30]...::0ca12      VALUE           <NA>
+      2    LABS_(-Inf,20 (20,30]...::0ca12      VALUE           <NA>
+      3    LABS_(-Inf,20 (20,30]...::0ca12      VALUE           <NA>
+      4      LABS_Berlin Hamburg...::d1b8a      VALUE           <NA>
+      5      LABS_Berlin Hamburg...::d1b8a      VALUE           <NA>
+      6      LABS_Berlin Hamburg...::d1b8a      VALUE           <NA>
+      7      LABS_Berlin Hamburg...::d1b8a      VALUE           <NA>
+      8      LABS_Berlin Hamburg...::d1b8a      VALUE           <NA>
+      9      LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      10     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      11     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      12     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      13     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      14     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      15     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      16     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      17     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      18     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      19     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      20     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      21     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      22     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      23     LABS_SR_120 USR_125...::a6436      VALUE           <NA>
+      24    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      25    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      26    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      27    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      28    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      29    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      30    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      31    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      32    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      33    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      34    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      35    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      36    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      37    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      38    LABS_USR_101 USR_103...::43712      VALUE           <NA>
+      39    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      40    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      41    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      42    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      43    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      44    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      45    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      46    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      47    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      48    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      49    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      50    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      51    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      52    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      53    LABS_USR_121 USR_123...::3f747      VALUE           <NA>
+      54  LABS_below 10 [10-30k)...::58d6e      VALUE           <NA>
+      55  LABS_below 10 [10-30k)...::58d6e      VALUE           <NA>
+      56  LABS_below 10 [10-30k)...::58d6e      VALUE           <NA>
+      57  LABS_below 10 [10-30k)...::58d6e      VALUE           <NA>
+      58  LABS_below 10 [10-30k)...::58d6e      VALUE           <NA>
+      59  LABS_below 10 [10-30k)...::58d6e      VALUE           <NA>
+      60      LABS_excellen good...::28596      VALUE           <NA>
+      61      LABS_excellen good...::28596      VALUE           <NA>
+      62      LABS_excellen good...::28596      VALUE           <NA>
+      63      LABS_excellen good...::28596      VALUE           <NA>
+      64      LABS_excellen good...::28596      VALUE           <NA>
+      65         LABS_females males::992b4      VALUE           <NA>
+      66         LABS_females males::992b4      VALUE           <NA>
+      67     LABS_never 1-2d a w...::4f03b      VALUE           <NA>
+      68     LABS_never 1-2d a w...::4f03b      VALUE           <NA>
+      69     LABS_never 1-2d a w...::4f03b      VALUE           <NA>
+      70     LABS_never 1-2d a w...::4f03b      VALUE           <NA>
+      71     LABS_never 1-2d a w...::4f03b      VALUE           <NA>
+      72                LABS_no yes::c3d28      VALUE           <NA>
+      73                LABS_no yes::c3d28      VALUE           <NA>
+      74      LABS_none vegetari...::d5c11      VALUE           <NA>
+      75      LABS_none vegetari...::d5c11      VALUE           <NA>
+      76      LABS_none vegetari...::d5c11      VALUE           <NA>
+      77   LABS_pre-prim primary...::39f16      VALUE           <NA>
+      78   LABS_pre-prim primary...::39f16      VALUE           <NA>
+      79   LABS_pre-prim primary...::39f16      VALUE           <NA>
+      80   LABS_pre-prim primary...::39f16      VALUE           <NA>
+      81   LABS_pre-prim primary...::39f16      VALUE           <NA>
+      82   LABS_pre-prim primary...::39f16      VALUE           <NA>
+      83   LABS_pre-prim primary...::39f16      VALUE           <NA>
+      84     LABS_single married...::d398a      VALUE           <NA>
+      85     LABS_single married...::d398a      VALUE           <NA>
+      86     LABS_single married...::d398a      VALUE           <NA>
+      87     LABS_single married...::d398a      VALUE           <NA>
       88                              <NA>    MISSING              O
       89                              <NA>    MISSING             NE
       90                              <NA>    MISSING              R
@@ -327,11 +327,11 @@
     Code
       prep_list_dataframes()
     Output
-       [1] "LABS_(-Inf,20 (20,30]...::8d957"  "LABS_Berlin Hamburg...::97896"   
-       [3] "LABS_SR_120 USR_125...::be858"    "LABS_USR_101 USR_103...::f7ae9"  
-       [5] "LABS_USR_121 USR_123...::c993d"   "LABS_below 10 [10-30k)...::7c9d1"
-       [7] "LABS_excellen good...::dfd3a"     "LABS_females males::8a1bf"       
-       [9] "LABS_never 1-2d a w...::9f0f5"    "LABS_no yes::cde3d"              
-      [11] "LABS_none vegetari...::ba106"     "LABS_pre-prim primary...::66ffb" 
-      [13] "LABS_single married...::5eb6b"    "missing_table"                   
+       [1] "LABS_(-Inf,20 (20,30]...::0ca12"  "LABS_Berlin Hamburg...::d1b8a"   
+       [3] "LABS_SR_120 USR_125...::a6436"    "LABS_USR_101 USR_103...::43712"  
+       [5] "LABS_USR_121 USR_123...::3f747"   "LABS_below 10 [10-30k)...::58d6e"
+       [7] "LABS_excellen good...::28596"     "LABS_females males::992b4"       
+       [9] "LABS_never 1-2d a w...::4f03b"    "LABS_no yes::c3d28"              
+      [11] "LABS_none vegetari...::d5c11"     "LABS_pre-prim primary...::39f16" 
+      [13] "LABS_single married...::d398a"    "missing_table"                   
 

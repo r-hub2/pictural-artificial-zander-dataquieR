@@ -42,17 +42,17 @@ label is set only for some variables
 \examples{
 \dontrun{
 meta_data <- prep_get_data_frame("meta_data")
-meta_data$JUMP_LIST[meta_data$VAR_NAMES == "v00003"] <- "99980 = NOOP"
+meta_data[[JUMP_LIST]][meta_data[[VAR_NAMES]] == "v00003"] <- "99980 = NOOP"
 md <- prep_expand_codes(meta_data)
-md$JUMP_LIST
-md$MISSING_LIST
+md[[JUMP_LIST]]
+md[[MISSING_LIST]]
 md <- prep_expand_codes(meta_data, mix_jumps_and_missings = TRUE)
-md$JUMP_LIST
-md$MISSING_LIST
+md[[JUMP_LIST]]
+md[[MISSING_LIST]]
 meta_data <- prep_get_data_frame("meta_data")
-meta_data$MISSING_LIST[meta_data$VAR_NAMES == "v00003"] <- "99980 = NOOP"
+meta_data[[MISSING_LIST]][meta_data[[VAR_NAMES]] == "v00003"] <- "99980 = NOOP"
 md <- prep_expand_codes(meta_data)
-md$JUMP_LIST
-md$MISSING_LIST
+md[[JUMP_LIST]]
+md[[MISSING_LIST]]
 }
 }

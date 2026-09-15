@@ -14,21 +14,22 @@
 #' dim(util_remove_na_records(dta, c("Sepal.Length", "Petal.Length")))
 #' }
 #'
-#'
 #' @family data_management
 #' @concept missing
 #' @noRd
 util_remove_na_records <- function(study_data, vars = colnames(study_data)) {
-  obs_wo_na <- rowSums(is.na(study_data[, vars, FALSE])) == 0
+  obs_wo_na <- rowSums(is.na(study_data[, vars, drop = FALSE])) == 0
   if (sum(!obs_wo_na) > 0) {
     util_message(
-      c("Removing %d observations because of NAs in some of",
-        "the following columns: %s"),
+      c(
+        "Removing %d observations because of NAs in some of",
+        "the following columns: %s"
+      ),
       sum(!obs_wo_na),
       paste0(dQuote(vars), collapse = ", ")
     )
   }
-  r <- study_data[obs_wo_na, , FALSE]
+  r <- study_data[obs_wo_na, , drop = FALSE]
   attributes(r)[.ds1_attribute_names] <-
     attributes(study_data)[.ds1_attribute_names]
   r

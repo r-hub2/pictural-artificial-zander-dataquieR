@@ -16,15 +16,17 @@
 #' @noRd
 
 util_app_cd <- function(x, dta) {
-  if ("CONTRADICTIONS" %in% names(x)) { # TODO: This is not really relevant
-    c1 <- ifelse(is.na(x[["CONTRADICTIONS"]]), 0, 1)
+  if ("CONTRADICTIONS" %in% names(x)) {
+    c1 <- ifelse(is.na(x[[CONTRADICTIONS]]), 0, 1)
   } else {
     c1 <- rep(0, times = dim(x)[1])
   }
 
   aa <- paste0(dta, c1)
-  score <- as.numeric(recode(as.factor(aa), "00" = 0, "01"
-                             = 1, "10" = 2, "11" = 3))
+  score <- as.numeric(recode(as.factor(aa),
+      "00" = 0,
+      "01" = 1, "10" = 2, "11" = 3
+    ))
   score <- as.factor(score)
   return(score)
 }

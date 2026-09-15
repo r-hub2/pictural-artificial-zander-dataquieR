@@ -8,25 +8,34 @@
 #' @return `invisible(NULL)`
 #' @export
 prep_create_meta_data_file <- function(file_name,
-                                       study_data,
-                                       open = TRUE,
-                                       overwrite = FALSE) {
+  study_data,
+  open = TRUE,
+  overwrite = FALSE) {
   util_expect_scalar(file_name,
-                     check_type = is.character,
-                     error_message =
-                       sprintf("%s needs to be a character string.",
-                               sQuote("file_name")))
+    check_type = is.character,
+    error_message =
+      sprintf(
+        "%s needs to be a character string.",
+        sQuote("file_name")
+      )
+  )
   util_expect_scalar(open,
-                     check_type = is.logical,
-                     error_message =
-                       sprintf("%s needs to be logical",
-                               sQuote("open")))
+    check_type = is.logical,
+    error_message =
+      sprintf(
+        "%s needs to be logical",
+        sQuote("open")
+      )
+  )
 
   util_expect_scalar(overwrite,
-                     check_type = is.logical,
-                     error_message =
-                       sprintf("%s needs to be logical",
-                               sQuote("overwrite")))
+    check_type = is.logical,
+    error_message =
+      sprintf(
+        "%s needs to be logical",
+        sQuote("overwrite")
+      )
+  )
 
   if (!missing(study_data)) {
     util_expect_data_frame(study_data, keep_types = TRUE)
@@ -41,16 +50,23 @@ prep_create_meta_data_file <- function(file_name,
     } else {
       prefix <- ""
     }
-    cmd <- paste0(deparse(nlines = -1,
-                   rlang::call_modify(cll,
-                                      overwrite = TRUE)),
-                  collapse = "\n")
+    cmd <- paste0(
+      deparse(
+        nlines = -1,
+        rlang::call_modify(cll,
+          overwrite = TRUE
+        )
+      ),
+      collapse = "\n"
+    )
     if (suppressWarnings(util_ensure_suggested("cli", err = FALSE))) {
       util_error(
         cli::cli_text(
           sprintf(
-"%s already exists, will not overwrite. Call \n{.run [%s](%s%s)}\n to overwrite.",
-    dQuote(file_name), cmd, prefix, cmd))
+            "%s already exists, will not overwrite. Call \n{.run [%s](%s%s)}\n to overwrite.", # nolint: line_length_linter.
+            dQuote(file_name), cmd, prefix, cmd
+          )
+        )
       )
     } else {
       util_error(
@@ -60,20 +76,24 @@ prep_create_meta_data_file <- function(file_name,
       )
     }
   }
-  mdl <- util_rio_import_list("https://dataquality.qihs.uni-greifswald.de/extdata/meta_data_v2.xlsx",
-                              keep_types = FALSE)
+  mdl <- util_rio_import_list("https://dataquality.qihs.uni-greifswald.de/extdata/meta_data_v2.xlsx", # nolint: line_length_linter.
+    keep_types = FALSE
+  )
   old_mlts <- unique(mdl[["item_level"]][[MISSING_LIST_TABLE]])
-  old_id_rft <- unique(c(mdl$segment_level$SEGMENT_ID_REF_TABLE,
-                         mdl$dataframe_level$DF_ID_REF_TABLE))
+  old_id_rft <- unique(c(
+    mdl$segment_level$SEGMENT_ID_REF_TABLE,
+    mdl$dataframe_level$DF_ID_REF_TABLE
+  ))
   if (!missing(study_data)) {
     old_cache <- prep_list_dataframes()
     mdl[["item_level"]] <-
       prep_study2meta(study_data = study_data)
 
     mdl[["item_level"]] <-
-      prep_meta_data_v1_to_item_level_meta_data(
+      util_prepare_item_level_metadata(
         meta_data = mdl[["item_level"]],
-        verbose = FALSE)
+        label_col = LABEL
+      )
 
     mdl[["item_level"]][[MISSING_LIST]] <- NULL
     mdl[["item_level"]][[JUMP_LIST]] <- NULL
@@ -81,8 +101,11 @@ prep_create_meta_data_file <- function(file_name,
     mlts <- unique(mdl[["item_level"]][[MISSING_LIST_TABLE]])
 
     for (mlt in mlts) {
-      if (!is.na(mlt)) try(mdl[[mlt]] <- prep_get_data_frame(mlt),
-                           silent = TRUE)
+      if (!is.na(mlt)) {
+        try(mdl[[mlt]] <- prep_get_data_frame(mlt),
+          silent = TRUE
+        )
+      }
     }
     new_cache <- prep_list_dataframes()
     rm(list = setdiff(new_cache, old_cache), envir = .dataframe_environment())
@@ -90,16 +113,19 @@ prep_create_meta_data_file <- function(file_name,
   mdl[old_mlts] <- NULL
   mdl[old_id_rft] <- NULL
   for (sheet in
-       setdiff(grep("_level$", value = TRUE, names(mdl)), c("item_level"))) {
-    mdl[[sheet]] <- mdl[[sheet]][FALSE, , FALSE]
+    setdiff(grep("_level$", value = TRUE, names(mdl)), c("item_level"))) {
+    mdl[[sheet]] <- mdl[[sheet]][FALSE, , drop = FALSE]
   }
 
   e <- try(rio::export(mdl, file = file_name),
-           silent = TRUE)
+    silent = TRUE
+  )
   if (inherits(e, "try-error")) {
-    util_error("Could not write %s: %s",
-               dQuote(file_name),
-               conditionMessage(attr(e, "condition")))
+    util_error(
+      "Could not write %s: %s",
+      dQuote(file_name),
+      conditionMessage(util_attr(e, "condition", exact = TRUE))
+    )
   }
   if (open) {
     browseURL(file_name)

@@ -10,11 +10,17 @@ util_extract_all_ids <- function(pages) {
   all_ids <- lapply(all_ids, unname)
   all_ids <- all_ids[!vapply(all_ids, is.null, FUN.VALUE = logical(1))]
   all_ids <- unlist(
-    lapply(names(all_ids), function(fn) { paste0(fn, "#", all_ids[[fn]]) } ))
+    lapply(names(all_ids), function(fn) {
+      paste0(fn, "#", all_ids[[fn]])
+    })
+  )
   all_ids <- c(gsub("#.*$", "", all_ids), all_ids)
   all_ids <- unique(c("report.html", all_ids))
   all_ids
 }
+#' Internal helper: util extract all ids from htmltools
+#'
+#' @noRd
 .util_extract_all_ids_from_htmltools <- function(html_stuff) {
   r <- list()
   if ("children" %in% names(html_stuff)) {

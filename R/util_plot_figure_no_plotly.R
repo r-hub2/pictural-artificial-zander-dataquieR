@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Plot a `ggplot2` figure without `plotly`
 #'
 #' @param x [ggplot2::ggplot2] object
@@ -6,18 +7,10 @@
 #' @return `htmltools` compatible object
 #'
 #' @noRd
+# nolint end
 util_plot_figure_no_plotly <- function(x, sizing_hints = NULL) {
-  if (capabilities("cairo") && suppressWarnings(util_ensure_suggested("grDevices",
-                                                     "render vector graphics",
-                                                     err = FALSE))) {
-    # x <- htmltools::plotTag(x, "", suppressSize = "xy", attribs =
-    #           list(class = "dataquieRfigure"),
-    #           device = grDevices::svg, mimeType = "image/svg+xml",
-    #           # width = 800, height = 600,
-    #           pixelratio = 1/72
-    # )
-    # # preserveAspectRatio="none"
-    # x$attribs$src
+  if (capabilities("cairo")) {
+    # Historical plotTag SVG-device path removed in commit 214dd76a7d.
     w <- 800
     h <- 600
     if (!is.null(sizing_hints)) {
@@ -30,8 +23,10 @@ util_plot_figure_no_plotly <- function(x, sizing_hints = NULL) {
     }
     x <- util_plot_svg_to_uri(x, w = w, h = h)
   } else {
-    x <- htmltools::plotTag(x, "", suppressSize = "xy", attribs =
-                              list(class = "dataquieRfigure"))#, width = 640)
+    x <- htmltools::plotTag(x, "",
+      suppressSize = "xy", attribs =
+        list(class = "dataquieRfigure")
+    ) # , width = 640)
   }
   x
 }

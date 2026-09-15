@@ -1,96 +1,149 @@
 test_that("util_assign_levlabs works", {
   skip_on_cran()
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
-  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData")
-  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE)
+  meta_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data.RData") # nolint: line_length_linter.
+  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", keep_types = TRUE) # nolint: line_length_linter.
   vname <- "v50000"
-     labelled_var <-
-       dataquieR:::util_assign_levlabs(
-         variable = study_data[[vname]],
-         string_of_levlabs = subset(meta_data,
-                                    VAR_NAMES == vname,
-                                    VALUE_LABELS,
-                                    TRUE),
-         splitchar = SPLIT_CHAR,
-         assignchar = " = "
-       )
+  labelled_var <-
+    dataquieR:::util_assign_levlabs(
+      variable = study_data[[vname]],
+      string_of_levlabs = subset(
+        meta_data,
+        VAR_NAMES == vname,
+        VALUE_LABELS,
+        TRUE
+      ),
+      splitchar = SPLIT_CHAR,
+      assignchar = " = "
+    )
 
-     expect_identical(
-       table(labelled_var, useNA = "always"),
-       structure(c(76L, 2864L, 60L), .Dim = 3L,
-         .Dimnames = list(labelled_var = c("no",  "yes", NA)),
-         class = "table")
-     )
-     expect_true(labelled_var[2021] < labelled_var[1])
-     expect_true(is.ordered(labelled_var))
+  expect_identical(
+    table(labelled_var, useNA = "always"),
+    structure(c(76L, 2864L, 60L),
+      dim = 3L,
+      dimnames = list(labelled_var = c("no", "yes", NA)),
+      class = "table"
+    )
+  )
+  expect_true(labelled_var[2021] < labelled_var[1])
+  expect_true(is.ordered(labelled_var))
 
-     labelled_var1 <-
-       dataquieR:::util_assign_levlabs(
-         ordered = FALSE,
-         variable = study_data[[vname]],
-         string_of_levlabs = subset(meta_data,
-                                    VAR_NAMES == vname,
-                                    VALUE_LABELS,
-                                    TRUE),
-         splitchar = SPLIT_CHAR,
-         assignchar = " = "
-       )
+  labelled_var1 <-
+    dataquieR:::util_assign_levlabs(
+      ordered = FALSE,
+      variable = study_data[[vname]],
+      string_of_levlabs = subset(
+        meta_data,
+        VAR_NAMES == vname,
+        VALUE_LABELS,
+        TRUE
+      ),
+      splitchar = SPLIT_CHAR,
+      assignchar = " = "
+    )
 
-     expect_identical(
-       table(labelled_var1, useNA = "always"),
-       structure(c(76L, 2864L, 60L), .Dim = 3L,
-                 .Dimnames = list(labelled_var1 = c("no",  "yes", NA)),
-                 class = "table")
-     )
-     expect_false(is.ordered(labelled_var1))
+  expect_identical(
+    table(labelled_var1, useNA = "always"),
+    structure(c(76L, 2864L, 60L),
+      dim = 3L,
+      dimnames = list(labelled_var1 = c("no", "yes", NA)),
+      class = "table"
+    )
+  )
+  expect_false(is.ordered(labelled_var1))
 
-     variable <- study_data[[vname]]
-     string_of_levlabs <- subset(meta_data,
-            VAR_NAMES == vname,
-            VALUE_LABELS,
-            TRUE)
-     labelled_var <-
-             dataquieR:::util_assign_levlabs(
-                     variable = variable,
-                     string_of_levlabs = string_of_levlabs,
-                     splitchar = SPLIT_CHAR,
-                     assignchar = " = "
-             )
-     non_num_labs <- as.character(labelled_var)
-     string_of_levlabs_now <- "no = no | yes = yes"
-     labelled_var2 <- util_assign_levlabs(
-             variable = non_num_labs,
-             string_of_levlabs = string_of_levlabs_now,
-             splitchar = SPLIT_CHAR,
-             assignchar = " = "
-     )
-     expect_equal(labelled_var2, labelled_var)
-     string_of_levlabs_now <- "no = no | yes"
-     expect_warning(invisible(
-             util_assign_levlabs(
-                     variable = non_num_labs,
-                     string_of_levlabs = string_of_levlabs_now,
-                     splitchar = SPLIT_CHAR,
-                     assignchar = " = "
-             )),
-             regexp =
-                     "use levels as labels",
-             fixed = TRUE
-     )
-     string_of_levlabs_now <- "no = no = no"
-     expect_warning(expect_warning(invisible(
-             util_assign_levlabs(
-                     variable = non_num_labs,
-                     string_of_levlabs = string_of_levlabs_now,
-                     splitchar = SPLIT_CHAR,
-                     assignchar = " = "
-             )),
-             regexp = sprintf("(%s|%s)",
-          "Number of levels in variable greater than in character string.",
-          "use levels as labels"
-             ),
-             perl = TRUE
-     ),
-     "Inadmissible categorical values found, use levels as labels",
-     perl = TRUE)
+  variable <- study_data[[vname]]
+  string_of_levlabs <- subset(
+    meta_data,
+    VAR_NAMES == vname,
+    VALUE_LABELS,
+    TRUE
+  )
+  labelled_var <-
+    dataquieR:::util_assign_levlabs(
+      variable = variable,
+      string_of_levlabs = string_of_levlabs,
+      splitchar = SPLIT_CHAR,
+      assignchar = " = "
+    )
+  non_num_labs <- as.character(labelled_var)
+  string_of_levlabs_now <- "no = no | yes = yes"
+  labelled_var2 <- util_assign_levlabs(
+    variable = non_num_labs,
+    string_of_levlabs = string_of_levlabs_now,
+    splitchar = SPLIT_CHAR,
+    assignchar = " = "
+  )
+  expect_equal(labelled_var2, labelled_var)
+  string_of_levlabs_now <- "no = no | yes"
+  expect_warning(
+    invisible(
+      util_assign_levlabs(
+        variable = non_num_labs,
+        string_of_levlabs = string_of_levlabs_now,
+        splitchar = SPLIT_CHAR,
+        assignchar = " = "
+      )
+    ),
+    regexp =
+      "use levels as labels",
+    fixed = TRUE
+  )
+  string_of_levlabs_now <- "no = no = no"
+  expect_warning(
+    expect_warning(
+      invisible(
+        util_assign_levlabs(
+          variable = non_num_labs,
+          string_of_levlabs = string_of_levlabs_now,
+          splitchar = SPLIT_CHAR,
+          assignchar = " = "
+        )
+      ),
+      regexp = sprintf(
+        "(%s|%s)",
+        "Number of levels in variable greater than in character string.",
+        "use levels as labels"
+      ),
+      perl = TRUE
+    ),
+    "Inadmissible categorical values found, use levels as labels",
+    perl = TRUE
+  )
+})
+
+test_that("util_assign_levlabs handles local coded vectors", {
+  skip_on_cran()
+
+  ordered_result <- util_assign_levlabs(
+    variable = c(2, 1, NA, 3),
+    string_of_levlabs = "1 = low | 2 = medium | 3 = high",
+    splitchar = SPLIT_CHAR,
+    assignchar = " = "
+  )
+
+  expect_s3_class(ordered_result, "ordered")
+  expect_equal(
+    as.character(ordered_result),
+    c("medium", "low", NA, "high")
+  )
+  expect_true(ordered_result[[2]] < ordered_result[[1]])
+
+  expect_warning(
+    expect_warning(
+      unordered_result <- util_assign_levlabs(
+        variable = c("no", "yes", "maybe"),
+        string_of_levlabs = "no = no | yes = yes",
+        splitchar = SPLIT_CHAR,
+        assignchar = " = ",
+        ordered = FALSE
+      ),
+      "Number of levels in variable greater"
+    ),
+    "Inadmissible categorical values found"
+  )
+
+  expect_s3_class(unordered_result, "factor")
+  expect_false(is.ordered(unordered_result))
+  expect_equal(levels(unordered_result), c("no", "yes", "maybe"))
 })

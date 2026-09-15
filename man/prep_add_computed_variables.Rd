@@ -15,8 +15,7 @@ prep_add_computed_variables(
 \arguments{
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
-\item{meta_data}{\link{data.frame} the data frame that contains metadata
-attributes of study data}
+\item{meta_data}{\link{data.frame} old name for \code{item_level}}
 
 \item{label_col}{\link{variable attribute} the name of the column in the metadata
 with labels of variables}
@@ -50,12 +49,13 @@ study_data <- prep_get_data_frame("ship")
 prep_load_workbook_like_file("ship_meta_v2")
 meta_data <- prep_get_data_frame("item_level")
 rules <- tibble::tribble(
-  ~VAR_NAMES,  ~COMPUTATION_RULE,
-  "BMI", '[BODY_WEIGHT_0]/(([BODY_HEIGHT_0]/100)^2)',
-  "R", '[WAIST_CIRC_0]/2/[pi]', # in m^3
-  "VOL_EST", '[pi]*([WAIST_CIRC_0]/2/[pi])^2*[BODY_HEIGHT_0] / 1000', # in l
- )
- r <- prep_add_computed_variables(study_data, meta_data,
-   label_col = "LABEL", rules, use_value_labels = FALSE)
+  ~VAR_NAMES, ~COMPUTATION_RULE,
+  "BMI", "[BODY_WEIGHT_0]/(([BODY_HEIGHT_0]/100)^2)",
+  "R", "[WAIST_CIRC_0]/2/[pi]", # in m^3
+  "VOL_EST", "[pi]*([WAIST_CIRC_0]/2/[pi])^2*[BODY_HEIGHT_0] / 1000", # in l
+)
+r <- prep_add_computed_variables(study_data, meta_data,
+  label_col = "LABEL", rules, use_value_labels = FALSE
+)
 }
 }

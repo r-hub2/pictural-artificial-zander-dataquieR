@@ -19,10 +19,10 @@ prep_acc_distributions_with_ecdf(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} the name of the measurement variable}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
-\item{group_vars}{\link{variable list} the name of the observer, device or
-reader variable}
+\item{group_vars}{\link{variable list} the names of the grouping variables}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 

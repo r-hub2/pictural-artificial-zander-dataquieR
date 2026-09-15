@@ -22,8 +22,9 @@ util_ensure_character <- function(x, error = FALSE, error_msg, ...) {
     error_args <- list(error_msg, sQuote(arg_name))
   } else {
     util_expect_scalar(error_msg,
-                       check_type = is.character,
-                       allow_more_than_one = TRUE)
+      check_type = is.character,
+      allow_more_than_one = TRUE
+    )
     error_args <- list(error_msg, ...)
   }
   util_expect_scalar(error, check_type = is.logical)

@@ -6,7 +6,6 @@
 #' @concept process
 #' @noRd
 util_get_colors <- function() {
-
   rsts <- util_get_ruleset_formats()
 
   cat_names <- as.character(rsts$category)

@@ -8,62 +8,90 @@
 #'   178 23 43"), `label` (e.g., "OK", "unclear", "moderate", "important",
 #'    "critical" )
 util_get_ruleset_formats <- function() {
-
   rs <- util_get_rule_sets()
 
-  if(!"dqi_catnum" %in% colnames(rs)) {
+  rs_list <- if (is.data.frame(rs)) {
+    list(rs)
+  } else {
+    rs
+  }
+  category_counts <- vapply(
+    rs_list,
+    function(rule_set) {
+      if (!is.data.frame(rule_set) ||
+          !"dqi_catnum" %in% colnames(rule_set)) {
+        return(NA_real_)
+      }
+      suppressWarnings(max(as.integer(rule_set[["dqi_catnum"]]), na.rm = TRUE))
+    },
+    FUN.VALUE = numeric(1)
+  )
+  category_counts <- category_counts[is.finite(category_counts)]
+  if (!length(category_counts)) {
     max_cats <- 5
   } else {
-    max_cats <- suppressWarnings(
-      vapply(lapply(lapply(rs, `[[`, "dqi_catnum"), as.integer), max,
-             na.rm = TRUE, FUN.VALUE = integer(1)))
+    max_cats <- max(category_counts)
   }
 
   shipped_ruleset_formats <- system.file("grading_formats.xlsx",
-                                  package = "dataquieR")
-  if (!nzchar(shipped_ruleset_formats) &&
+    package = "dataquieR"
+  )
+  if (!nzchar(shipped_ruleset_formats) && # nocov start
       suppressWarnings(util_ensure_suggested("pkgload", err = FALSE)) &&
       pkgload::is_dev_package("dataquieR")) {
-    if (util_is_try_error(try(silent = TRUE,
+    if (util_is_try_error(try(
+      silent = TRUE,
       shipped_ruleset_formats <- pkgload::package_file("inst",
-                                                    "grading_formats.xlsx",
-                                                    path = find.package(
-                                                      "dataquieR"))))) {
-      rlang::warn(sprintf(
-        "Could not find package source, trying to use %s from installed package",
-        sQuote("grading_formats.xlsx")
-      ),
-      .frequency_id =
-        "pkgload_confusionfmts",
-      .frequency = "once")
+        "grading_formats.xlsx",
+        path = find.package(
+          "dataquieR"
+        )
+      )
+    ))) {
+      rlang::warn(
+        sprintf(
+          "Could not find package source, trying to use %s from installed package", # nolint: line_length_linter.
+          sQuote("grading_formats.xlsx")
+        ),
+        .frequency_id =
+          "pkgload_confusionfmts",
+        .frequency = "once"
+      )
       shipped_ruleset_formats <-
         names(head(which(vapply(
-          setNames(nm = file.path(.libPaths(), "dataquieR",
-                                  "grading_formats.xlsx")), file.exists,
-          FUN.VALUE = logical(1))), 1))
+          setNames(nm = file.path(
+            .libPaths(), "dataquieR",
+            "grading_formats.xlsx"
+          )), file.exists,
+          FUN.VALUE = logical(1)
+        )), 1))
       if (length(shipped_ruleset_formats) != 1) {
         shipped_ruleset_formats <- ""
       }
     }
-  }
+  } # nocov end
   if (!nzchar(shipped_ruleset_formats)) {
     util_error(
       "Internal error with pkgload, please report, sorry: Could not find %s.",
-      sQuote("shipped_ruleset_formats"))
+      sQuote("shipped_ruleset_formats")
+    )
   }
   shipped_ruleset_formats <- prep_get_data_frame(shipped_ruleset_formats)
 
   reftab <- try(
-    prep_get_data_frame(getOption("dataquieR.grading_formats", dataquieR.grading_formats_default)),
+    prep_get_data_frame(getOption("dataquieR.grading_formats", dataquieR.grading_formats_default)), # nolint: line_length_linter.
     silent = TRUE
   ) # https://gitlab.com/libreumg/dataquier/-/issues/34#note_1597720844
   if (!inherits(reftab, "data.frame")) {
-    if (getOption("dataquieR.grading_formats", dataquieR.grading_formats_default) != dataquieR.grading_formats_default) {
-      util_message("Could not find ruleset formats %s, using the default formats.",
-                   dQuote(getOption("dataquieR.grading_formats",
-                                    dataquieR.grading_formats_default)),
-                   applicability_problem = TRUE,
-                   intrinsic_applicability_problem = FALSE)
+    if (getOption("dataquieR.grading_formats", dataquieR.grading_formats_default) != dataquieR.grading_formats_default) { # nolint: line_length_linter.
+      util_message("Could not find ruleset formats %s, using the default formats.", # nolint: line_length_linter.
+        dQuote(getOption(
+          "dataquieR.grading_formats",
+          dataquieR.grading_formats_default
+        )),
+        applicability_problem = TRUE,
+        intrinsic_applicability_problem = FALSE
+      )
     }
     reftab <- shipped_ruleset_formats
   }
@@ -77,19 +105,24 @@ util_get_ruleset_formats <- function() {
     util_error(
       applicability_problem = TRUE,
       intrinsic_applicability_problem = FALSE,
-      c("Did not find formats for all categories, need %s, found %s.",
+      c(
+        "Did not find formats for all categories, need %s, found %s.",
         "%s may not match %s or one of these is not available."
       ),
       util_pretty_vector_string(need),
       util_pretty_vector_string(have),
-      dQuote(getOption("dataquieR.grading_formats",
-                       dataquieR.grading_formats_default)),
-      dQuote(getOption("dataquieR.grading_rulesets",
-                       dataquieR.grading_rulesets_default))
+      dQuote(getOption(
+        "dataquieR.grading_formats",
+        dataquieR.grading_formats_default
+      )),
+      dQuote(getOption(
+        "dataquieR.grading_rulesets",
+        dataquieR.grading_rulesets_default
+      ))
     )
   }
 
-  reftab <- reftab[!util_empty(reftab$category), , FALSE]
+  reftab <- reftab[!util_empty(reftab$category), , drop = FALSE]
   reftab[["category"]] <-
     suppressWarnings(as.integer(reftab[["category"]]))
 

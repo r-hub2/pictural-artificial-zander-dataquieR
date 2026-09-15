@@ -3,8 +3,11 @@
 # inside cross-item rules. Only content inside square brackets [ ... ] is
 # interpreted as a pattern. Everything else is left unchanged.
 
-util_expand_pattern_rules <- function(pattern_rules, valid_names) {
-
+#' Internal helper: expand pattern rules
+#'
+#' @noRd
+util_expand_pattern_rules <- function(pattern_rules, valid_names,
+  meta_data = NULL, context = NULL) {
   e <- environment()
 
   mismatches <- list()
@@ -12,8 +15,16 @@ util_expand_pattern_rules <- function(pattern_rules, valid_names) {
   # Basic input checks
   util_stop_if_not(is.character(pattern_rules), is.character(valid_names))
   if (any(inv <- grepl("[][]", valid_names))) {
-    util_warning("valid names must not contain '[' or ']'.",
-                 applicability_problem = TRUE)
+    util_message(
+      c(
+        "Some variable names or labels contain '[' or ']'.",
+        "These names are ignored for pattern-based rule expansion",
+        "because square brackets are reserved by the rule-template",
+        "language."
+      ),
+      applicability_problem = TRUE,
+      once_id = "pattern_rules_square_brackets_in_valid_names"
+    )
     valid_names <- valid_names[!inv]
   }
 
@@ -51,11 +62,11 @@ util_expand_pattern_rules <- function(pattern_rules, valid_names) {
   # Resolve capture references such as {W}, {W-1}, or {W+1}.
   # Arithmetic is only attempted for integer capture values.
   .resolve_capture_reference <- function(cap_expr, captures) {
-    m <- regexec("^([A-Za-z][A-Za-z0-9_]*)([+-][0-9]+)?$", cap_expr, perl = TRUE)
+    m <- regexec("^([A-Za-z][A-Za-z0-9_]*)([+-][0-9]+)?$", cap_expr, perl = TRUE) # nolint: line_length_linter.
     mm <- regmatches(cap_expr, m)[[1L]]
 
     if (!length(mm)) {
-      util_error(sprintf("Invalid capture reference {%s}.", cap_expr), call. = FALSE)
+      util_error("Invalid capture reference {%s}.", cap_expr)
     }
 
     ref_name <- mm[[2L]]
@@ -160,7 +171,7 @@ util_expand_pattern_rules <- function(pattern_rules, valid_names) {
 
         i <- close + 1L
       } else {
-        next_special <- regexpr("[\\\\{]", substr(pattern, i, n), perl = TRUE)[[1L]]
+        next_special <- regexpr("[\\\\{]", substr(pattern, i, n), perl = TRUE)[[1L]] # nolint: line_length_linter.
         end <- if (next_special < 0L) n else i + next_special - 2L
         rx <- c(rx, .compile_fragment(substr(pattern, i, end)))
         i <- end + 1L
@@ -176,6 +187,13 @@ util_expand_pattern_rules <- function(pattern_rules, valid_names) {
 
   # Expand a single token against valid names
   .expand_token <- function(token, captures = list()) {
+    group_hits <- .expand_group_token(token)
+    if (!is.null(group_hits)) {
+      return(lapply(group_hits, function(nm) {
+        list(name = nm, captures = captures)
+      }))
+    }
+
     compiled <- .compile_var_pattern(token, captures)
 
     hits <- valid_names[grepl(compiled$regex, valid_names, perl = TRUE)]
@@ -200,33 +218,261 @@ util_expand_pattern_rules <- function(pattern_rules, valid_names) {
     })
   }
 
+  .expand_group_token <- function(token) {
+    token <- trimws(token)
+    where_hits <- .expand_where_token(token)
+    if (!is.null(where_hits)) {
+      return(where_hits)
+    }
+
+    if (identical(token, "ALL")) {
+      if (is.data.frame(meta_data) && VAR_NAMES %in% colnames(meta_data)) {
+        all_vars <- meta_data[[VAR_NAMES]]
+        return(all_vars[!util_empty(all_vars)])
+      }
+      return(valid_names)
+    }
+
+    segment_match <- regexec(
+      "^SEGMENT(?::([^][]+))?$",
+      token,
+      perl = TRUE
+    )
+    segment_parts <- regmatches(token, segment_match)[[1L]]
+    dataframe_match <- regexec(
+      "^DATAFRAME(?::([^][]+))?$",
+      token,
+      perl = TRUE
+    )
+    dataframe_parts <- regmatches(token, dataframe_match)[[1L]]
+    if (!length(segment_parts) && !length(dataframe_parts)) {
+      return(NULL)
+    }
+
+    if (is.null(meta_data) || !is.data.frame(meta_data)) {
+      util_warning(
+        "%s needs item-level metadata and was ignored.",
+        paste0("[", token, "]"),
+        applicability_problem = TRUE
+      )
+      return(character(0))
+    }
+
+    group_column <- if (length(segment_parts)) {
+      STUDY_SEGMENT
+    } else {
+      DATAFRAMES
+    }
+    group_label <- if (length(segment_parts)) {
+      "SEGMENT"
+    } else {
+      "DATAFRAME"
+    }
+    group_parts <- if (length(segment_parts)) {
+      segment_parts
+    } else {
+      dataframe_parts
+    }
+
+    if (!group_column %in% colnames(meta_data)) {
+      util_warning(
+        "%s needs %s in item-level metadata and was ignored.",
+        paste0("[", token, "]"),
+        sQuote(group_column),
+        applicability_problem = TRUE
+      )
+      return(character(0))
+    }
+
+    has_group_name <- length(group_parts) >= 2L && nzchar(group_parts[2])
+    group <- if (has_group_name) {
+      trimws(group_parts[2])
+    } else if (is.data.frame(context) && group_column %in% colnames(context)) {
+      context[[group_column]][[1L]]
+    } else if (is.list(context) && group_column %in% names(context)) {
+      context[[group_column]][[1L]]
+    } else {
+      NA_character_
+    }
+
+    if (util_empty(group)) {
+      util_warning(
+        "%s needs %s in the current metadata row and was ignored.",
+        paste0("[", token, "]"),
+        sQuote(group_column),
+        applicability_problem = TRUE
+      )
+      return(character(0))
+    }
+
+    group_vars <- meta_data[
+      meta_data[[group_column]] == group,
+      VAR_NAMES,
+      drop = TRUE
+    ]
+    group_vars <- group_vars[!util_empty(group_vars)]
+    if (!length(group_vars)) {
+      util_warning(
+        "%s does not match any variables in %s %s.",
+        paste0("[", token, "]"),
+        sQuote(group_label),
+        sQuote(group),
+        applicability_problem = TRUE
+      )
+    }
+    group_vars
+  }
+
+  .expand_where_token <- function(token) {
+    token <- trimws(token)
+    where_match <- regexec("^WHERE[[:space:]]*\\{(.*)\\}[[:space:]]*$",
+      token,
+      perl = TRUE
+    )
+    where_parts <- regmatches(token, where_match)[[1L]]
+    if (!length(where_parts)) {
+      return(NULL)
+    }
+
+    if (is.null(meta_data) || !is.data.frame(meta_data)) {
+      util_warning(
+        "%s needs item-level metadata and was ignored.",
+        paste0("[", token, "]"),
+        applicability_problem = TRUE
+      )
+      return(character(0))
+    }
+    if (!VAR_NAMES %in% colnames(meta_data)) {
+      util_warning(
+        "%s needs %s in item-level metadata and was ignored.",
+        paste0("[", token, "]"),
+        sQuote(VAR_NAMES),
+        applicability_problem = TRUE
+      )
+      return(character(0))
+    }
+
+    where_rule <- trimws(where_parts[2L])
+    parsed_rule <- try(
+      suppressWarnings(util_parse_redcap_rule(where_rule)),
+      silent = TRUE
+    )
+    if (util_is_try_error(parsed_rule) ||
+        !(is.language(parsed_rule) || is.atomic(parsed_rule))) {
+      util_warning(
+        "%s could not be parsed as a REDCap-like metadata rule.",
+        paste0("[", token, "]"),
+        applicability_problem = TRUE
+      )
+      return(character(0))
+    }
+
+    matches <- try(
+      eval(parsed_rule, meta_data, util_get_redcap_rule_env()),
+      silent = TRUE
+    )
+    if (util_is_try_error(matches)) {
+      util_warning(
+        "%s could not be evaluated against item-level metadata.",
+        paste0("[", token, "]"),
+        applicability_problem = TRUE
+      )
+      return(character(0))
+    }
+    if (!is.logical(matches) || length(matches) != nrow(meta_data)) {
+      util_warning(
+        "%s did not evaluate to one logical value per item-level metadata row.",
+        paste0("[", token, "]"),
+        applicability_problem = TRUE
+      )
+      return(character(0))
+    }
+
+    matches[is.na(matches)] <- FALSE
+    where_vars <- meta_data[[VAR_NAMES]][matches]
+    where_vars <- where_vars[!util_empty(where_vars)]
+    if (!length(where_vars)) {
+      util_warning(
+        "%s does not match any variables in item-level metadata.",
+        paste0("[", token, "]"),
+        applicability_problem = TRUE
+      )
+    }
+    where_vars
+  }
+
   # Expand full rule
   .extract_bracket_tokens <- function(rule) {
-    m <- gregexpr("\\[[^][]+\\]", rule, perl = TRUE)
-    tokens <- regmatches(rule, m)[[1L]]
-    if (!length(tokens)) return(character(0))
-    sub("^\\[", "", sub("\\]$", "", tokens))
+    if (is.na(rule)) {
+      return(list())
+    }
+    n <- nchar(rule)
+    if (!n) {
+      return(list())
+    }
+    tokens <- list()
+    i <- 1L
+    while (i <= n) {
+      if (substr(rule, i, i) != "[") {
+        i <- i + 1L
+        next
+      }
+
+      start <- i
+      i <- i + 1L
+      brace_depth <- 0L
+      while (i <= n) {
+        ch <- substr(rule, i, i)
+        if (ch == "{") {
+          brace_depth <- brace_depth + 1L
+        } else if (ch == "}" && brace_depth > 0L) {
+          brace_depth <- brace_depth - 1L
+        } else if (ch == "]" && brace_depth == 0L) {
+          raw <- substr(rule, start, i)
+          token <- substr(raw, 2L, nchar(raw) - 1L)
+          if (nzchar(token)) {
+            tokens[[length(tokens) + 1L]] <- list(
+              raw = raw,
+              token = token
+            )
+          }
+          break
+        }
+        i <- i + 1L
+      }
+      if (i > n) {
+        raw <- substr(rule, start, n)
+        tokens[[length(tokens) + 1L]] <- list(
+          raw = raw,
+          token = substr(raw, 2L, nchar(raw))
+        )
+      }
+      i <- i + 1L
+    }
+    tokens
   }
 
   .expand_rule <- function(rule) {
     tokens <- .extract_bracket_tokens(rule)
     states <- list(list(text = rule, captures = list()))
 
-    for (token in tokens) {
+    for (token_def in tokens) {
+      token <- token_def$token
       new_states <- list()
       token_had_hit <- FALSE
 
       for (state in states) {
         hits <- .expand_token(token, state$captures)
 
-        if (length(hits) || isTRUE(attr(hits, "pattern_invalid"))) {
+        if (length(hits) ||
+            isTRUE(util_attr(hits, "pattern_invalid", exact = TRUE))) {
           token_had_hit <- TRUE
         }
 
         for (hit in hits) {
           new_states[[length(new_states) + 1L]] <- list(
             text = sub(
-              paste0("[", token, "]"),
+              token_def$raw,
               paste0("[", hit$name, "]"),
               state$text,
               fixed = TRUE
@@ -238,8 +484,9 @@ util_expand_pattern_rules <- function(pattern_rules, valid_names) {
 
       if (!token_had_hit) {
         assign("mismatches",
-               c(e$mismatches, token),
-               envir = e)
+          c(e$mismatches, token),
+          envir = e
+        )
       }
 
       states <- new_states

@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' ECDF plots for distribution checks
 #'
 #' @description
@@ -7,12 +8,18 @@
 #'
 #' [Descriptor]
 #'
+#' @details
+#' If `resp_vars` is missing or empty, all interval or ratio scaled variables
+#' are selected. Selected response variables may include multiple variables, but
+#' each selected variable must be interval or ratio scaled, must have at least
+#' ten distinct non-missing values, and must not contain only missing values.
+#'
+#' `group_vars` must identify one nominal or ordinal grouping variable that is
+#' not a float variable and has at least two distinct non-missing values.
+#'
 #' @export
 #'
 #' @inheritParams .template_function_indicator
-#' @param resp_vars [variable list] the names of the measurement variables
-#' @param group_vars [variable list] the name of the observer, device or
-#'                                   reader variable
 #' @param n_group_max maximum number of categories to be displayed individually
 #'                  for the grouping variable (`group_vars`, devices / examiners)
 #' @param n_obs_per_group_min minimum number of data points per group to create
@@ -28,82 +35,101 @@
 #' [Online Documentation](
 #' https://dataquality.qihs.uni-greifswald.de/VIN_acc_impl_distributions.html
 #' )
+# nolint end
 acc_distributions_ecdf <- function(resp_vars = NULL,
-                                   group_vars = NULL,
-                                   study_data,
-                                   label_col,
-                                   item_level = "item_level",
-                                   meta_data = item_level,
-                                   meta_data_v2,
-                                   n_group_max = getOption("dataquieR.max_group_var_levels_in_plot", dataquieR.max_group_var_levels_in_plot_default),
-                                   n_obs_per_group_min = getOption("dataquieR.min_obs_per_group_var_in_plot", dataquieR.min_obs_per_group_var_in_plot_default)) {
+  group_vars = NULL,
+  study_data,
+  label_col,
+  item_level = "item_level",
+  meta_data = item_level,
+  meta_data_v2,
+  n_group_max = getOption("dataquieR.max_group_var_levels_in_plot", dataquieR.max_group_var_levels_in_plot_default), # nolint: line_length_linter.
+  n_obs_per_group_min = getOption("dataquieR.min_obs_per_group_var_in_plot", dataquieR.min_obs_per_group_var_in_plot_default)) { # nolint: line_length_linter.
   # preps ----------------------------------------------------------------------
   util_maybe_load_meta_data_v2()
-  prep_prepare_dataframes(.replace_hard_limits = TRUE,
-                          #.apply_factor_metadata = TRUE, # can be omitted in favor of .apply_factor_metadata_inadm
-                          .apply_factor_metadata_inadm = TRUE
+  prep_prepare_dataframes(
+    .replace_hard_limits = TRUE,
+    # .apply_factor_metadata = TRUE, # can be omitted in favor of
+    # .apply_factor_metadata_inadm
+    .apply_factor_metadata_inadm = TRUE
   )
 
   # If no response variable is defined, all suitable variables will be selected.
   if (length(resp_vars) == 0) {
     util_message(
-      c("All variables with interval or ratio scale according to the metadata",
-        "are used by acc_distributions_ecdf."),
-      applicability_problem = TRUE, intrinsic_applicability_problem = TRUE)
-    resp_vars <- meta_data[[label_col]][meta_data$SCALE_LEVEL %in%
-                                          c("interval", "ratio")]
+      c(
+        "All variables with interval or ratio scale according to the metadata",
+        "are used by acc_distributions_ecdf."
+      ),
+      applicability_problem = TRUE, intrinsic_applicability_problem = TRUE
+    )
+    resp_vars <- meta_data[[label_col]][meta_data[[SCALE_LEVEL]] %in%
+        c("interval", "ratio")]
     resp_vars <- intersect(resp_vars, colnames(ds1))
     if (length(resp_vars) == 0) {
-      util_error("No suitable variables were defined for acc_distributions_ecdf.",
-                 applicability_problem = TRUE)
+      util_error("No suitable variables were defined for acc_distributions_ecdf.", # nolint: line_length_linter.
+        applicability_problem = TRUE
+      )
     }
   }
 
   util_correct_variable_use(resp_vars,
-                            allow_more_than_one = TRUE,
-                            allow_any_obs_na = TRUE,
-                            allow_all_obs_na = FALSE,
-                            min_distinct_values = 10,
-                            do_not_stop = ifelse(length(resp_vars) > 1,
-                                                 TRUE, FALSE),
-                            need_scale = "interval | ratio"
+    allow_more_than_one = TRUE,
+    allow_any_obs_na = TRUE,
+    allow_all_obs_na = FALSE,
+    min_distinct_values = 10,
+    do_not_stop = ifelse(length(resp_vars) > 1,
+      TRUE, FALSE
+    ),
+    need_scale = "interval | ratio"
   )
 
   util_correct_variable_use(group_vars,
-                            allow_more_than_one = FALSE,
-                            allow_any_obs_na = TRUE,
-                            allow_all_obs_na = FALSE,
-                            min_distinct_values = 2,
-                            need_type = "!float",
-                            need_scale = "nominal | ordinal"
+    allow_more_than_one = FALSE,
+    allow_any_obs_na = TRUE,
+    allow_all_obs_na = FALSE,
+    min_distinct_values = 2,
+    need_type = "!float",
+    need_scale = "nominal | ordinal"
   )
 
   # The grouping variable should not be included as response variable.
   if (any(group_vars %in% resp_vars)) {
     resp_vars <- resp_vars[-which(resp_vars %in% group_vars)]
-    util_warning(paste("Removed grouping variable from response variables",
-                       "for acc_distributions_ecdf."),
-                 applicability_problem = TRUE)
+    util_warning(
+      paste(
+        "Removed grouping variable from response variables",
+        "for acc_distributions_ecdf."
+      ),
+      applicability_problem = TRUE
+    )
   }
   if (length(resp_vars) == 0) {
     util_error("No variables left to analyse for acc_distributions_ecdf.",
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
 
   util_expect_scalar(n_group_max,
-                     check_type = util_is_numeric_in(min = 2,
-                                                     whole_num = TRUE,
-                                                     finite = TRUE))
+    check_type = util_is_numeric_in(
+      min = 2,
+      whole_num = TRUE,
+      finite = TRUE
+    )
+  )
 
   util_expect_scalar(n_obs_per_group_min,
-                     check_type = util_is_numeric_in(min = 0,
-                                                     whole_num = TRUE,
-                                                     finite = TRUE))
+    check_type = util_is_numeric_in(
+      min = 0,
+      whole_num = TRUE,
+      finite = TRUE
+    )
+  )
 
   # Which variables are of type 'datetime'?
   is_datetime_var <- vapply(resp_vars, function(rv) {
-    meta_data[["DATA_TYPE"]][meta_data[[label_col]] == rv] ==
+    meta_data[[DATA_TYPE]][meta_data[[label_col]] == rv] ==
       DATA_TYPES$DATETIME
   }, FUN.VALUE = logical(1))
 
@@ -119,14 +145,15 @@ acc_distributions_ecdf <- function(resp_vars = NULL,
   if (any(tab_gr) < n_obs_per_group_min) {
     keep_gr <- names(tab_gr)[which(tab_gr >= n_obs_per_group_min)]
     levels(ds1[[group_vars]])[which(!levels(ds1[[group_vars]]) %in%
-                                      keep_gr)] <- NA
+          keep_gr)] <- NA
     ds1 <- ds1[!(is.na(ds1[[group_vars]])), , drop = FALSE]
     tab_gr <- table(ds1[[group_vars]])
   }
 
   if (nrow(ds1) == 0) {
     util_error("No data left after data preparation.",
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
 
   # collapse 'rare' groups to reduce the number of levels, if needed
@@ -134,25 +161,28 @@ acc_distributions_ecdf <- function(resp_vars = NULL,
     tab_gr <- tab_gr[order(tab_gr, decreasing = TRUE)]
     keep_gr <- names(tab_gr)[1:n_group_max]
     levels(ds1[[group_vars]])[which(!levels(ds1[[group_vars]])
-                                    %in% keep_gr)] <- "other"
+        %in% keep_gr)] <- "other"
     # new category 'other' should always be the last one
     lvl_gr <-
-      c(levels(ds1[[group_vars]])[which(levels(ds1[[group_vars]])
-                                        %in% keep_gr)],
-        "other")
+      c(
+        levels(ds1[[group_vars]])[which(levels(ds1[[group_vars]])
+            %in% keep_gr)],
+        "other"
+      )
     ds1[[group_vars]] <- as.character(ds1[[group_vars]])
     ds1[[group_vars]] <- factor(ds1[[group_vars]], levels = lvl_gr)
   }
 
   # find suitable labels
   lbg <- paste0(prep_get_labels(group_vars,
-                                item_level = meta_data,
-                                label_col = label_col,
-                                resp_vars_match_label_col_only = TRUE,
-                                label_class = "SHORT"))
+      item_level = meta_data,
+      label_col = label_col,
+      resp_vars_match_label_col_only = TRUE,
+      label_class = "SHORT"
+    ))
 
   is_datetime_var <- vapply(resp_vars, function(rv) {
-    meta_data[["DATA_TYPE"]][meta_data[[label_col]] == rv] ==
+    meta_data[[DATA_TYPE]][meta_data[[label_col]] == rv] ==
       DATA_TYPES$DATETIME
   }, FUN.VALUE = logical(1))
 
@@ -165,13 +195,13 @@ acc_distributions_ecdf <- function(resp_vars = NULL,
   )
 
   plot_list <- lapply(setNames(nm = resp_vars), function(rv) {
-
     # find suitable labels
     lbr <- paste0(prep_get_labels(rv,
-                                  item_level = meta_data,
-                                  label_col = label_col,
-                                  resp_vars_match_label_col_only = TRUE,
-                                  label_class = "SHORT"))
+        item_level = meta_data,
+        label_col = label_col,
+        resp_vars_match_label_col_only = TRUE,
+        label_class = "SHORT"
+      ))
 
     # omit NAs from data to prevent ggplot2 warning messages
     ds1 <- ds1[!(is.na(ds1[[rv]])), , drop = FALSE]
@@ -179,8 +209,10 @@ acc_distributions_ecdf <- function(resp_vars = NULL,
     .ds00 <- ds1[, c(rv, group_vars), drop = FALSE]
 
     pp <- util_create_lean_ggplot(
-      ggplot(data = .ds00,
-             aes(x = .data[[rv]], colour = .data[[group_vars]])) +
+      ggplot(
+        data = .ds00,
+        aes(x = .data[[rv]], colour = .data[[group_vars]])
+      ) +
         stat_ecdf(geom = "step") +
         labs(x = "", y = paste0("ECDF: ", lbr, " (by ", lbg, ")")) +
         theme_minimal() +
@@ -211,11 +243,14 @@ acc_distributions_ecdf <- function(resp_vars = NULL,
     }
 
     if (util_ensure_suggested("colorspace",
-                              "use the colorspace color scale",
-                              err = FALSE)) {
+        "use the colorspace color scale",
+        err = FALSE
+      )) {
       pp <- pp + util_create_lean_ggplot(
-          colorspace::scale_color_discrete_sequential(palette = "Plasma",
-                                                      na.value = "grey")
+        colorspace::scale_color_discrete_sequential(
+          palette = "Plasma",
+          na.value = "grey"
+        )
       )
     }
 
@@ -224,4 +259,3 @@ acc_distributions_ecdf <- function(resp_vars = NULL,
 
   return(list(SummaryPlotList = plot_list))
 }
-

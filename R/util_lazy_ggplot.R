@@ -36,14 +36,14 @@ util_lazy_ggplot_next_id <- local({ # nolint
 #'
 #' @noRd
 dq_lazy_ggplot <- function(expr, env, id = NULL) {
-
   s3 <- dq_lazy_ggplot_s3(expr = expr, env = env, id = id)
 
   gg_compatible <-
-    as.logical(getOption("dataquieR.lazy_plots_gg_compatibility",
-                         dataquieR.lazy_plots_gg_compatibility_default))
+    as.logical(getOption(
+      "dataquieR.lazy_plots_gg_compatibility",
+      dataquieR.lazy_plots_gg_compatibility_default
+    ))
 
-  # TODO: make all this S7 magic optional
   if (gg_compatible && dq_lazy_register_s7()) {
     obj <- .dq_lazy_state$s7_class(payload = s3)
 
@@ -56,8 +56,11 @@ dq_lazy_ggplot <- function(expr, env, id = NULL) {
   s3
 }
 
+#' Internal helper: dq lazy ggplot s3
+#'
+#' @noRd
 dq_lazy_ggplot_s3 <- function(expr, env, id = NULL) {
-  stopifnot(is.environment(env))
+  util_stop_if_not("`env` must be an environment" = is.environment(env))
 
   if (is.null(id)) {
     id <- util_lazy_ggplot_next_id()
@@ -86,7 +89,6 @@ dq_lazy_ggplot_s3 <- function(expr, env, id = NULL) {
 #'
 #' @export
 prep_realize_ggplot <- function(x) {
-
   x <- dq_lazy_unwrap(x)
 
   if (!inherits(x, "dq_lazy_ggplot")) {
@@ -104,21 +106,30 @@ prep_realize_ggplot <- function(x) {
   p <- eval(x_un$expr, envir = x_un$env)
 
   # if (!inherits(p, "ggplot")) {
-  #   util_error("dq_lazy_ggplot: expr did not evaluate to a ggplot object, but %s",
+  # util_error("dq_lazy_ggplot: expr did not evaluate to a ggplot object, but
+  # %s",
   #              util_pretty_vector_string(class(p)))
   # }
 
-  lazy_cache <- as.logical(getOption("dataquieR.lazy_plots_cache",
-                               dataquieR.lazy_plots_cache_default))
+  lazy_cache <- as.logical(getOption(
+    "dataquieR.lazy_plots_cache",
+    dataquieR.lazy_plots_cache_default
+  ))
   if (length(lazy_cache) != 1 || is.na(lazy_cache)) {
-    util_warning(c(
-      "Cannot use option dataquieR.lazy_plots_cache %s as a logical value",
-      "using %s"
-    ),
-    dQuote(paste(getOption("dataquieR.lazy_plots_cache",
-                           dataquieR.lazy_plots_cache_default),
-                 collapse = ",")),
-    dQuote(dataquieR.lazy_plots_cache_default))
+    util_warning(
+      c(
+        "Cannot use option dataquieR.lazy_plots_cache %s as a logical value",
+        "using %s"
+      ),
+      dQuote(paste(
+        getOption(
+          "dataquieR.lazy_plots_cache",
+          dataquieR.lazy_plots_cache_default
+        ),
+        collapse = ","
+      )),
+      dQuote(dataquieR.lazy_plots_cache_default)
+    )
     lazy_cache <- as.logical(dataquieR.lazy_plots_cache_default)
   }
 
@@ -161,7 +172,8 @@ plotly_build.dq_lazy_ggplot <- function(p, ...) { # nolint
   util_plotly_build(p, ...)
 }
 
-# patchwork ist das einzige Downstream-Paket mit relevanten gg-/ggplot-Generics; cowplot/gridExtra/egg/ggpubr hängen an ggplotGrob()
+# patchwork ist das einzige Downstream-Paket mit relevanten
+# gg-/ggplot-Generics; cowplot/gridExtra/egg/ggpubr hängen an ggplotGrob()
 #' @export
 `-.dq_lazy_ggplot` <- function(e1, e2) { # nolint
   p1 <- prep_realize_ggplot(e1)
@@ -272,7 +284,7 @@ ggplotGrob.dq_lazy_ggplot_s7 <- function(x, ...) { # nolint
 }
 
 #' @export
+#' @noRd
 util_undisclose.dq_lazy_ggplot_s7 <- function(x, ...) { # nolint
   util_undisclose(x@payload, ...)
 }
-

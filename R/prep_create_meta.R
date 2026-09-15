@@ -43,7 +43,7 @@
 #' @export
 #' @importFrom stats setNames
 prep_create_meta <- function(..., stringsAsFactors = FALSE,
-                             level, character.only = FALSE) {
+  level, character.only = FALSE) {
   if (length(list(...)) == 1 && is.data.frame(list(...)[[1]])) {
     metas <- list(...)[[1]]
     cn <- colnames(metas)
@@ -51,9 +51,11 @@ prep_create_meta <- function(..., stringsAsFactors = FALSE,
     args <- list(...)
     if (any(duplicated(names(args)))) {
       util_error("Found duplicated meta columns: %s",
-                 paste0(dQuote(unique(names(args)[duplicated(names(args))])),
-                        collapse = ", "),
-                 applicability_problem = TRUE)
+        paste0(dQuote(unique(names(args)[duplicated(names(args))])),
+          collapse = ", "
+        ),
+        applicability_problem = TRUE
+      )
     }
 
     args_lens <- vapply(args, length, integer(1))
@@ -61,11 +63,16 @@ prep_create_meta <- function(..., stringsAsFactors = FALSE,
     null_args <- args_lens == 0
 
     if (any(null_args)) {
-      util_warning(c("The following variable attributes are",
-                   "NULL, will ignore these: %s"),
-                   paste0(dQuote(names(null_args[null_args])),
-                          collapse = ", "),
-                   applicability_problem = TRUE)
+      util_warning(
+        c(
+          "The following variable attributes are",
+          "NULL, will ignore these: %s"
+        ),
+        paste0(dQuote(names(null_args[null_args])),
+          collapse = ", "
+        ),
+        applicability_problem = TRUE
+      )
       args <- args[!null_args]
       args_lens <- vapply(args, length, integer(1))
     }
@@ -73,20 +80,24 @@ prep_create_meta <- function(..., stringsAsFactors = FALSE,
     max_len <- max(args_lens)
 
     if (any(max_len %% args_lens != 0)) {
-      util_error(c("The given variable attributes have different lengths and",
-                   "cannot be equalized by repeating the shorter ones to",
-                   "create a data frame with as %d rows (the longest",
-                   "variable attribute vector provided). R would say:",
-                   "arguments imply differing number of rows: %s"),
-                   max_len,
-                   paste0(sort(unique(args_lens)), collapse = ", "))
+      util_error(
+        c(
+          "The given variable attributes have different lengths and",
+          "cannot be equalized by repeating the shorter ones to",
+          "create a data frame with as %d rows (the longest",
+          "variable attribute vector provided). R would say:",
+          "arguments imply differing number of rows: %s"
+        ),
+        max_len,
+        paste0(sort(unique(args_lens)), collapse = ", ")
+      )
     }
 
     metas <- do.call(data.frame, c(args, stringsAsFactors = stringsAsFactors))
     cn <- names(args)
   }
   if (ncol(metas) > 0) {
-    cn <-  mget(
+    cn <- mget(
       x = cn,
       envir = as.environment(WELL_KNOWN_META_VARIABLE_NAMES),
       mode = "character",
@@ -104,26 +115,32 @@ prep_create_meta <- function(..., stringsAsFactors = FALSE,
       level <- as.character(substitute(expr = level))
     }
     if (length(level) > 0) {
-      level <- try(match.arg(level, choices = c(names(VARATT_REQUIRE_LEVELS),
-                                                unlist(VARATT_REQUIRE_LEVELS)),
-                             several.ok = FALSE), silent = TRUE)
+      level <- try(match.arg(level,
+        choices = c(
+          names(VARATT_REQUIRE_LEVELS),
+          unlist(VARATT_REQUIRE_LEVELS)
+        ),
+        several.ok = FALSE
+      ), silent = TRUE)
       if (inherits(level, "try-error")) {
         util_error(
           "Error regarding argument %s: %s",
           dQuote("level"),
-          conditionMessage(attr(level, "condition")),
+          conditionMessage(util_attr(level, "condition", exact = TRUE)),
           applicability_problem = TRUE
         )
       }
     }
   }
-  # level <- VARATT_REQUIRE_LEVELS[[level]]
+  # Historical VARATT_REQUIRE_LEVELS normalization removed here.
 
-  prep_check_meta_names(item_level = metas,
-                        level = level, character.only = TRUE)
+  prep_check_meta_names(
+    item_level = metas,
+    level = level, character.only = TRUE
+  )
   if (any(c(JUMP_LIST, MISSING_LIST, MISSING_LIST_TABLE) %in%
-      util_get_var_att_names_of_level(level))) {
-    metas <- util_validate_known_meta(metas) # TODO: MISSING_LIST_TABLE
+        util_get_var_att_names_of_level(level))) {
+    metas <- util_validate_known_meta(metas)
   }
   return(metas)
 }

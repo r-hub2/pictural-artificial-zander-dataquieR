@@ -13,22 +13,25 @@
 #'   method and algorithm used.
 #'
 #' @noRd
-util_compress <- function(x, algo)  {
-  #structure(memCompress(serialize(x, NULL, xdr = FALSE), "xz"),
+util_compress <- function(x, algo) {
+  # structure(memCompress(serialize(x, NULL, xdr = FALSE), "xz"),
   if (missing(algo)) {
-    if (R.version$major > 4 || (R.version$major == 4 && R.version$minor >= 5))
+    if (R.version$major > 4 || (R.version$major == 4 && R.version$minor >= 5)) {
       algo <- c("zstd", "gzip", "bzip2", "xz", "none")
-    else
+    } else { # nocov start
       algo <- c("gzip", "bzip2", "xz", "none")
+    } # nocov end
   }
   algo <- head(intersect(
     algo,
-    MEM_COMPRESS_CAPABILITIES), 1)
+    MEM_COMPRESS_CAPABILITIES
+  ), 1)
   structure(memCompress(serialize(x, NULL, xdr = FALSE), type = algo),
-      class = "compressed",
-      method = "memCompress",
-      algo = algo)
-  # qs::qserialize(x, preset = "high")
+    class = "compressed",
+    method = "memCompress",
+    algo = algo
+  )
+  # Historical qs serialization alternative removed here.
 }
 
 #' Decompress an object created by `util_compress()`
@@ -42,25 +45,31 @@ util_compress <- function(x, algo)  {
 #' @returns The original R object restored after decompression.
 #'
 #' @noRd
-util_decompress <- function(x)  {
+util_decompress <- function(x) {
   if (inherits(x, "compressed")) {
-    algo <- attr(x, "algo")
+    algo <- util_attr(x, "algo", exact = TRUE)
     if (is.null(algo)) {
       algo <- head(MEM_COMPRESS_CAPABILITIES, 1)
     }
     unserialize(memDecompress(x, type = algo))
   } else {
-    util_error("Decompression of objects of class %s unsupported",
-               util_pretty_vector_string(class(x), quote = sQuote))
+    util_error(
+      "Decompression of objects of class %s unsupported",
+      util_pretty_vector_string(class(x), quote = sQuote)
+    )
   }
-  # qs::qdeserialize(r)
+  # Historical qs deserialization alternative removed here.
 }
 
-.util_mem_compress_capabilities <- function(types = c("gzip", "bzip2", "xz",
-                                                      "zstd", "none")) {
+#' Internal helper: util mem compress capabilities
+#'
+#' @noRd
+.util_mem_compress_capabilities <- function(types = c(
+  "gzip", "bzip2", "xz",
+  "zstd", "none"
+)) {
   test_raw <- charToRaw("test")
   setNames(vapply(types, function(t) {
     !inherits(try(memCompress(test_raw, type = t), silent = TRUE), "try-error")
   }, logical(1)), types)
 }
-

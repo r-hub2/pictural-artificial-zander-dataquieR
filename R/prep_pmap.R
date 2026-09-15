@@ -7,9 +7,12 @@
 #' @param .f [`function`] to call with the arguments from `.l`
 #' @param ... additional, static arguments for calling `.f`
 #' @param cores number of cpu cores to use or a (named) list with arguments for
-#'              [parallelMap::parallelStart] or NULL, if parallel has already
-#'              been started by the caller. Set to 0 to run without
-#'              parallelization.
+#'              the internal parallel backend (`util_parallel_start`) or NULL,
+#'              if parallel has already been started by the caller. Set to 0
+#'              to run without parallelization. In RStudio report rendering,
+#'              caller-owned clusters can make HTML finalization hang; prefer
+#'              letting `dataquieR` create the cluster from a number or backend
+#'              list.
 #'
 #' @seealso `purrr::pmap`
 #' @seealso [Stack Overflow post](https://stackoverflow.com/a/47575143)
@@ -25,29 +28,37 @@ prep_pmap <- function(.l, .f, ..., cores = 0) {
   }
 
   if (!is.null(cores)) {
-    if (getOption("parallelMap.status", "stopped") != "stopped") {
+    if (util_parallel_status() != "stopped") {
       util_warning("prep_pmap called encapsulated",
-                   applicability_problem = FALSE)
+        applicability_problem = FALSE
+      )
     }
     if (identical(cores, 0)) {
-      suppressMessages(parallelMap::parallelStart(mode = "local"))
+      suppressMessages(util_parallel_start(mode = "local"))
     } else if (inherits(cores, "list")) { # nocov start
       # Should not test in parallel
-      suppressMessages(do.call(parallelMap::parallelStart, cores))
+      suppressMessages(do.call(util_parallel_start, cores))
     } else {
-      suppressMessages(parallelMap::parallelStart("socket", cpus = cores,
-                                                  logging = FALSE,
-                                                  load.balancing = TRUE))
+      suppressMessages(util_parallel_start("socket",
+          cpus = cores,
+          logging = FALSE,
+          load.balancing = TRUE
+        ))
       # Should not test in parallel
     } # nocov end
-    on.exit({Sys.sleep(2);suppressMessages(parallelMap::parallelStop());}, add = TRUE) # whyever, rstudio needs these two seconds, it hangs, otherwise.
+    withr::defer(
+      {
+        Sys.sleep(2)
+        suppressMessages(util_parallel_stop())
+      }
+    ) # whyever, rstudio needs these two seconds, it hangs, otherwise.
   }
   more_args <- list(...)
   ..f <- function(...) {
     return(.f(...))
   }
   do.call(
-    parallelMap::parallelMap,
+    util_parallel_map,
     c(.l, list(
       fun = ..f, more.args = more_args, simplify = FALSE, use.names = FALSE,
       show.info = FALSE, impute.error = identity

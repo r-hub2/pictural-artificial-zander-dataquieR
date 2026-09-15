@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Utility function to create histograms
 #'
 #' A helper function for simple histograms.
@@ -24,67 +25,84 @@
 #' @importFrom grDevices colorRampPalette
 #'
 #' @noRd
+# nolint end
 util_histogram <- function(plot_data,
-                           num_var = colnames(plot_data)[1],
-                           fill_var = NULL,
-                           facet_var = NULL,
-                           nbins_max = 100,
-                           colors = "#2166AC",
-                           is_datetime = FALSE,
-                           is_time = FALSE) { # FIXME: EK: see https://chatgpt.com/s/t_69d517c5f1488191a4afb6fe4763b8cc for time-only-variables at least, the binning can look like overlapping bins triggering warnings like "`position_stack()` requires non-overlapping x intervals." at rendering time. I'm suppressing them now, but fixing would be preferred. # xxxx remove after removing xxxxx from acc_distributions and addressing this issuse correctly, here.
+  num_var = colnames(plot_data)[1],
+  fill_var = NULL,
+  facet_var = NULL,
+  nbins_max = 100,
+  colors = "#2166AC",
+  is_datetime = FALSE,
+  is_time = FALSE) {
   # compute bin breaks
   # if the plot is faceted, optimize bin breaks for the most frequent category
   bb_opt_sel <- seq_len(nrow(plot_data))
   if (!is.null(facet_var)) {
     # Which category occurs most frequently?
-    tab_cat <- table(plot_data[, facet_var])
+    tab_cat <- table(plot_data[, facet_var, drop = TRUE])
     most_freq <- names(tab_cat)[which.max(tab_cat)]
-    bb_opt_sel <- which(plot_data[, facet_var] == most_freq)
+    bb_opt_sel <- which(plot_data[, facet_var, drop = TRUE] == most_freq)
     # We have to ensure that the list of bin breaks includes also the overall
     # minimum and maximum value. Otherwise the faceted plots will be limited to
     # the range of values from the most frequent category.
-    bb_opt_sel <- unique(c(bb_opt_sel,
-                           which.min(plot_data[, num_var]),
-                           which.max(plot_data[, num_var])))
+    bb_opt_sel <- unique(c(
+      bb_opt_sel,
+      which.min(plot_data[, num_var, drop = TRUE]),
+      which.max(plot_data[, num_var, drop = TRUE])
+    ))
   }
 
   bin_breaks <- suppressMessages(util_optimize_histogram_bins(
-    x = plot_data[bb_opt_sel, num_var],
+    x = plot_data[bb_opt_sel, num_var, drop = TRUE],
     nbins_max = nbins_max
   ))
   breaks_x <- bin_breaks[[1]]
+  breaks_numeric <- as.numeric(breaks_x)
 
   # compute bin heights, prepare data for plotting
-  if (!is.null(facet_var) | !is.null(fill_var)) { # histogram with groups
+  if (!is.null(facet_var) || !is.null(fill_var)) { # histogram with groups
     split_var <- c(facet_var, fill_var)
-    split_data <- split(plot_data, plot_data[, split_var])
+    split_data <- split(plot_data, plot_data[, split_var, drop = TRUE])
     split_data <- split_data[vapply(split_data, nrow, integer(1)) > 0]
     plot_data2 <- lapply(seq_along(split_data), function(ll) {
-      h1 <- hist(split_data[[ll]][, num_var], plot = FALSE, breaks = breaks_x)
-      return(data.frame(histogram_x = h1$mids,
-                        histogram_y = h1$counts,
-                        split_data[[ll]][1, split_var, drop = FALSE],
-                        row.names = NULL))
+      h1 <- hist(
+        as.numeric(split_data[[ll]][, num_var, drop = TRUE]),
+        plot = FALSE,
+        breaks = breaks_numeric
+      )
+      return(data.frame(
+        histogram_x = h1$mids,
+        histogram_y = h1$counts,
+        split_data[[ll]][1, split_var, drop = FALSE],
+        row.names = NULL
+      ))
     })
     plot_data2 <- do.call(rbind, plot_data2)
     if (is_datetime) {
-      plot_data2[["histogram_x"]] <- util_parse_date(plot_data2[["histogram_x"]])
+      plot_data2[["histogram_x"]] <- util_parse_date(plot_data2[["histogram_x"]]) # nolint: line_length_linter.
     } else if (is_time) {
-      plot_data2[["histogram_x"]] <- util_parse_time(plot_data2[["histogram_x"]])
+      plot_data2[["histogram_x"]] <- util_parse_time(plot_data2[["histogram_x"]]) # nolint: line_length_linter.
     }
   } else { # plain histogram
-    bin_heights <- hist(as.numeric(plot_data[, num_var]),
-                        plot = FALSE,
-                        breaks = breaks_x)
+    bin_heights <- hist(as.numeric(plot_data[, num_var, drop = TRUE]),
+      plot = FALSE,
+      breaks = breaks_numeric
+    )
     if (is_datetime) {
-      plot_data2 <- data.frame(histogram_x = util_parse_date(bin_heights$mids),
-                               histogram_y = bin_heights$counts)
+      plot_data2 <- data.frame(
+        histogram_x = util_parse_date(bin_heights$mids),
+        histogram_y = bin_heights$counts
+      )
     } else if (is_time) {
-      plot_data2 <- data.frame(histogram_x = util_parse_time(bin_heights$mids),
-                               histogram_y = bin_heights$counts)
+      plot_data2 <- data.frame(
+        histogram_x = util_parse_time(bin_heights$mids),
+        histogram_y = bin_heights$counts
+      )
     } else {
-      plot_data2 <- data.frame(histogram_x = bin_heights$mids,
-                               histogram_y = bin_heights$counts)
+      plot_data2 <- data.frame(
+        histogram_x = bin_heights$mids,
+        histogram_y = bin_heights$counts
+      )
     }
   }
   width_col <- as.numeric(breaks_x)
@@ -92,16 +110,18 @@ util_histogram <- function(plot_data,
 
   # create histogram
   if (!is.null(fill_var)) { # histogram with color-coded groups
-    if (length(colors) < length(levels(plot_data[, fill_var]))) {
+    if (length(colors) < length(levels(plot_data[, fill_var, drop = TRUE]))) {
       if (length(colors) == 1) {
         colors <- c("gray90", colors, "gray20")
       }
-      colors <- colorRampPalette(colors)(length(levels(plot_data[, fill_var])))
+      colors <- colorRampPalette(colors)(length(levels(plot_data[, fill_var, drop = TRUE]))) # nolint: line_length_linter.
     }
     his <- util_create_lean_ggplot(
-      ggplot(data = plot_data2, aes(x = .data[["histogram_x"]],
-                                    y = .data[["histogram_y"]],
-                                    fill = .data[[fill_var]])) +
+      ggplot(data = plot_data2, aes(
+        x = .data[["histogram_x"]],
+        y = .data[["histogram_y"]],
+        fill = .data[[fill_var]]
+      )) +
         theme_minimal() +
         xlab("") +
         ylab("") +
@@ -114,14 +134,18 @@ util_histogram <- function(plot_data,
     )
   } else { # 'plain' histogram
     his <- util_create_lean_ggplot(
-      ggplot(data = plot_data2, aes(x = .data[["histogram_x"]],
-                                    y = .data[["histogram_y"]])) +
+      ggplot(data = plot_data2, aes(
+        x = .data[["histogram_x"]],
+        y = .data[["histogram_y"]]
+      )) +
         theme_minimal() +
         xlab("") +
         ylab("") +
-        geom_col(width = width_col,
-                 fill = colors[1],
-                 color = colors[1]),
+        geom_col(
+          width = width_col,
+          fill = colors[1],
+          color = colors[1]
+        ),
       plot_data2 = plot_data2,
       width_col = width_col,
       colors = colors
@@ -130,21 +154,25 @@ util_histogram <- function(plot_data,
 
   if (!is_datetime && !is_time) {
     his <- his + util_create_lean_ggplot(
-      scale_x_continuous(expand = expansion(mult = 0.1)))
+      scale_x_continuous(expand = expansion(mult = 0.1))
+    )
   } else if (is_datetime && !is_time) {
     his <- his + util_create_lean_ggplot(
-      scale_x_datetime(expand = expansion(mult = 0.1)))
+      scale_x_datetime(expand = expansion(mult = 0.1))
+    )
   } else {
     # should be time
     his <- his + util_create_lean_ggplot(
-      ggplot2::scale_x_time(expand = expansion(mult = 0.1)))
+      ggplot2::scale_x_time(expand = expansion(mult = 0.1))
+    )
   }
 
   if (!is.null(facet_var)) {
     his <- his + util_create_lean_ggplot(
       facet_grid(.data[[facet_var]] ~ ., scales = "free_y"),
-      facet_var = facet_var) +
-        theme(strip.text = element_text(size = 14))
+      facet_var = facet_var
+    ) +
+      theme(strip.text = element_text(size = 14))
   }
 
   return(his)

@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Integer breaks for `ggplot2`
 #'
 #' creates integer-only breaks
@@ -31,6 +32,7 @@
 #' big_numbers_plot2 + scale_y_continuous(breaks = util_int_breaks_rounded)
 #' }
 #'
+# nolint end
 util_int_breaks_rounded <- function(x, n = 5) {
-  unique(pretty(x, n)[round(pretty(x, n),1) %% 1 == 0])
+  unique(pretty(x, n)[round(pretty(x, n), 1) %% 1 == 0])
 }

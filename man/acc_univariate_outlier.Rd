@@ -18,8 +18,8 @@ acc_univariate_outlier(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} the name of the continuous measurement
-variable}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 

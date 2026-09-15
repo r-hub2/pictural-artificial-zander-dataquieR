@@ -22,23 +22,21 @@ util_plot2svg_object <- function(expr, w = 21.2, h = 15.9, sizing_hints) {
   }
   tmpfil <- NULL
   withr::with_tempfile("tmpfil", fileext = ".svg", {
-    htmltools::capturePlot(expr = {
-      rlang::eval_tidy(expr)
-    },
-    filename = tmpfil,
-    device = grDevices::svg,
-    width = w / 2.54, height = h / 2.54,
-    #    pointsize = 12
-    #    res = 1/72
+    htmltools::capturePlot(
+      expr = {
+        rlang::eval_tidy(expr)
+      },
+      filename = tmpfil,
+      device = grDevices::svg,
+      width = w / 2.54, height = h / 2.54,
+      # Default SVG device point size and resolution are used intentionally.
     )
     .svg <- readLines(tmpfil)
-    .svg <- gsub("<svg ", '<svg preserveAspectRatio="none" ', .svg, fixed = TRUE)
-    # writeLines(.svg, tmpfil)
+    .svg <- gsub("<svg ", '<svg preserveAspectRatio="none" ', .svg, fixed = TRUE) # nolint: line_length_linter.
+    # The adjusted SVG is passed through rsvg without keeping an intermediate.
     rsvg::rsvg_svg(charToRaw(paste0(.svg, collapse = "\n")), tmpfil)
-    # res <- as.environment(list(
-    #   x = magick::image_read_svg(tmpfil, width = w, height = h)
-    # ))
-    # class(res) <- "dataquieR_undisclosed_figure"
+    # Historical magick-based fallback removed here. Inspect commit fe31a7aa6c
+    # before restoring the old undisclosed-figure wrapper.
     raw <- grImport2::readPicture(tmpfil)
     res <- util_svg_plot_proxy(tmpfil)
     attr(res, "sizing_hints") <- orig_sizing_hints
@@ -55,7 +53,7 @@ util_plot2svg_object <- function(expr, w = 21.2, h = 15.9, sizing_hints) {
 #' @return `ggplot` object, but rendered (no original data included)
 #'
 #' @noRd
-util_plotly2svg_object <- function(plotly, w = 21.2, h = 15.9, sizing_hints) { # FIXME: Also for thumbnails, if not ggplot exists.
+util_plotly2svg_object <- function(plotly, w = 21.2, h = 15.9, sizing_hints) {
   util_ensure_suggested("grImport2")
   util_ensure_suggested("rsvg")
   util_ensure_suggested("plotly")
@@ -70,24 +68,25 @@ util_plotly2svg_object <- function(plotly, w = 21.2, h = 15.9, sizing_hints) { #
       h <- sizing_hints$h_in_cm
     }
   }
-  # install.packages('reticulate')
-  # reticulate::install_miniconda()
-  # reticulate::conda_install('r-reticulate', 'python-kaleido')
-  # reticulate::conda_install('r-reticulate', 'plotly', channel = 'plotly')
-  # reticulate::use_miniconda('r-reticulate')
+  # Reticulate and Kaleido setup is intentionally left to the user environment.
 
   tmpfil <- NULL
   withr::with_tempfile("tmpfil", fileext = ".svg", {
-
-    fn <- try({
-      plotly::save_image(p = plotly, file = tmpfil,
-                         width = w / 2.54 * 96,
-                         height = h / 2.54 * 96)
-    }, silent = TRUE)
+    fn <- try(
+      {
+        plotly::save_image(
+          p = plotly, file = tmpfil,
+          width = w / 2.54 * 96,
+          height = h / 2.54 * 96
+        )
+      },
+      silent = TRUE
+    )
 
     if (util_is_try_error(fn)) {
       util_error(
-        c("Could not use %s to convert a plotly to a static image:\n",
+        c(
+          "Could not use %s to convert a plotly to a static image:\n",
           "%s",
           "\nYou can try to fix that by setting up reticulate properly and",
           "setting everything up as described in %s. You can also file a bug",
@@ -95,15 +94,16 @@ util_plotly2svg_object <- function(plotly, w = 21.2, h = 15.9, sizing_hints) { #
           "the development of new indicator functions."
         ),
         sQuote("plotly::save_image()"),
-        dQuote(conditionMessage(attr(fn, "condition"))),
+        dQuote(conditionMessage(util_attr(fn, "condition", exact = TRUE))),
         sQuote("? plotly::save_image")
       )
-      # For STS: reticulate::use_python("/Users/struckmanns/Library/r-miniconda-arm64/envs/r-reticulate/bin/python", required = T)
+      # Historical STS-specific Reticulate setup removed here. Inspect commit
+      # c48791d1e3 before restoring the local Python override.
     }
 
     .svg <- readLines(tmpfil, warn = FALSE)
-    .svg <- gsub("<svg ", '<svg preserveAspectRatio="none" ', .svg, fixed = TRUE)
-    # writeLines(.svg, tmpfil)
+    .svg <- gsub("<svg ", '<svg preserveAspectRatio="none" ', .svg, fixed = TRUE) # nolint: line_length_linter.
+    # The adjusted SVG is passed through rsvg without keeping an intermediate.
     rsvg::rsvg_svg(charToRaw(paste0(.svg, collapse = "\n")), tmpfil)
     res <- util_svg_plot_proxy(tmpfil)
     attr(res, "sizing_hints") <- orig_sizing_hints
@@ -121,15 +121,21 @@ util_is_svg_object <- function(x) {
   inherits(x, "svg_plot_proxy") || (
     util_is_gg_plot(x) &&
       all(vapply(lapply(x$layers, `[[`, "geom"),
-                 inherits, "GeomDrawGrob", FUN.VALUE = logical(1)))
+          inherits, "GeomDrawGrob",
+          FUN.VALUE = logical(1)
+        ))
   )
 }
 
+#' Internal helper: svg plot proxy
+#'
+#' @noRd
 util_svg_plot_proxy <- function(svg_file) {
   svg_raw <-
     charToRaw(paste(readLines(svg_file, warn = FALSE), collapse = "\n"))
   structure(list(svg = svg_raw),
-            class = "svg_plot_proxy")
+    class = "svg_plot_proxy"
+  )
 }
 
 #' @exportS3Method grid::grid.draw
@@ -137,7 +143,7 @@ grid.draw.svg_plot_proxy <- function(x, ...) {
   util_ensure_suggested("grImport2")
 
   tmp_svg <- tempfile(fileext = ".svg")
-  on.exit(unlink(tmp_svg), add = TRUE)
+  withr::defer(unlink(tmp_svg))
   writeBin(x$svg, tmp_svg)
 
   pic <- grImport2::readPicture(tmp_svg)

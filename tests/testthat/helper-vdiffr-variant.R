@@ -18,12 +18,11 @@ if (.on_cran()) {
     .expect_doppelganger2 <- vdiffr::expect_doppelganger
     formals(.expect_doppelganger2)$variant <- prep_get_variant()
   } else { # here, the variant formal was missing.
-    .expect_doppelganger2 <- function (title, fig, path = deprecated(), ...,
-                                      writer = write_svg,
-                                      cran = FALSE, variant =
-                                        prep_get_variant())
-    { # see vdiffr::expect_doppelganger, ugly patch to avoid https://github.com/r-lib/vdiffr/issues/125
-      # this file is a patched version from vdiffr (MIT License, original authors: see packageDescription("vdiffr"))
+    .expect_doppelganger2 <- function(title, fig, path = deprecated(), ...,
+      writer = write_svg,
+      cran = FALSE, variant =
+        prep_get_variant()) { # see vdiffr::expect_doppelganger, ugly patch to avoid https://github.com/r-lib/vdiffr/issues/125 # nolint: line_length_linter.
+      # this file is a patched version from vdiffr (MIT License, original authors: see packageDescription("vdiffr")) # nolint: line_length_linter.
       testthat::local_edition(3)
       fig_name <- str_standardise(title)
       file <- paste0(fig_name, ".svg")
@@ -31,33 +30,40 @@ if (.on_cran()) {
       testcase <- make_testcase_file(fig_name)
       writer(fig, testcase, title)
       if (!missing(...)) {
-        lifecycle::deprecate_soft("1.0.0", "vdiffr::expect_doppelganger(... = )",
-        )
+        lifecycle::deprecate_soft("1.0.0", "vdiffr::expect_doppelganger(... = )", ) # nolint: line_length_linter.
       }
       if (lifecycle::is_present(path)) {
-        lifecycle::deprecate_soft("1.0.0", "vdiffr::expect_doppelganger(path = )",
-        )
+        lifecycle::deprecate_soft("1.0.0", "vdiffr::expect_doppelganger(path = )", ) # nolint: line_length_linter.
       }
       if (is_graphics_engine_stale()) {
-        testthat::skip(paste_line("The R graphics engine is too old.",
-                                  "Please update to R 4.1.0 and regenerate the vdiffr snapshots."))
+        testthat::skip(paste_line(
+          "The R graphics engine is too old.",
+          "Please update to R 4.1.0 and regenerate the vdiffr snapshots."
+        ))
       }
-      withCallingHandlers(testthat::expect_snapshot_file(variant = variant,
-                                                         testcase, name = file, cran = cran, compare = testthat::compare_file_text),
-                          expectation_failure = function(cnd) {
-                            if (is_snapshot_stale(title, testcase)) {
-                              testthat::skip(paste_line("SVG snapshot generated under a different vdiffr version.",
-                                                        i = "Please update your snapshots."))
-                            }
-                            if (!is_null(snapshotter <- get_snapshotter())) {
-                              path_old <- snapshot_path(snapshotter, file)
-                              path_new <- snapshot_path(snapshotter, paste0(fig_name,
-                                                                            ".new.svg"))
-                              if (all(file.exists(path_old, path_new))) {
-                                push_log(fig_name, path_old, path_new)
-                              }
-                            }
-                          })
+      withCallingHandlers(
+        testthat::expect_snapshot_file(
+          variant = variant,
+          testcase, name = file, cran = cran, compare = testthat::compare_file_text # nolint: line_length_linter.
+        ),
+        expectation_failure = function(cnd) {
+          if (is_snapshot_stale(title, testcase)) {
+            testthat::skip(paste_line("SVG snapshot generated under a different vdiffr version.", # nolint: line_length_linter.
+                i = "Please update your snapshots."
+              ))
+          }
+          if (!is_null(snapshotter <- get_snapshotter())) {
+            path_old <- snapshot_path(snapshotter, file)
+            path_new <- snapshot_path(snapshotter, paste0(
+              fig_name,
+              ".new.svg"
+            ))
+            if (all(file.exists(path_old, path_new))) {
+              push_log(fig_name, path_old, path_new)
+            }
+          }
+        }
+      )
     }
     if (requireNamespace("vdiffr", quietly = TRUE)) {
       environment(expect_doppelganger2) <- asNamespace("vdiffr")
@@ -65,7 +71,8 @@ if (.on_cran()) {
   }
 }
 expect_doppelganger2 <- function(title, fig, ...) {
-  if (util_is_gg(fig))
+  if (util_is_gg(fig)) {
     fig <- prep_realize_ggplot(fig)
+  }
   .expect_doppelganger2(title, fig, ...)
 }

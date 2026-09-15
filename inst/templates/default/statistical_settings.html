@@ -1,0 +1,22 @@
+<h1>
+    {{ meta_data_title }}
+</h1>
+
+<h3>
+    {{ meta_data_name }}
+</h3>
+
+<p>
+  This table contains the effective settings available to repeated-measurement
+  checks. Built-in defaults are combined with overrides from a registered
+  <code>statistical_settings</code> or legacy
+  <code>repeated_measurement_settings</code> data frame.
+</p>
+
+<p>
+  Result-table setting identifiers link to the corresponding filtered row on
+  this page. Register customized settings with
+  <code>prep_add_data_frames()</code> before computing the report.
+</p>
+
+{{ meta_data_table }}

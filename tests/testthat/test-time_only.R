@@ -3,10 +3,11 @@ test_that("Time-only variables general", {
   skip_if_offline(host = "dataquality.qihs.uni-greifswald.de")
   skip_if_not_installed("stringdist")
 
-  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData",
-                                    keep_types = TRUE)
+  study_data <- prep_get_data_frame("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData", # nolint: line_length_linter.
+    keep_types = TRUE
+  )
 
-  prep_load_workbook_like_file("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx")
+  prep_load_workbook_like_file("https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx") # nolint: line_length_linter.
   meta_data <- prep_get_data_frame("item_level")
 
   meta_data <- util_rbind(
@@ -41,7 +42,6 @@ test_that("Time-only variables general", {
       LOCATION_RANGE = NA_character_,
       PROPORTION_RANGE = NA_character_,
       REPEATED_MEASURES_VARS = NA_character_,
-      REPEATED_MEASURES_GOLDSTANDARD = NA_character_,
       CO_VARS = NA_character_,
       MISSING_LIST = "00:00:00 = not available"
     )
@@ -51,15 +51,18 @@ test_that("Time-only variables general", {
     set.seed(12345)
     r <- dq_report2(
       resp_vars = "ADMIS_TM_0",
-      study_data = study_data, label_col = LABEL,meta_data = meta_data,
+      study_data = study_data, label_col = LABEL, meta_data = meta_data,
       filter_indicator_functions =
-        c("^com_item_missingness$",
-          "^con_limit_deviations$"),
+        c(
+          "^com_item_missingness$",
+          "^con_limit_deviations$"
+        ),
       filter_result_slots =
         c("^SummaryTable$"),
       cores = NULL,
       meta_data_v2 =
-        "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx")
+        "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx" # nolint: line_length_linter.
+    )
     r
   }
 
@@ -68,71 +71,97 @@ test_that("Time-only variables general", {
     0:23,
     function(h) {
       list(
-        hms::hms(hours = h,
-                 minutes = 3),
-        hms::hms(hours = h,
-                 minutes = 13),
-        hms::hms(hours = h,
-                 minutes = 24),
-        hms::hms(hours = h,
-                 minutes = 30),
-        hms::hms(hours = h,
-                 minutes = 50)
+        hms::hms(
+          hours = h,
+          minutes = 3
+        ),
+        hms::hms(
+          hours = h,
+          minutes = 13
+        ),
+        hms::hms(
+          hours = h,
+          minutes = 24
+        ),
+        hms::hms(
+          hours = h,
+          minutes = 30
+        ),
+        hms::hms(
+          hours = h,
+          minutes = 50
+        )
       )
     }
   ), recursive = FALSE)
   probs <-
     rep(c(.7, .2, .05, .04, 0.01), 24)
-  times <- sample(x = day_course,
-                  prob = probs,
-                  size = nrow(study_data),
-                  replace = TRUE)
+  times <- sample(
+    x = day_course,
+    prob = probs,
+    size = nrow(study_data),
+    replace = TRUE
+  )
   times[sample(seq_along(times),
-               size = length(times) %/% 100,
-               replace = !TRUE)] <-
+      size = length(times) %/% 100,
+      replace = !TRUE
+    )] <-
     list(hms::hms(seconds = 0, minutes = 0, hours = 0))
 
   study_data$v02000 <- times
 
   r <- compute_me()
 
-  expect_true(is.list(attr(r, "integrity_issues_before_pipeline")) &&
-                length(attr(r, "integrity_issues_before_pipeline")) == 0)
+  integrity_issues <- util_attr(r, "integrity_issues_before_pipeline", exact = TRUE) # nolint: line_length_linter.
+  expect_true(is.list(integrity_issues) && length(integrity_issues) == 0)
 
   expect_length(r, 2)
 
   expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Missing codes N`,
-               30)
-  expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Sysmiss N`, 0)
+    30,
+    ignore_attr = TRUE
+  )
+  expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Sysmiss N`, 0,
+    ignore_attr = TRUE
+  )
   expect_equal(r$con_limit_deviations.ADMIS_TM_0$SummaryTable$NUM_con_rvv_inum,
-               1864,
-               ignore_attr = TRUE)
+    1864,
+    ignore_attr = TRUE
+  )
 
-  times <- sample(x = day_course,
-                  prob = probs,
-                  size = nrow(study_data),
-                  replace = TRUE)
+  times <- sample(
+    x = day_course,
+    prob = probs,
+    size = nrow(study_data),
+    replace = TRUE
+  )
   # introduce some missing
   times[sample(seq_along(times),
-               size = length(times) %/% 100,
-               replace = !TRUE)] <-
+      size = length(times) %/% 100,
+      replace = !TRUE
+    )] <-
     hms::hms(seconds = 0, minutes = 0, hours = 0)
 
   study_data$v02000 <- times
 
   r <- compute_me()
 
-  expect_true(is.list(attr(r, "integrity_issues_before_pipeline")) &&
-                length(attr(r, "integrity_issues_before_pipeline")) == 1)
+  integrity_issues <- util_attr(r, "integrity_issues_before_pipeline", exact = TRUE) # nolint: line_length_linter.
+  expect_true(is.list(integrity_issues) && length(integrity_issues) == 1)
 
   expect_length(r, 2)
 
   expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Missing codes N`,
-               30)
-  expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Sysmiss N`, 0)
+    30,
+    ignore_attr = TRUE
+  )
+  expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Sysmiss N`, 0,
+    ignore_attr = TRUE
+  )
   expect_equal(r$con_limit_deviations.ADMIS_TM_0$SummaryTable$NUM_con_rvv_inum,
-               1876,
-               ignore_attr = TRUE)
+    1876,
+    ignore_attr = TRUE
+  )
 
 
   times[c(4, 6)] <-
@@ -142,29 +171,37 @@ test_that("Time-only variables general", {
 
   r <- compute_me()
 
-  expect_true(is.list(attr(r, "integrity_issues_before_pipeline")) &&
-                length(attr(r, "integrity_issues_before_pipeline")) == 2)
+  integrity_issues <- util_attr(r, "integrity_issues_before_pipeline", exact = TRUE) # nolint: line_length_linter.
+  expect_true(is.list(integrity_issues) && length(integrity_issues) == 2)
 
   expect_length(r, 2)
 
   expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Missing codes N`,
-               30)
-  expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Sysmiss N`, 3)
+    30,
+    ignore_attr = TRUE
+  )
+  expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Sysmiss N`, 3,
+    ignore_attr = TRUE
+  )
   expect_equal(r$con_limit_deviations.ADMIS_TM_0$SummaryTable$NUM_con_rvv_inum,
-               1875,
-               ignore_attr = TRUE)
+    1875,
+    ignore_attr = TRUE
+  )
 
   skip_if_not_installed("chron")
 
   probs <-
     rep(c(.7, .2, .05, .04, 0.01), 24)
-  times <- sample(x = day_course,
-                  prob = probs,
-                  size = nrow(study_data),
-                  replace = TRUE)
+  times <- sample(
+    x = day_course,
+    prob = probs,
+    size = nrow(study_data),
+    replace = TRUE
+  )
   times[sample(seq_along(times),
-               size = length(times) %/% 100,
-               replace = !TRUE)] <-
+      size = length(times) %/% 100,
+      replace = !TRUE
+    )] <-
     list(hms::hms(seconds = 0, minutes = 0, hours = 0))
 
   times <-
@@ -174,17 +211,20 @@ test_that("Time-only variables general", {
 
   r <- compute_me()
 
-  expect_true(is.list(attr(r, "integrity_issues_before_pipeline")) &&
-                length(attr(r, "integrity_issues_before_pipeline")) == 0)
+  integrity_issues <- util_attr(r, "integrity_issues_before_pipeline", exact = TRUE) # nolint: line_length_linter.
+  expect_true(is.list(integrity_issues) && length(integrity_issues) == 0)
 
   expect_length(r, 2)
 
   expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Missing codes N`,
-               30)
-  expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Sysmiss N`, 0)
+    30,
+    ignore_attr = TRUE
+  )
+  expect_equal(r$com_item_missingness.ADMIS_TM_0$SummaryTable$`Sysmiss N`, 0,
+    ignore_attr = TRUE
+  )
   expect_equal(r$con_limit_deviations.ADMIS_TM_0$SummaryTable$NUM_con_rvv_inum,
-               1876,
-               ignore_attr = TRUE)
-
-
+    1876,
+    ignore_attr = TRUE
+  )
 })

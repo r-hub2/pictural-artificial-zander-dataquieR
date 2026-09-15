@@ -2,6 +2,10 @@
 #'
 #' @param resp_vars [variable] the names of the measurement variables, if
 #'                             missing or `NULL`, all variables will be checked
+#' @param group_vars [variable list] the names of the grouping variables
+#' @param co_vars [variable list] the names of covariables for adjustment
+#' @param time_vars [variable] the name of the variable giving the time of
+#'                             measurement
 #' @param study_data [data.frame] the data frame that contains the measurements
 #' @param label_col [variable attribute] the name of the column in the metadata
 #'                                       with labels of variables
@@ -16,15 +20,21 @@
 #' @param meta_data_dataframe [data.frame] the data frame that contains the
 #'                                          metadata for the data frame level
 #' @param meta_data_segment [data.frame] -- optional: Segment level metadata
+#' @param meta_data_cross_item [data.frame] -- optional: Cross-item level
+#'                                           metadata
 #' @param dataframe_level [data.frame] alias for `meta_data_dataframe`
 #' @param segment_level [data.frame] alias for `meta_data_segment`
+#' @param cross_item_level [data.frame] alias for `meta_data_cross_item`
+#' @param `cross-item_level` [data.frame] alias for `meta_data_cross_item`
 #' @return `invisible(NULL)`
 #' @keywords internal
 .template_function_indicator <-
-  function(resp_vars, study_data, label_col, item_level, meta_data,
-           meta_data_v2,
-           meta_data_dataframe, meta_data_segment, dataframe_level,
-           segment_level) { # nocov start
+  function(resp_vars, group_vars, co_vars, time_vars, study_data, label_col,
+    item_level, meta_data,
+    meta_data_v2,
+    meta_data_dataframe, meta_data_segment, meta_data_cross_item,
+    dataframe_level, segment_level, cross_item_level,
+    `cross-item_level`) { # nocov start
     util_error("nothing, just a template for Roxygen")
     invisible(NULL)
-} # nocov end
+  } # nocov end

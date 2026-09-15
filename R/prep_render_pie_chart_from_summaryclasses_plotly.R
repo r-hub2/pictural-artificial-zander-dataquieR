@@ -10,16 +10,20 @@
 #'
 #' @family summary_functions
 #' @export
-prep_render_pie_chart_from_summaryclasses_plotly <- function(data, # FIXME: If use_plotly is FALSE?
-                                                             meta_data = "item_level") {
-  vars_to_include <- attr(data, "vars_to_include")
+prep_render_pie_chart_from_summaryclasses_plotly <- function(data,
+  meta_data = "item_level") {
+  vars_to_include <- util_attr(data, "vars_to_include", exact = TRUE)
+  summary_subtitle <- util_attr(data, "summary_subtitle", exact = TRUE)
+  summary_unit_label <- util_attr(data, "summary_unit_label", exact = TRUE)
   ssi <- (identical(vars_to_include, "ssi"))
-  # FIXME: Amend prep_render_pie_chart_from_summaryclasses_ggplot2 to handle this also.
+  variable_group <- identical(vars_to_include, "variable_group")
   te <- topenv(parent.frame(1)) # see https://stackoverflow.com/a/27870803
   if (!(isNamespace(te) && getNamespaceName(te) == "dataquieR")) {
-    lifecycle::deprecate_soft("2.1.0.9007",
-                              "prep_render_pie_chart_from_summaryclasses_plotly()",
-                              "plot.dataquieR_summary()")
+    lifecycle::deprecate_soft(
+      "2.1.0.9007",
+      "prep_render_pie_chart_from_summaryclasses_plotly()",
+      "plot.dataquieR_summary()"
+    )
   }
 
   if (!util_ensure_suggested(c("plotly", "htmltools"), err = FALSE)) {
@@ -41,14 +45,13 @@ prep_render_pie_chart_from_summaryclasses_plotly <- function(data, # FIXME: If u
   if (length(groups) > 1) {
     all_pys <- lapply(setNames(nm = groups), function(g) {
       prep_render_pie_chart_from_summaryclasses_plotly(
-        data[data[[grouped_by]] == g, , FALSE], meta_data = meta_data)
+        data[data[[grouped_by]] == g, , drop = FALSE],
+        meta_data = meta_data
+      )
     })
-    # pys <-
-    #   do.call(plotly::subplot, lapply(all_pys, plotly::subplot))
-    # py <- plotly::layout(pys,
-    #                # title = list(text =
-    #                #                res$SummaryPlot$patches$annotation$title),
-    #                margin = 0.01)
+    # Historical subplot layout prototype removed here. Inspect with
+    # `git show 184d467443 --`
+    # `R/prep_render_pie_chart_from_summaryclasses_plotly.R`.
     ncols <- min(2, ceiling(sqrt(length(all_pys))))
     nrows <- ceiling(length(all_pys) / ncols)
 
@@ -85,46 +88,46 @@ prep_render_pie_chart_from_summaryclasses_plotly <- function(data, # FIXME: If u
   labs["NA"] <- "Not classified"
 
   # wrap the text of the labs if too long. Max no. characters = 20
-  no_char_labs<- vapply(labs, FUN = function(x){
+  no_char_labs <- vapply(labs, FUN = function(x) {
     no_char <- nchar(x)
   }, FUN.VALUE = numeric(1))
 
   if (any(no_char_labs > 10)) {
-    labs<- vapply(labs, FUN = function(x){
-      #remove white spaces at beginning or end
+    labs <- vapply(labs, FUN = function(x) {
+      # remove white spaces at beginning or end
       x <- trimws(x)
 
-      #If labs >20 characters, cut it at 20
+      # If labs >20 characters, cut it at 20
       if (nchar(x) > 20) {
         x <- substr(x, start = 1, stop = 20)
       }
 
-      sst <- strsplit(x, '')[[1]]  #from https://stackoverflow.com/questions/11619616/how-to-split-a-string-into-substrings-of-a-given-length
-      m <- matrix('', nrow=10,
-                  ncol=(length(sst)+10-1)%/%10)
+      sst <- strsplit(x, "")[[1]] # from https://stackoverflow.com/questions/11619616/how-to-split-a-string-into-substrings-of-a-given-length # nolint: line_length_linter.
+      m <- matrix("",
+        nrow = 10,
+        ncol = (length(sst) + 10 - 1) %/% 10
+      )
       m[seq_along(sst)] <- sst
-      x <- apply(m, 2, paste, collapse='')
+      x <- apply(m, 2, paste, collapse = "")
       rm(sst, m)
-      #remove white spaces at beginning or end
+      # remove white spaces at beginning or end
       x <- trimws(x)
       x <- paste0(x, collapse = "<br>")
     }, FUN.VALUE = character(1))
   }
 
 
-  if (all(is.na(data$class))) {
-    return(htmltools::browsable(htmltools::HTML("")))
-  }
-
   if (is.factor(data$class)) {
     data$class <- as.integer(gsub("^cat", "", data$class))
   }
-  data$class <- factor(data$class,
-                       levels = names(py_colors),
-                       ordered = TRUE
+  class_values <- as.character(data$class)
+  class_values[is.na(class_values)] <- "NA"
+  data$class <- factor(class_values,
+    levels = names(py_colors),
+    ordered = TRUE
   )
 
-  data <- data[order(data$class, -data$value, decreasing = TRUE), , FALSE]
+  data <- data[order(data$class, -data$value, decreasing = TRUE), , drop = FALSE] # nolint: line_length_linter.
   hoverinfo <- "label+percent+value"
 
   if ("note" %in% colnames(data)) {
@@ -132,46 +135,73 @@ prep_render_pie_chart_from_summaryclasses_plotly <- function(data, # FIXME: If u
   } else {
     data$note <- ""
   }
-
-  if (length(groups) > 1) { # IDEA: sunburst would maybe work here, if we have a hiearchy in groups, currently, we do not have that.
-    # Sunburst:
-    # py <- plotly::plot_ly(
-    #   ids = c("Eve", "Cain", "Seth", "Enos", "Noam", "Abel", "Awan", "Enoch", "Azura"),
-    #   labels = paste(c("Eve", "Cain", "Seth", "Enos", "Noam", "Abel", "Awan", "Enoch", "Azura"), 42),
-    #   parents = c("", "Eve", "Eve", "Seth", "Seth", "Eve", "Eve", "Awan", "Eve"),
-    #   values = c(10, 14, 12, 10, 2, 6, 6, 4, 4),
-    #   type = 'sunburst'
-    # )
-  } else {
-    rotation_value <- 90
-    #order data frame "data"
-    data <- data[order(data$class),]
-
-
-    py <- plotly::add_pie(plotly::plot_ly(data,
-                                          height = 400,
-                                          width = 400),
-                          sort = FALSE,
-                          direction = "clockwise",
-                          rotation = rotation_value,
-                          labels = labs[
-                            paste(data$class)],
-                          values = data$value,
-                          hovertext = data$note,
-                          #                name = "Segment",
-                          #                hoverinfo = "label+percent+name",
-                          hoverinfo = hoverinfo,
-                          textinfo = 'label+percent+value',
-                          showlegend = FALSE,
-                          marker = list(
-                            colors = py_colors[paste(data$class)]))
+  if (variable_group) {
+    if (is.null(summary_unit_label)) {
+      summary_unit_label <- "group-metric results"
+    }
+    note_heading <- paste0(
+      toupper(substr(summary_unit_label, 1L, 1L)),
+      substring(summary_unit_label, 2L)
+    )
+    data$note <- paste0("<b>", note_heading, "</b><br>", data$note)
   }
 
-  if (identical(grouped_by, "indicator_metric")) { # TODO: Hiearchical structure support
-    title <- util_translate_indicator_metrics(groups, short = FALSE,
-                                              long = FALSE)
+  if (length(groups) > 1) {
+    # Historical sunburst prototype removed here. Inspect with
+    # `git show 184d467443 --`
+    # `R/prep_render_pie_chart_from_summaryclasses_plotly.R`.
+  } else {
+    rotation_value <- 90
+    # order data frame "data"
+    data <- data[order(data$class), , drop = FALSE]
+    data$display_percent <- util_pie_display_percentages(data$value)
+
+
+    py <- plotly::add_pie(
+      plotly::plot_ly(data,
+        height = 400,
+        width = 400
+      ),
+      sort = FALSE,
+      direction = "clockwise",
+      rotation = rotation_value,
+      labels = labs[
+        paste(data$class)
+      ],
+      values = data$value,
+      hovertext = data$note,
+      customdata = data$note,
+      # Segment names are carried through labels and hover text.
+      hoverinfo = hoverinfo,
+      hovertemplate = if (variable_group) {
+        paste0(
+          "<b>%{label}</b><br>%{value} ", summary_unit_label, " ",
+          "(%{percent})<br>%{customdata}<extra></extra>"
+        )
+      } else {
+        paste0(
+          "<b>%{label}</b><br>%{value} (%{percent})",
+          "<br>%{customdata}<extra></extra>"
+        )
+      },
+      text = data$display_percent,
+      textinfo = "text",
+      textposition = "inside",
+      insidetextorientation = "horizontal",
+      showlegend = TRUE,
+      marker = list(
+        colors = py_colors[paste(data$class)]
+      )
+    )
+  }
+
+  if (identical(grouped_by, "indicator_metric")) {
+    title <- util_translate_indicator_metrics(groups,
+      short = FALSE,
+      long = FALSE
+    )
     subtitle <- "percentage of QA classes"
-  } else if (identical(grouped_by, "call_names")) { # TODO: Hiearchical structure support
+  } else if (identical(grouped_by, "call_names")) {
     fnms <- util_cll_nm2fkt_nm(groups)
     if (nchar(fnms) < nchar(groups)) {
       suff <- gsub("^.*_", ": ", groups)
@@ -180,106 +210,85 @@ prep_render_pie_chart_from_summaryclasses_plotly <- function(data, # FIXME: If u
       suff <- ""
     }
     title <- paste0(util_map_labels(fnms,
-                                    util_get_concept_info("implementations"),
-                                    to = "dq_report2_short_title",
-                                    from = "function_R",
-                                    ifnotfound = NA_character_), suff)
+        util_get_concept_info("implementations"),
+        to = "dq_report2_short_title",
+        from = "function_R",
+        ifnotfound = NA_character_
+      ), suff)
     subtitle <- "percentage of QA classes"
-  } else if (identical(grouped_by, as.character(STUDY_SEGMENT))) { # TODO: Hiearchical structure support
+  } else if (identical(grouped_by, as.character(STUDY_SEGMENT))) {
     title <- groups
     subtitle <- "percentage of QA classes"
   } else if (identical(grouped_by, as.character(VAR_NAMES))) {
     util_expect_data_frame(meta_data)
     title <- prep_get_labels(groups,
-                             meta_data = meta_data,
-                             label_class = "LONG")
+      meta_data = meta_data,
+      label_class = "LONG"
+    )
     subtitle <- "percentage of QA classes"
   } else if (identical(grouped_by, as.character("function_name"))) {
-    title <- vapply(groups, util_alias2caption, long = TRUE,
-                    FUN.VALUE = character(1))
+    title <- vapply(groups, util_alias2caption,
+      long = TRUE,
+      FUN.VALUE = character(1)
+    )
     subtitle <- groups
   } else {
     title <- groups
     subtitle <- "percentage of QA classes"
-    #subtitle <- NULL
-    #    util_error("Unkown grouping by %s", sQuote(grouped_by))
+    # Historical empty-subtitle and unknown-grouping error variants removed.
   }
 
-  if (!ssi) # FIXME: also for ssi
-    subtitle <- paste(subtitle, sprintf(" -- %d of %d %s classified",
-                                        sum(data$value, na.rm = TRUE),
-                                        nrow(meta_data),
-                                        ifelse(ssi, "scales", "variables")
-    )) # TODO: Maybe, we should not compute this here, but earlier.
-
-
-  #Define the space on top among the title and the plot conditionally
-  angles <- data$value / sum(data$value) * 360
-  cs1 <- cumsum(data$value / sum(data$value) * 360) #final limits in case started on top
-  cs1 <- cs1 + rotation_value # final limits in case started at rotation_value
-
-  lower_bound <- 345
-  upper_bound <- 360
-  values_in_range1 <- (cs1 >= lower_bound & cs1 <= upper_bound)
-  count_in_range1 <- sum(values_in_range1)
-
-  lower_bound <- 360
-  upper_bound <- 375
-  values_in_range2 <- (cs1 >= lower_bound & cs1 <= upper_bound)
-  count_in_range2 <- sum(values_in_range2)
-
-
-  #for bottom margin
-  lower_bound <- 150
-  upper_bound <- 180
-  values_in_range3 <- (cs1 >= lower_bound & cs1 <= upper_bound)
-  count_in_range3 <- sum(values_in_range3)
-
-  lower_bound <- 180
-  upper_bound <- 210
-  values_in_range3 <- (cs1 >= lower_bound & cs1 <= upper_bound)
-  count_in_range4 <- sum(values_in_range3)
-
-
-  #Define the values for white spaces around the plot
-  value_bottom_conditional <- 50
-  value_on_top_conditional <- 50
-
-  if(all(angles >= 60)) {
-    #All the text is inside the plot, no need for extra space at top or bottom
-    value_on_top_conditional <- 0
-    value_bottom_conditional <- 0
-  } else {
-    if (count_in_range1 >= 2 || count_in_range2 >= 2) {
-      value_on_top_conditional <- 170
-    } else {
-      value_on_top_conditional <- 60
-    }
-
-    if (count_in_range3 >= 2 || count_in_range4 >= 2) {
-      value_bottom_conditional <- 170
-    } else {
-      value_bottom_conditional <- 60
-    }
+  if (!is.null(summary_subtitle)) {
+    subtitle <- summary_subtitle
   }
+
+  if (!ssi && !variable_group) {
+    subtitle <- paste(subtitle, sprintf(
+      " -- %d of %d %s classified",
+      sum(data$value, na.rm = TRUE),
+      nrow(meta_data),
+      "variables"
+    ))
+  }
+
+  wrapped_title <- util_plotly_wrap_text(title)
+  wrapped_subtitle <- util_plotly_wrap_text(subtitle)
+  title_line_count <- util_attr(wrapped_title, "line_count", exact = TRUE) +
+    util_attr(wrapped_subtitle, "line_count", exact = TRUE)
+  extra_title_height <- 18L * max(0L, title_line_count - 2L)
+
+
+  value_on_top_conditional <- 60 + extra_title_height
+  value_bottom_conditional <- 85
 
   py <- plotly::layout(py,
-                       title =
-                         list(
-                           text =
-                             as.character(htmltools::tagList(
-                               title,
-                               htmltools::tags$sup(subtitle)
-                             )),
-                           y = 0.95,
-                           yref = "container"),
-                       autosize = FALSE,  #maybe can cause trouble
-                       margin = list(
-                         t = value_on_top_conditional,
-                         r = 100,
-                         l = 100,
-                         b = value_bottom_conditional)
+    title =
+      list(
+        text =
+        as.character(htmltools::tagList(
+          wrapped_title,
+          htmltools::tags$sup(wrapped_subtitle)
+        )),
+        y = 0.95,
+        yref = "container"
+      ),
+    autosize = FALSE, # maybe can cause trouble
+    legend = list(
+      orientation = "h",
+      x = 0.5,
+      xanchor = "center",
+      y = -0.05,
+      yanchor = "top",
+      font = list(size = 11)
+    ),
+    margin = list(
+      t = value_on_top_conditional,
+      r = 30,
+      l = 30,
+      b = value_bottom_conditional
+    )
   )
+  py$height <- 400 + extra_title_height
 
   py <- plotly::config(py, displaylogo = FALSE)
 
@@ -293,36 +302,35 @@ prep_render_pie_chart_from_summaryclasses_plotly <- function(data, # FIXME: If u
   return(py)
 
 
-#  py <- plotly::layout(py,
-                       #title =
-                       #  list(
-                       #    text =
-                       #      as.character(htmltools::tagList(
-                       #        title,
-                       #        htmltools::tags$sup(subtitle)
-                        #     )),
-                        #   y = 0.95,
-                        #   yref = "container"),
-#                       autosize = FALSE,  #maybe can cause trouble
-#                       margin = list(
-#                         t = value_on_top_conditional,
-#                         r = 100,
-#                         l = 100,
-#                         b = value_bottom_conditional)
-#  )
+  # Historical post-return plotly layout prototype removed here. Inspect with
+  # `git show 214dd76a7d --`
+  # `R/prep_render_pie_chart_from_summaryclasses_plotly.R`.
+}
 
-#  py <-
-#    htmltools::div(htmltools::h4(title,
-#                                 style = "font-family: sans-serif; margin-bottom: 0; margin-top: 2;"),
-#                   htmltools::h5(subtitle,
-#                                 style = "font-family: sans-serif; margin-top: 0; margin-bottom: 0; "),
-#                   htmltools::div(py,
-#                                  style = "align-self: center;margin-top: 0; "),
-#                   style = "text-align: center; display: flex; flex-direction: column; align-item: center;",
-#                   title = groups,
-#                   `data-tippy-always-on` = "true")
-
-#  py <- htmltools::browsable(py)
-
-#  return(py)
+#' Wrap Plotly text without losing long unbroken labels
+#'
+#' @param text Scalar text to wrap.
+#' @param width Maximum number of characters per line.
+#'
+#' @return Escaped HTML text with `<br>` line breaks and a `line_count`
+#'   attribute.
+#' @noRd
+util_plotly_wrap_text <- function(text, width = 38L) {
+  text <- as.character(text)
+  util_stop_if_not(length(text) == 1L, length(width) == 1L, width > 3L)
+  text <- gsub("[[:space:]]+", " ", trimws(text))
+  lines <- strwrap(text, width = width, simplify = FALSE)[[1]]
+  lines <- unlist(lapply(lines, function(line) {
+    starts <- seq.int(1L, max(1L, nchar(line)), by = width)
+    substring(line, starts, starts + width - 1L)
+  }), use.names = FALSE)
+  if (!length(lines)) {
+    lines <- ""
+  }
+  result <- htmltools::HTML(paste(
+    htmltools::htmlEscape(lines),
+    collapse = "<br>"
+  ))
+  attr(result, "line_count") <- length(lines)
+  result
 }

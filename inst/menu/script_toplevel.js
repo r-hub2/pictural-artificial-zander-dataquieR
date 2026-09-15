@@ -1,4 +1,23 @@
 window.in_iframe = false;
+let dtLayoutRebuilder;
+const DQ_RESPONSIVE_NAVBAR_QUERY = "screen and (max-width: 1280px)";
+
+function dqWhenJQueryReady(callback) {
+  if (window.jQuery) {
+    window.jQuery(callback);
+    return;
+  }
+  var tries = 0;
+  var timer = window.setInterval(function () {
+    if (window.jQuery) {
+      window.clearInterval(timer);
+      window.jQuery(callback);
+    } else if (++tries > 200) {
+      window.clearInterval(timer);
+      console.warn("dataquieR menu initialization skipped: jQuery is not available");
+    }
+  }, 25);
+}
 
 //runs imidiatly
 (() => {
@@ -13,7 +32,7 @@ window.in_iframe = false;
 })()
 
 //runs after dom is loaded
-$(() => {
+dqWhenJQueryReady(function () {
 
   initSinglePageViewFromHash();
 
@@ -22,12 +41,16 @@ $(() => {
   dtLayoutRebuilder = new DtLayoutRebuilder();
 
   initializePageElements();
+  initSunburstModeSwitches();
+  schedule_visible_sunburst_relayout();
 
   initIframeResized();
 
+  messageTooltip = new MessageTooltip()
+
   initDataquieRResultTooltips();
 
-  messageTooltip = new MessageTooltip()
+  initReportScopeTrees();
 
   menuSearch = new MenuSearch();
 
@@ -47,6 +70,60 @@ $(() => {
 })
 
 //#region general init functions
+
+/**
+ * Initializes expandable rows in report-scope tree tables.
+ */
+function initReportScopeTrees() {
+  document.querySelectorAll(".dq-report-scope-tree-table").forEach(
+    function (table) {
+      if (table.getAttribute("data-dq-tree-initialized") === "true") {
+        return;
+      }
+      table.setAttribute("data-dq-tree-initialized", "true");
+
+      function children(id) {
+        return Array.prototype.filter.call(
+          table.querySelectorAll("tbody tr"),
+          function (row) {
+            return row.getAttribute("data-parent-id") === id;
+          }
+        );
+      }
+
+      function setChildren(id, visible) {
+        children(id).forEach(function (row) {
+          row.style.display = visible ? "table-row" : "none";
+          const childId = row.getAttribute("data-node-id");
+          const toggle = row.querySelector(".dq-report-scope-tree-toggle");
+          setChildren(
+            childId,
+            visible && toggle &&
+              toggle.getAttribute("aria-expanded") === "true"
+          );
+        });
+      }
+
+      table.querySelectorAll(".dq-report-scope-tree-toggle").forEach(
+        function (toggle) {
+          toggle.addEventListener("click", function () {
+            const expanded =
+              toggle.getAttribute("aria-expanded") === "true";
+            toggle.setAttribute(
+              "aria-expanded",
+              expanded ? "false" : "true"
+            );
+            toggle.innerHTML = expanded ? "&#9656;" : "&#9662;";
+            setChildren(toggle.getAttribute("data-node-id"), !expanded);
+          });
+        }
+      );
+      if (window.dataquieRInitTippies) {
+        window.dataquieRInitTippies(table);
+      }
+    }
+  );
+}
 
 /**
  * remove all info about initialized iframe divs, if such exist
@@ -95,6 +172,53 @@ function initializePageElements() {
   })
   fixTDforMozilla();
   var tippyInstances = [];
+  $(".dq-report-scope-tree-table [title]").each(function () {
+    var reference = this;
+    var title = reference.getAttribute("title");
+    if (!title || title.trim() === "") return;
+    reference.removeAttribute("title");
+    if (!reference.hasAttribute("tabindex")) {
+      reference.setAttribute("tabindex", "0");
+    }
+    reference.setAttribute("aria-haspopup", "dialog");
+    reference.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        reference.click();
+      } else if (event.key === "Escape" && reference._tippy) {
+        reference._tippy.hide();
+        reference.focus();
+      }
+    });
+    tippyInstances.push(reference);
+    tippy(reference, {
+      content: title,
+      allowHTML: true,
+      appendTo: document.body,
+      interactive: true,
+      maxWidth: 650,
+      hideOnClick: true,
+      role: "dialog",
+      trigger: "click",
+      onMount(instance) {
+        var content = instance.popper.querySelector(".tippy-content");
+        if (!content || content.querySelector(".dq-report-scope-tooltip-close")) {
+          return;
+        }
+        var closeButton = document.createElement("button");
+        closeButton.type = "button";
+        closeButton.className = "dq-report-scope-tooltip-close";
+        closeButton.setAttribute("aria-label", "Close details");
+        closeButton.textContent = "\u00d7";
+        closeButton.addEventListener("click", function (event) {
+          event.stopPropagation();
+          instance.hide();
+          reference.focus();
+        });
+        content.insertBefore(closeButton, content.firstChild);
+      }
+    });
+  });
   tippy('[title]', { // https://atomiks.github.io/tippyjs/v6/all-props/
     content(reference) { // https://atomiks.github.io/tippyjs/v5/faq/#can-i-use-the-attribute
       tippyInstances = tippyInstances.concat(reference); // https://github.com/atomiks/tippyjs/issues/473#issuecomment-485055710
@@ -447,7 +571,8 @@ function initSinglePageViewFromHash() {
 
     // 1) Find wanted blocks
     const $wanted = $("div.dataquieR_result").filter(function () {
-      return $(this).attr("data-nm") === nm;
+      return $(this).attr("data-nm") === nm ||
+        $(this).attr("data-popup-nm") === nm;
     });
 
     if (!$wanted.length) return;
@@ -507,7 +632,8 @@ function initPopupWindowManager() { // TODO: scaler-div inside resizable dialogs
         keysInZ: [],               // bottom -> top list of keys
         activeKey: null,
         escInstalled: false,
-        mouseInstalled: false
+        mouseInstalled: false,
+        messageInstalled: false
       };
     }
     return window[NS];
@@ -657,6 +783,59 @@ function initPopupWindowManager() { // TODO: scaler-div inside resizable dialogs
   function setTitle($w, url, title) {
     const fallbackTitle = String(url).split(/[?#]/)[0].split("/").pop();
     $w.find(".dq-title").text(title ? String(title) : fallbackTitle);
+  }
+
+  function managedPopupForSource(source) {
+    const s = state();
+    var match = null;
+    Object.keys(s.byKey).some(function (key) {
+      const $w = s.byKey[key];
+      const iframe = $w && $w.length ? $w.find("iframe")[0] : null;
+      if (iframe && iframe.contentWindow === source) {
+        match = $w;
+        return true;
+      }
+      return false;
+    });
+    return match;
+  }
+
+  function installPopupMessageBridgeOnce() {
+    const s = state();
+    if (s.messageInstalled) return;
+    s.messageInstalled = true;
+
+    window.addEventListener("message", function (event) {
+      const msg = event && event.data;
+      if (!msg) return;
+
+      const $sourcePopup = managedPopupForSource(event.source);
+      if (!$sourcePopup) return;
+
+      const data = msg.data || {};
+      if (msg.message === "showDataquieRResult") {
+        window.showDataquieRResult(data.url, data.link_url, data.title);
+      } else if (msg.message === "navigateDataquieRFrame" &&
+                 isAllowedPopupNavigation(data.url)) {
+        $sourcePopup.find("iframe").attr("src", data.url);
+      }
+    });
+  }
+
+  function isAllowedPopupNavigation(url) {
+    try {
+      const current = new URL(window.location.href);
+      const target = new URL(String(url), current);
+      const currentDir = current.pathname.replace(/[^/]+$/, "");
+      if (current.protocol === "file:") {
+        return target.protocol === "file:" &&
+          target.pathname.indexOf(currentDir) === 0;
+      }
+      return target.origin === current.origin &&
+        target.pathname.indexOf(currentDir) === 0;
+    } catch (e) {
+      return false;
+    }
   }
 
   // ---- mouse tracking (for initial placement near click) ----
@@ -1168,6 +1347,7 @@ function initPopupWindowManager() { // TODO: scaler-div inside resizable dialogs
     ensureEscOnce();
     ensureMouseTrackingOnce();
     installHistorySyncOnce();
+    installPopupMessageBridgeOnce();
 
     const s = state();
     const key = urlKey(url);
@@ -1275,12 +1455,69 @@ function initPopupWindowManager() { // TODO: scaler-div inside resizable dialogs
     return $w;
   }
 
+  function isEmbeddedWindow() {
+    var isEmbedded = false;
+    try { isEmbedded = window.self !== window.top; }
+    catch (e) { isEmbedded = true; }
+    return isEmbedded;
+  }
+
+  function absoluteUrl(value) {
+    if (!value) return value;
+    try { return new URL(String(value), window.location.href).href; }
+    catch (e) { return value; }
+  }
+
+  function isSameDocumentUrl(left, right) {
+    try {
+      var leftUrl = new URL(String(left), window.location.href);
+      var rightUrl = new URL(String(right), window.location.href);
+      return leftUrl.protocol === rightUrl.protocol &&
+        leftUrl.host === rightUrl.host &&
+        leftUrl.pathname === rightUrl.pathname &&
+        leftUrl.search === rightUrl.search;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function postToTop(message, data) {
+    var targetOrigin = window.location.protocol === "file:" ?
+      "*" : window.location.origin;
+    window.top.postMessage({ message: message, data: data }, targetOrigin);
+  }
+
+  window.navigateDataquieRFrame = function (url) {
+    if (!util_checked_navigate(url, { navigate: false })) return;
+    if (isEmbeddedWindow()) {
+      var targetUrl = absoluteUrl(url);
+      if (isSameDocumentUrl(window.location.href, targetUrl)) {
+        if (typeof window.hideDataquieRLoading === "function") {
+          window.hideDataquieRLoading(true);
+        }
+        window.location.hash = new URL(targetUrl, window.location.href).hash;
+        return;
+      }
+      postToTop("navigateDataquieRFrame", { url: targetUrl });
+      return;
+    }
+    window.location.href = url;
+  };
+
   // Public API: showDataquieRResult(url, link_url, title)
   window.showDataquieRResult = function (url, link_url, title) {
-    var ok = util_checked_navigate(link_url, { navigate: false });
-    if (ok) {
-      openWindow(url, link_url, title, false);
+    if (!util_checked_navigate(link_url, { navigate: false })) return;
+
+    if (isEmbeddedWindow()) {
+      postToTop("showDataquieRResult", {
+        url: absoluteUrl(url),
+        link_url: absoluteUrl(link_url),
+        title: title
+      });
+      return;
     }
+
+    openWindow(url, link_url, title, false);
   };
 
   // --- auto-init restore on page load ---
@@ -1347,6 +1584,19 @@ function supportsSelector(selector) {
  */
 function handle_bread_crumbs() {
   $(".breadcrumb").remove()
+  function prefix_by_report_overview(breadcrumb) {
+    if (!window.by_report) return;
+    $('<a/>', {
+      class: "dq-breadcrumb-overview",
+      html: "Reports overview",
+      href: "#",
+      onclick: 'if (window.__dqPersistPopupHistory) window.__dqPersistPopupHistory();window.location.href = "../../index.html"'
+    }).prependTo(breadcrumb);
+    $("<span/>", {
+      html: ">",
+      style: "padding-left: 0.5em; padding-right: 0.5em"
+    }).insertAfter(breadcrumb.find(".dq-breadcrumb-overview"));
+  }
   if ($("a.target").parent().parent().find("p").html() !== undefined) {
     // on a "real page""
     var breadcrumb0 = $('<div/>', {
@@ -1356,6 +1606,7 @@ function handle_bread_crumbs() {
         href: "report.html"
       })
     })
+    prefix_by_report_overview(breadcrumb0);
     breadcrumb0.appendTo('div.navbar');
     var breadcrumb05 = $("<span/>", { html: ">", style: "padding-left: 0.5em; padding-right: 0.5em" })
     var breadcrumb1 = $('<div/>', {
@@ -1388,6 +1639,7 @@ function handle_bread_crumbs() {
           href: "report.html"
         })
       })
+      prefix_by_report_overview(breadcrumb0);
       breadcrumb0.appendTo('div.navbar');
       var breadcrumb05 = $("<span/>", { html: ">", style: "padding-left: 0.5em; padding-right: 0.5em" })
       var breadcrumb1 = $('<div/>', {
@@ -1421,17 +1673,18 @@ function handle_bread_crumbs() {
  */
 function sunburst_on_render(el, x, data) {
 
-  $(function () {
-    var update = {
-      width: $(el).parent().width(),
-      height: $(el).parent().height()
-    };
-    Plotly.relayout(el, update);
-  })
+  enable_sunburst_page_scroll(el);
+  schedule_visible_sunburst_relayout(el);
 
   // --- sunburst drilldown state via History API (no location.hash usage) ---
-  var DQ_SUNBURST_STATE_KEY = 'dq_sunburst_level';
-  var DQ_SUNBURST_EX_KEY = 'dq_sunburst_ex'; // keep for compatibility: now interpreted as "p"
+  var DQ_SUNBURST_STATE_KEY = sunburst_history_key(
+    el,
+    'dq_sunburst_level'
+  );
+  var DQ_SUNBURST_EX_KEY = sunburst_history_key(
+    el,
+    'dq_sunburst_ex'
+  ); // keep for compatibility: now interpreted as "p"
 
   // per-widget default, set from R via onRender(..., data = list(ex_init = <number>))
   var dq_default_ex = (function () {
@@ -1661,17 +1914,8 @@ function sunburst_on_render(el, x, data) {
   dq_set_history_level(dq_current_level || '', true);
   dq_set_history_ex(dq_current_ex, true);
 
-  if (!window.__dqSunburstHistoryInstalled) {
-    window.__dqSunburstHistoryInstalled = true;
-
-    window.addEventListener('popstate', function () {
-      dq_restore();
-    });
-
-    window.addEventListener('pageshow', function () {
-      dq_restore();
-    });
-  }
+  if (gd) gd.__dqRestoreSunburstHistory = dq_restore;
+  install_sunburst_history_restore_once();
 
   dq_restore();
 
@@ -2017,6 +2261,267 @@ function sunburst_on_render(el, x, data) {
 }
 
 /**
+ * Keeps drilldown history independent when multiple sunbursts share a page.
+ * Standalone charts retain the historical unsuffixed state keys.
+ *
+ * @param {HTMLElement} el - A sunburst widget or one of its descendants.
+ * @param {string} base - The historical state-key prefix.
+ * @returns {string} A page-local history key.
+ */
+function sunburst_history_key(el, base) {
+  if (!el || !el.closest) return base;
+  var section = el.closest(
+    ".dq-sunburst-mode-panel[id], .dq-sunburst-section[id], " +
+    ".dq-overview-section-card[id]"
+  );
+  return section && section.id ? base + "." + section.id : base;
+}
+
+/**
+ * Returns the history-state key for a switchable sunburst group.
+ *
+ * @param {HTMLElement} modeSwitch - The switch root.
+ * @returns {string} Stable page-local history key.
+ */
+function sunburst_mode_history_key(modeSwitch) {
+  var base = "dq_sunburst_mode";
+  return modeSwitch && modeSwitch.id ? base + "." + modeSwitch.id : base;
+}
+
+/**
+ * Restores registered sunburst widgets below a DOM node without recording
+ * history. Hidden widgets are harmless here and are restored again on reveal.
+ *
+ * @param {HTMLElement|Document} [root=document] - Restoration scope.
+ * @returns {void}
+ */
+function restore_sunburst_history_in(root) {
+  var context = root || document;
+  if (!context) return;
+  var nodes = [];
+  if (context.classList && context.classList.contains("js-plotly-plot")) {
+    nodes.push(context);
+  }
+  if (context.querySelectorAll) {
+    nodes = nodes.concat(Array.prototype.slice.call(
+      context.querySelectorAll(".js-plotly-plot")
+    ));
+  }
+  nodes.forEach(function (node) {
+    if (typeof node.__dqRestoreSunburstHistory === "function") {
+      node.__dqRestoreSunburstHistory();
+    }
+  });
+}
+
+/**
+ * Installs one page-level browser-history listener for all sunburst widgets.
+ *
+ * @returns {void}
+ */
+function install_sunburst_history_restore_once() {
+  if (window.__dqSunburstHistoryInstalled) return;
+  window.__dqSunburstHistoryInstalled = true;
+  window.addEventListener("popstate", function () {
+    restore_sunburst_history_in(document);
+  });
+  window.addEventListener("pageshow", function () {
+    restore_sunburst_history_in(document);
+  });
+}
+
+/**
+ * Initializes category controls for switchable variable-group sunbursts.
+ * Both Plotly widgets are rendered ahead of time; only the selected mode is
+ * visible. This avoids rebuilding hierarchical traces in the browser and keeps
+ * each widget's drilldown history independent.
+ *
+ * @param {HTMLElement|Document} [root=document] - Limit initialization.
+ * @returns {void}
+ */
+function initSunburstModeSwitches(root) {
+  var context = root || document;
+  if (!context.querySelectorAll) return;
+
+  Array.prototype.forEach.call(
+    context.querySelectorAll(".dq-sunburst-mode-switch"),
+    function (modeSwitch) {
+      if (modeSwitch.getAttribute("data-dq-switch-initialized") === "true") {
+        return;
+      }
+      modeSwitch.setAttribute("data-dq-switch-initialized", "true");
+
+      var buttons = Array.prototype.slice.call(modeSwitch.querySelectorAll(
+        "[data-dq-sunburst-mode-button]"
+      ));
+      var panels = Array.prototype.slice.call(modeSwitch.querySelectorAll(
+        "[data-dq-sunburst-mode-panel]"
+      ));
+      var status = modeSwitch.querySelector(".dq-sunburst-mode-status");
+      var modeHistoryKey = sunburst_mode_history_key(modeSwitch);
+
+      function historyMode() {
+        if (typeof history === "undefined" || !history.state ||
+            typeof history.state !== "object") return null;
+        return history.state[modeHistoryKey] || null;
+      }
+
+      function hasMode(mode) {
+        return panels.some(function (panel) {
+          return panel.getAttribute("data-dq-sunburst-mode-panel") === mode;
+        });
+      }
+
+      function recordMode(mode, replace) {
+        if (typeof history === "undefined") return;
+        if (historyMode() === mode) return;
+        if (!replace && window.__dqPersistPopupHistory) {
+          window.__dqPersistPopupHistory();
+        }
+        var current = history.state && typeof history.state === "object" ?
+          history.state : {};
+        var next = Object.assign({}, current);
+        next[modeHistoryKey] = mode;
+        try {
+          if (replace) history.replaceState(next, "");
+          else history.pushState(next, "");
+        } catch (e) { }
+      }
+
+      function activate(mode, moveFocus, recordHistory) {
+        if (!hasMode(mode)) return;
+        if (recordHistory) recordMode(mode, false);
+        var activePanel = null;
+        var activeLabel = "";
+        buttons.forEach(function (button) {
+          var selected = button.getAttribute(
+            "data-dq-sunburst-mode-button"
+          ) === mode;
+          button.setAttribute("aria-selected", selected ? "true" : "false");
+          button.setAttribute("tabindex", selected ? "0" : "-1");
+          button.classList.toggle("is-active", selected);
+          if (selected) {
+            activeLabel = button.textContent.trim();
+            if (moveFocus) button.focus();
+          }
+        });
+        panels.forEach(function (panel) {
+          var visible = panel.getAttribute(
+            "data-dq-sunburst-mode-panel"
+          ) === mode;
+          panel.hidden = !visible;
+          panel.setAttribute("aria-hidden", visible ? "false" : "true");
+          if (visible) activePanel = panel;
+        });
+        modeSwitch.setAttribute("data-dq-active-mode", mode);
+        if (status && activeLabel) {
+          status.textContent = "Showing " + activeLabel + ".";
+        }
+        if (activePanel) {
+          restore_sunburst_history_in(activePanel);
+          schedule_visible_sunburst_relayout(activePanel);
+        }
+      }
+
+      buttons.forEach(function (button, index) {
+        button.addEventListener("click", function () {
+          activate(
+            button.getAttribute("data-dq-sunburst-mode-button"),
+            false,
+            true
+          );
+        });
+        button.addEventListener("keydown", function (event) {
+          if (!buttons.length) return;
+          var next = index;
+          if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+            next = (index + 1) % buttons.length;
+          } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+            next = (index + buttons.length - 1) % buttons.length;
+          } else if (event.key === "Home") {
+            next = 0;
+          } else if (event.key === "End") {
+            next = buttons.length - 1;
+          } else {
+            return;
+          }
+          event.preventDefault();
+          activate(
+            buttons[next].getAttribute("data-dq-sunburst-mode-button"),
+            true,
+            true
+          );
+        });
+      });
+
+      var defaultMode = modeSwitch.getAttribute("data-dq-default-mode");
+      var restoredMode = historyMode();
+      if (hasMode(restoredMode)) defaultMode = restoredMode;
+      if (!hasMode(defaultMode) && panels.length) {
+        defaultMode = panels[0].getAttribute("data-dq-sunburst-mode-panel");
+      }
+      if (defaultMode) {
+        recordMode(defaultMode, true);
+        activate(defaultMode, false, false);
+      }
+
+      function restoreModeFromHistory() {
+        var mode = historyMode();
+        if (hasMode(mode)) activate(mode, false, false);
+      }
+      if (typeof window !== "undefined") {
+        window.addEventListener("popstate", restoreModeFromHistory);
+        window.addEventListener("pageshow", restoreModeFromHistory);
+      }
+
+      if (buttons.length > 1 && typeof window !== "undefined") {
+        var modeBeforePrint = null;
+        window.addEventListener("beforeprint", function () {
+          modeBeforePrint = modeSwitch.getAttribute("data-dq-active-mode");
+          panels.forEach(function (panel) {
+            panel.hidden = false;
+            panel.setAttribute("aria-hidden", "false");
+          });
+          panels.forEach(function (panel) {
+            relayout_visible_sunburst_widgets(panel);
+          });
+        });
+        window.addEventListener("afterprint", function () {
+          if (modeBeforePrint) activate(modeBeforePrint, false, false);
+          modeBeforePrint = null;
+        });
+      }
+    }
+  );
+}
+
+/**
+ * Keeps vertical wheel gestures available for normal document scrolling while
+ * the pointer is above an interactive sunburst.
+ *
+ * @param {HTMLElement} el - The rendered htmlwidget element.
+ * @returns {void}
+ */
+function enable_sunburst_page_scroll(el) {
+  if (!el || !el.closest) return;
+  var container = el.closest(".dq-sunburst-container");
+  if (!container || container.__dqPageScrollEnabled) return;
+  container.__dqPageScrollEnabled = true;
+
+  container.addEventListener("wheel", function (event) {
+    if (!event || event.ctrlKey || !event.deltaY) return;
+    var scrollingElement = document.scrollingElement ||
+      document.documentElement || document.body;
+    if (!scrollingElement) return;
+    var before = scrollingElement.scrollTop;
+    window.scrollBy(0, event.deltaY);
+    if (scrollingElement.scrollTop !== before && event.preventDefault) {
+      event.preventDefault();
+    }
+  }, { passive: false, capture: true });
+}
+
+/**
  * Switches between different sections or pages based on the current URL hash. This function
  * handles showing and hiding specific elements, applying dynamic CSS styles, updating the navbar
  * state, and managing scrolling and layout adjustments on a single-page application (SPA).
@@ -2061,7 +2566,7 @@ function single_page_switch(event) {
         $("div.singlePageFinal:target").show();
         $("div.singlePageFinal:has(:target)").show();
         $(".navbar a[href='" + $("dataquier-data:visible").attr("curr-url") + "']").addClass("target");
-        if (window.matchMedia('screen and (max-width: 1082px)').matches) { // also adjust in CSS at line tagged with !!MEDIA!!
+        if (window.matchMedia(DQ_RESPONSIVE_NAVBAR_QUERY).matches) {
           $(".navbar.responsive").css({
             "float": "",
             "display": "",
@@ -2089,6 +2594,9 @@ function single_page_switch(event) {
 
       window.setTimeout(function () {
         sizeIframes(/* forceSetSizeToInit = */ false)
+      }, 20)
+      window.setTimeout(function () {
+        schedule_visible_sunburst_relayout();
       }, 20)
       window.setTimeout(function () {
         try {
@@ -2133,10 +2641,11 @@ const dataquieR = {
  * https://stackoverflow.com/a/5316785
  */
 function float_menus() {
+  var floatbarTop = $(".navbar").height() + 6;
   if ($(window).scrollTop() >= 20 - $(".navbar").height()) {
-    $(".floatbar").css({ position: 'fixed', left: '0px', top: $(".navbar").height() + 'px' });
+    $(".floatbar").css({ position: 'fixed', left: '0px', top: floatbarTop + 'px' });
   } else {
-    $(".floatbar").css({ position: 'absolute', left: '0px', top: ($(".navbar").height() + 20) + 'px' });
+    $(".floatbar").css({ position: 'absolute', left: '0px', top: (floatbarTop + 20) + 'px' });
   }
 }
 
@@ -2174,7 +2683,11 @@ function Plotly_dq_go_root(el) {
 
   try { Plotly.restyle(el, { level: "" }, [0]); } catch (e) { }
   // If you also store level in history state, clear it too:
-  try { history.replaceState(Object.assign({}, history.state, { dq_sunburst_level: "" }), ""); } catch (e) { }
+  try {
+    var state = Object.assign({}, history.state);
+    state[sunburst_history_key(el, "dq_sunburst_level")] = "";
+    history.replaceState(state, "");
+  } catch (e) { }
 }
 
 /**
@@ -2422,16 +2935,18 @@ function initDropdownHandlers() {
     e.stopPropagation();
   }, true);
 
-  $(document).on("click", ".dropdown .dropdown-content a", function (e) {
-    e.stopPropagation();
-  });
+  if (window.jQuery) {
+    window.jQuery(document).on("click", ".dropdown .dropdown-content a", function (e) {
+      e.stopPropagation();
+    });
+  }
 }
 
 /**
  * Displays the description of a main menu entry. It handles updating the URL hash
  * to reflect the currently visible description, while managing history and the display logic.
  *
- * In narrow mode (screen width ≤ 1082px), the function uses the `:target` pseudo-class
+ * In narrow mode, the function uses the `:target` pseudo-class
  * to toggle visibility of the submenu without affecting the history.
  * In wide mode, it shows the description, adds it to the page, and updates the URL hash with history.
  *
@@ -2450,7 +2965,7 @@ function showDescription(id, description) {
     }
   }
 
-  if (window.matchMedia('screen and (max-width: 1082px)').matches) { // also adjust in CSS at line tagged with !!MEDIA!!
+  if (window.matchMedia(DQ_RESPONSIVE_NAVBAR_QUERY).matches) {
     // Toggle via :target (reliable) without adding history
     if (window.location.hash === ("#" + id)) {
       setHashReplaceNoHistory("");       // close
@@ -2472,7 +2987,7 @@ function showDescription(id, description) {
   }
 
   // Narrow mode: click should ONLY open/close the submenu
-  if (window.matchMedia('screen and (max-width: 1082px)').matches) { // also adjust in CSS at line tagged with !!MEDIA!!
+  if (window.matchMedia(DQ_RESPONSIVE_NAVBAR_QUERY).matches) {
     var $nav = $(".navbar.responsive");
     var $dd = $("#" + id + ".dropdown");
     if (!$dd.length) return;
@@ -2592,7 +3107,28 @@ let currentContextMenu = null;
  * and attaches a custom context menu with clipboard + download actions.
  */
 function initDataquieRResultTooltips() {
-  $('div.dataquieR_result').each(function () {
+  if (typeof $ === "undefined" || typeof tippy === "undefined") {
+    window.setTimeout(initDataquieRResultTooltips, 50);
+    return;
+  }
+
+  function showMessageTip(msg, delay) {
+    if (typeof messageTooltip !== "undefined" &&
+        messageTooltip &&
+        typeof messageTooltip.showTip === "function") {
+      messageTooltip.showTip(msg, delay);
+    }
+  }
+
+  var resultNodes = $('div.dataquieR_result').filter(function () {
+    if (this.getAttribute("data-dq-result-tooltip-init") === "true") {
+      return false;
+    }
+    this.setAttribute("data-dq-result-tooltip-init", "true");
+    return true;
+  });
+
+  resultNodes.each(function () {
     var stderr = this.getAttribute("data-stderr").trim();
     if (stderr != "") {
       // Plain tippy, open on click,
@@ -2661,27 +3197,35 @@ function initDataquieRResultTooltips() {
       $(this).prepend("<br />");
     }
   });
-  tippy('div.dataquieR_result', {
+
+  if (!resultNodes.length) {
+    return;
+  }
+
+  tippy(resultNodes.toArray(), {
     content(reference) {
-      const call = $(reference).attr("data-call");
+      const call = ($(reference).attr("data-call") || "").trim();
       const l = 30;
-      const call_link = $("<button/>", {
-        text: "Copy R-Call: " + (call.length > l + 3 ? call.substr(0, l) + "..." : call),
-        "data-clipboard-text": call,
-        "class": "context-menu"
-      });
       const save_link = $("<button/>", {
         text: "Save to disk",
         onclick: "dlResult(event)",
         "class": "context-menu"
       });
       save_link.reference = reference;
-      const call_li = $("<li />")
-      call_li.append(call_link);
       const save_li = $("<li />")
       save_li.append(save_link);
       const ul = $("<ul />");
-      ul.append(call_li);
+      if (call !== "") {
+        const call_link = $("<button/>", {
+          text: "Copy R-Call: " +
+            (call.length > l + 3 ? call.substr(0, l) + "..." : call),
+          "data-clipboard-text": call,
+          "class": "context-menu dq-copy-r-call"
+        });
+        const call_li = $("<li />")
+        call_li.append(call_link);
+        ul.append(call_li);
+      }
       ul.append(save_li);
       return ul[0];
     },
@@ -2692,15 +3236,46 @@ function initDataquieRResultTooltips() {
       if (stderr != "") {
         // showTip(stderr)
       }
-      instance._clipboard = new ClipboardJS($(instance.popper).find("button")[0])
-      instance._clipboard.on('success', function (e) {
-        showTip("Call Copied to Clipboard.");
+      const copyButton = $(instance.popper).find("button.dq-copy-r-call")[0];
+      if (!copyButton) {
+        return;
+      }
+      if (typeof ClipboardJS === "undefined") {
+        showMessageTip("Clipboard support is not available on this page.");
         instance.hide(500);
+        return;
+      }
+      instance._clipboard = new ClipboardJS(copyButton)
+      instance._clipboard.on('success', function (e) {
+        var $button = $(instance.popper).find("button").first();
+        if ($button.length) {
+          $button.text("Call Copied to Clipboard.");
+          $button.css({
+            "background": "#e6f4ea",
+            "border-color": "#7bc47f",
+            "color": "#14532d"
+          });
+        }
+        showMessageTip("Call Copied to Clipboard.");
+        window.setTimeout(function () {
+          instance.hide(500);
+        }, 700);
       })
       instance._clipboard.on('error', function (e) {
-        showTip("Error Copying Call to Clipboard.");
+        var $button = $(instance.popper).find("button").first();
+        if ($button.length) {
+          $button.text("Error Copying Call to Clipboard.");
+          $button.css({
+            "background": "#fee2e2",
+            "border-color": "#fca5a5",
+            "color": "#7f1d1d"
+          });
+        }
+        showMessageTip("Error Copying Call to Clipboard.");
         console.log(e),
-          instance.hide(500);
+          window.setTimeout(function () {
+            instance.hide(500);
+          }, 900);
       })
     },
     onHide(instance) {//https://clipboardjs.com/ https://atomiks.github.io/tippyjs/v5/lifecycle-hooks/ https://clipboardjs.com/ https://atomiks.github.io/tippyjs/v6/html-content/ https://atomiks.github.io/tippyjs/v6/misc/
@@ -2756,6 +3331,9 @@ function dismissContextMenu() {
  */
 function toggleTopNav(event) {
   $(".navbar").first().toggleClass("responsive")
+  if (typeof float_menus === "function") {
+    float_menus()
+  }
   event.stopPropagation()
 }
 
@@ -2814,15 +3392,29 @@ class MessageTooltip {
       }
     })[0];
 
-    const clip_inst = new ClipboardJS('.clipbtn');
+    if (typeof ClipboardJS !== "undefined") {
+      const clip_inst = new ClipboardJS('.clipbtn');
 
-    clip_inst.on('success', () => {
-      this.showTip("Text Copied to Clipboard.");
-    });
-    clip_inst.on('error', (e) => {
-      this.showTip("Error Copying Text to Clipboard.");
-      console.log(e);
-    });
+      clip_inst.on('success', (e) => {
+        const confirmation = e.trigger.dataset.clipboardSuccess;
+        if (confirmation && typeof tippy !== "undefined") {
+          const tip = tippy(e.trigger, {
+            content: confirmation,
+            trigger: "manual",
+            placement: "bottom",
+            hideOnClick: false
+          });
+          tip.show();
+          setTimeout(() => tip.destroy(), 2500);
+        } else {
+          showTip("Text Copied to Clipboard.");
+        }
+      });
+      clip_inst.on('error', (e) => {
+        showTip("Error Copying Text to Clipboard.");
+        console.log(e);
+      });
+    }
   }
 
   /**
@@ -2924,7 +3516,8 @@ class MenuSearch {
       }
 
       // --- narrow mode ---
-      if (window.matchMedia && window.matchMedia('screen and (max-width: 1082px)').matches) {
+      if (window.matchMedia &&
+          window.matchMedia(DQ_RESPONSIVE_NAVBAR_QUERY).matches) {
 
         // ensure the responsive navbar is open (otherwise nothing is visible)
         var $nav = $(".navbar");
@@ -2996,10 +3589,17 @@ class MenuSearch {
     let search_string = "";
     let last_cf = 0;
     document.addEventListener("keydown", (e) => {
-      if (document.activeElement instanceof HTMLInputElement) {
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLInputElement ||
+          activeElement instanceof HTMLTextAreaElement ||
+          activeElement instanceof HTMLSelectElement ||
+          activeElement.isContentEditable) {
         return; // no auto-search, if user tries to fill an input field
       }
       const c_f = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.which == 70;
+      if ((e.ctrlKey || e.metaKey) && !c_f) {
+        return; // keep browser/system shortcuts such as Cmd+P or Cmd+Alt+K usable
+      }
       if (this.highlight_timer != null) {
         window.clearTimeout(this.highlight_timer);
         this.highlight_timer = null;
@@ -3592,8 +4192,6 @@ class DtLayoutRebuilder {
     }
   }
 }
-let dtLayoutRebuilder;
-
 /** --- util: last-wins DT adjust (prevents resize race between header/body) --- */
 function util_dt_schedule_safe_adjust(dt) {
   try {
@@ -3619,6 +4217,22 @@ function util_dt_schedule_safe_adjust(dt) {
         if (node.__dqDtAdjTok !== tok) return;
 
         try {
+          var $wrap = $(dt.table().container());
+          // Keep the outer scroll wrapper's CSS max-width from dt-cols-*.
+          $wrap.find(".dataTables_scroll, .dt-scroll")
+            .css({ width: "100%", maxWidth: "" });
+          $wrap.find(
+            ".dataTables_scrollHead, .dataTables_scrollBody, " +
+            ".dt-scroll-head, .dt-scroll-body"
+          )
+            .css({ width: "100%", maxWidth: "100%" });
+          $wrap.find(
+            ".dataTables_scrollHeadInner, .dataTables_scrollHead table.dataTable, " +
+            ".dataTables_scrollBody table.dataTable, .dt-scroll-headInner, " +
+            ".dt-scroll-head table.dataTable, .dt-scroll-body table.dataTable"
+          )
+            .css("width", "");
+
           dt.columns.adjust();
 
           if (dt.responsive) dt.responsive.recalc();
@@ -3632,7 +4246,6 @@ function util_dt_schedule_safe_adjust(dt) {
           if (dt.fixedHeader) dt.fixedHeader.adjust();
 
           // final “belt & suspenders”: keep scrollHead/table width in sync with body table
-          var $wrap = $(dt.table().container());
           var $bodyTbl = $wrap.find('.dataTables_scrollBody table.dataTable').first();
           var $headInner = $wrap.find('.dataTables_scrollHeadInner').first();
           var $headTbl = $wrap.find('.dataTables_scrollHead table.dataTable').first();
@@ -3672,7 +4285,10 @@ function adjustDtInResult(container) {
           return;
         }
 
-        var dt = $tbl.DataTable();
+        var dt = (typeof dqGetDataTableApi === "function") ?
+          dqGetDataTableApi(tbl) :
+          ($tbl.DataTable ? $tbl.DataTable() : null);
+        if (!dt) return;
         util_dt_schedule_safe_adjust(dt);
 
       } catch (e) {
@@ -3847,7 +4463,6 @@ function resize_scaler_div(entries) { // if resize-handle was clicked, makt it a
     }
 
     if (dataquieR.isReady()) { // not initial sizing
-      if (window.dataquieR_single_result === true) return;
       const et = $(scalerdiv).find("img[data-iframe]");
       if (et.length === 1) {
         // scalerIsResized must also tolerate "hidden" cases; but we already filtered >0 above.
@@ -3898,7 +4513,7 @@ function initScalerResizeObserver() {
       updatePlotTableLayoutForScaler(scaler);
 
       // debounce rebuilding/adapting datatables
-      dtLayoutRebuilder.schedule(resultDiv);
+      if (dtLayoutRebuilder) dtLayoutRebuilder.schedule(resultDiv);
     }
   });
 
@@ -3970,19 +4585,101 @@ function updatePlotTableLayoutForScaler(scaler_div) {
  * @returns {void}
  */
 function relayout_after_reveiling_dom_parts() {
+  schedule_visible_sunburst_relayout();
+
   // For each plot+table result, recompute layout based on available space
   $(".dataquieR_result.dq-plot-table-result div.scaler").each(function (_, scaler) {
     updatePlotTableLayoutForScaler(scaler);
     let resultDiv = scaler.closest("div.dataquieR_result");
     if (resultDiv) {
-      dtLayoutRebuilder.schedule(resultDiv);
+      if (dtLayoutRebuilder) dtLayoutRebuilder.schedule(resultDiv);
     }
   });
 
   // Also handle "plain" DataTables (not part of dq-plot-table-result)
   $("table.myDT").each(function () {
     var resultDiv = this.closest("div.dataquieR_result");
-    if (resultDiv) dtLayoutRebuilder.schedule(resultDiv);
+    if (resultDiv && dtLayoutRebuilder) dtLayoutRebuilder.schedule(resultDiv);
+  });
+}
+
+/**
+ * Schedules a few bounded relayout attempts for visible Plotly sunburst widgets.
+ * The progress-page to final-report transition can briefly render widgets while
+ * their containers still have zero or unstable dimensions.
+ *
+ * @param {HTMLElement|Document} [root=document] - Limit the search to this root.
+ * @returns {void}
+ */
+function schedule_visible_sunburst_relayout(root) {
+  var delays = [0, 50, 150, 500];
+
+  function run() {
+    try { relayout_visible_sunburst_widgets(root); } catch (e) { }
+  }
+
+  try { window.requestAnimationFrame(run); } catch (e) { }
+  for (var i = 0; i < delays.length; i++) {
+    window.setTimeout(run, delays[i]);
+  }
+}
+
+/**
+ * Relayouts visible Plotly sunburst widgets once their containers have a size.
+ *
+ * @param {HTMLElement|Document} [root=document] - Limit the search to this root.
+ * @returns {void}
+ */
+function relayout_visible_sunburst_widgets(root) {
+  if (typeof Plotly === "undefined") return;
+
+  var context = root || document;
+  var nodes = [];
+
+  if (context.classList && context.classList.contains("js-plotly-plot")) {
+    nodes.push(context);
+  }
+  if (context.querySelectorAll) {
+    nodes = nodes.concat(Array.prototype.slice.call(
+      context.querySelectorAll(".js-plotly-plot")
+    ));
+  }
+
+  nodes = nodes.filter(function (node, idx, arr) {
+    return arr.indexOf(node) === idx;
+  });
+
+  nodes.forEach(function (gd) {
+    var data = gd.data || gd._fullData || [];
+    var isSunburst = data.some(function (trace) {
+      return trace && trace.type === "sunburst";
+    });
+    if (!isSunburst) return;
+
+    var plotRect = gd.getBoundingClientRect ? gd.getBoundingClientRect() : null;
+    var parent = gd.parentElement;
+    var parentRect = parent && parent.getBoundingClientRect ?
+      parent.getBoundingClientRect() : null;
+    var width = parentRect && parentRect.width ? parentRect.width :
+      (plotRect && plotRect.width ? plotRect.width : 0);
+    var height = parentRect && parentRect.height ? parentRect.height :
+      (plotRect && plotRect.height ? plotRect.height : 0);
+
+    if (width < 2 || height < 2) return;
+
+    try {
+      if (Plotly.Plots && typeof Plotly.Plots.resize === "function") {
+        Plotly.Plots.resize(gd);
+      }
+    } catch (e) { }
+
+    try {
+      Plotly.relayout(gd, {
+        autosize: true,
+        width: Math.floor(width),
+        height: Math.floor(height)
+      });
+    } catch (e) { }
   });
 }
 

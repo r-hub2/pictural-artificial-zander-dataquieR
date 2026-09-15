@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Extension of [acc_shape_or_scale] to examine uniform distributions of
 #' end digits
 #'
@@ -11,7 +12,8 @@
 #'
 #' @details
 #' # ALGORITHM OF THIS IMPLEMENTATION:
-#' - This implementation is restricted to data of type float or integer.
+#' - `resp_vars` identifies one interval or ratio scaled measurement variable
+#'   of type float or integer.
 #' - Missing codes are removed from resp_vars (if defined in the metadata)
 #' - The user must specify the column of the metadata containing probability
 #'   distribution (currently only: normal, uniform, gamma)
@@ -21,9 +23,6 @@
 #'   distribution
 #'
 #' @inheritParams .template_function_indicator
-#'
-#' @param resp_vars [variable] the names of the measurement variables,
-#'                             mandatory
 #'
 #' @return a [list] with:
 #'   - `SummaryTable`: [data.frame] with the columns `Variables` and `FLG_acc_ud_shape`
@@ -37,13 +36,13 @@
 #' [Online Documentation](
 #' https://dataquality.qihs.uni-greifswald.de/VIN_acc_impl_end_digits.html
 #' )
+# nolint end
 acc_end_digits <- function(resp_vars = NULL,
-                           study_data,
-                           label_col,
-                           item_level = "item_level",
-                           meta_data = item_level,
-                           meta_data_v2) {
-
+  study_data,
+  label_col,
+  item_level = "item_level",
+  meta_data = item_level,
+  meta_data_v2) {
   # preps ----------------------------------------------------------------------
   # map metadata to study data
   util_maybe_load_meta_data_v2()
@@ -57,23 +56,26 @@ acc_end_digits <- function(resp_vars = NULL,
   )
 
   if (.called_in_pipeline && util_is_na_0_empty_or_false(
-    meta_data[meta_data[[label_col]] == resp_vars, END_DIGIT_CHECK])) {
+    meta_data[meta_data[[label_col]] == resp_vars, END_DIGIT_CHECK, drop = TRUE]
+  )) {
     util_error("No end digit check requested for %s",
-               dQuote(resp_vars),
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      dQuote(resp_vars),
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
     # this is not really intrinsic, but, from a user's point of view, it is.
   }
 
   # checks
   if (any(is.infinite(ds1[[resp_vars]]))) {
     util_error("Values in 'resp_vars' must not contain infinite data",
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
 
-  vtype <- meta_data[meta_data[[label_col]] == resp_vars, DATA_TYPE]
+  vtype <- meta_data[meta_data[[label_col]] == resp_vars, DATA_TYPE, drop = TRUE] # nolint: line_length_linter.
 
-  decs <- meta_data[meta_data[[label_col]] == resp_vars, DECIMALS]
+  decs <- meta_data[meta_data[[label_col]] == resp_vars, DECIMALS, drop = TRUE]
 
   if (is.null(decs)) {
     decs <- NA
@@ -90,8 +92,9 @@ acc_end_digits <- function(resp_vars = NULL,
 
   if (vtype == DATA_TYPES$FLOAT && all(util_is_integer(ds1[[resp_vars]]))) {
     util_message("%s is of type integer.",
-                 dQuote(resp_vars),
-                 applicability_problem = TRUE)
+      dQuote(resp_vars),
+      applicability_problem = TRUE
+    )
     vtype <- "integer"
   }
 
@@ -120,17 +123,18 @@ acc_end_digits <- function(resp_vars = NULL,
     label_col = label_col
   )
 
-  if (length(attr(res, "error")) > 0) {
-    util_error(attr(res, "error")[[1]])
+  if (length(util_attr(res, "error", exact = TRUE)) > 0) {
+    util_error(util_attr(res, "error", exact = TRUE)[[1]])
   }
 
   st <- res$SummaryTable
   st$Variables <- gsub("_x_last[\\s\\d]*$", "", st$Variables)
 
-  return(util_attach_attr(list(SummaryTable = st,
-              SummaryPlot = util_set_size(
-                res$SummaryPlot,
-                width_em = 15
-              )), sizing_hints = attr(res, "sizing_hints")
-  ))
+  return(util_attach_attr(list(
+    SummaryTable = st,
+    SummaryPlot = util_set_size(
+      res$SummaryPlot,
+      width_em = 15
+    )
+  ), sizing_hints = util_attr(res, "sizing_hints", exact = TRUE)))
 }

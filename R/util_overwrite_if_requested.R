@@ -1,3 +1,6 @@
+#' Internal helper: overwrite if requested
+#'
+#' @noRd
 util_overwrite_if_requested <- function(dir, force_overwrite) {
   if (file.exists(dir)) {
     if (force_overwrite) {
@@ -16,26 +19,37 @@ util_overwrite_if_requested <- function(dir, force_overwrite) {
         FUN.VALUE = character(1),
         mustWork = FALSE
       )
-      if (any(unlist(
+      if (any(unlist( # nocov start
         lapply(c(to_remove_norm), strsplit, .Platform$file.sep,
-               fixed = TRUE)) == ".."))
+          fixed = TRUE
+        )
+      ) == "..")) {
         util_error("Refusing to unlink paths containing '..'")
+      } # nocov end
       unlink(to_remove_norm,
-             recursive = TRUE,
-             force = TRUE,
-             expand = FALSE)
+        recursive = TRUE,
+        force = TRUE,
+        expand = FALSE
+      )
       if (file.exists(dir) && !dir.exists(dir)) {
-        util_error(c("%s already exists as a file, not a directory, cannot",
-                     "use this as an output folder."),
-                   dQuote(dir))
+        util_error(
+          c(
+            "%s already exists as a file, not a directory, cannot",
+            "use this as an output folder."
+          ),
+          dQuote(dir)
+        )
       }
     } else {
-      util_error("%s already exists, cannot use this as an output folder.",
-                 dQuote(dir))
+      util_error(
+        "%s already exists, cannot use this as an output folder.",
+        dQuote(dir)
+      )
     }
   }
-  if (!dir.exists(dir))
+  if (!dir.exists(dir)) {
     if (!dir.create(dir, recursive = TRUE, showWarnings = FALSE)) {
       util_error("Could not create %s", dQuote(dir))
+    }
   }
 }

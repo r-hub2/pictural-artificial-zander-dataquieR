@@ -5,7 +5,6 @@
 #' @family summary_functions
 #' @noRd
 util_get_labels_grading_class <- function() {
-
   rsts <- util_get_ruleset_formats()
 
   cat_names <- as.character(rsts$category)

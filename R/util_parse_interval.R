@@ -18,8 +18,9 @@ util_parse_interval <- function(int) {
     return(get(int, .interval_cache))
   }
   r <- util_eval_rule(util_parse_redcap_rule(int,
-                                             entry_pred = "interval",
-                                             must_eof = TRUE))
+      entry_pred = "interval",
+      must_eof = TRUE
+    ))
   if (!inherits(r, "interval") || r$low > r$upp) {
     r <- NA
   }

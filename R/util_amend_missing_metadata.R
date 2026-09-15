@@ -5,16 +5,24 @@
 #' @returns [data.frame] fixed `meta_data`
 #' @noRd
 util_amend_missing_metadata <- function(study_data,
-                                        meta_data,
-                                        level = c(
-                                          VARATT_REQUIRE_LEVELS$REQUIRED,
-                                          VARATT_REQUIRE_LEVELS$RECOMMENDED
-                                        ),
-                                        cumulative = TRUE,
-                                        guess_missing_codes =
-                                          getOption("dataquieR.guess_missing_codes",
-                                                    dataquieR.guess_missing_codes_default)) {
-  to_amend <- !(colnames(study_data) %in% meta_data[[VAR_NAMES]])
+  meta_data,
+  level = c(
+    VARATT_REQUIRE_LEVELS$REQUIRED,
+    VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  cumulative = TRUE,
+  guess_missing_codes =
+    getOption(
+      "dataquieR.guess_missing_codes",
+      dataquieR.guess_missing_codes_default
+    )) {
+  invalid_meta_data <- !is.data.frame(meta_data) ||
+    !(VAR_NAMES %in% colnames(meta_data))
+  meta_vars <- character()
+  if (!invalid_meta_data) {
+    meta_vars <- meta_data[[VAR_NAMES]]
+  }
+  to_amend <- !(colnames(study_data) %in% meta_vars)
   if (any(to_amend)) {
     util_message(
       "Missing %s from %s, amending guessed %s for these items/variables...",
@@ -26,12 +34,15 @@ util_amend_missing_metadata <- function(study_data,
     )
     am_md <- prep_study2meta(
       study_data =
-        study_data[, colnames(study_data)[to_amend], FALSE],
+        study_data[, colnames(study_data)[to_amend], drop = FALSE],
       level = level,
       cumulative = cumulative,
       convert_factors = FALSE,
       guess_missing_codes = guess_missing_codes
     )
+    if (invalid_meta_data) {
+      return(am_md)
+    }
     meta_data <- util_rbind(meta_data, am_md)
   }
   return(meta_data)

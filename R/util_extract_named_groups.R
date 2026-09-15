@@ -14,9 +14,9 @@
 util_extract_named_groups <- function(pattern, text_vector) {
   m <- regexpr(pattern, text_vector, perl = TRUE)
 
-  starts <- attr(m, "capture.start")
-  lengths <- attr(m, "capture.length")
-  names <- attr(m, "capture.names")
+  starts <- util_attr(m, "capture.start", exact = TRUE)
+  lengths <- util_attr(m, "capture.length", exact = TRUE)
+  names <- util_attr(m, "capture.names", exact = TRUE)
 
   if (is.null(starts)) {
     # Kein Match oder keine Gruppen
@@ -31,10 +31,10 @@ util_extract_named_groups <- function(pattern, text_vector) {
 
   # Ergebnisliste: je Element ein benannter Vektor der Gruppenwerte
   result <- lapply(seq_along(text_vector), function(i) {
-    s_row <- starts[i, ]
-    l_row <- lengths[i, ]
+    s_row <- starts[i, , drop = FALSE]
+    l_row <- lengths[i, , drop = FALSE]
     grp_vals <- mapply(function(start, len) {
-      if (start != -1) substr(text_vector[i], start, start + len - 1) else NA_character_
+      if (start != -1) substr(text_vector[i], start, start + len - 1) else NA_character_ # nolint: line_length_linter.
     }, s_row, l_row, SIMPLIFY = TRUE)
     setNames(as.list(grp_vals), names)
   })
@@ -42,4 +42,5 @@ util_extract_named_groups <- function(pattern, text_vector) {
   # In Data Frame umwandeln
   result_df <- do.call(rbind.data.frame, result)
   rownames(result_df) <- NULL
-  return(result_df)}
+  return(result_df)
+}

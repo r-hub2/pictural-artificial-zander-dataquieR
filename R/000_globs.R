@@ -12,6 +12,27 @@ DISTRIBUTIONS <- list(
   GAMMA = "gamma"
 )
 
+# Shared top-level report menu for variable-group and scale results.
+VARIABLE_GROUP_REPORT_MENU <- "Variable groups / scales"
+
+# Supported values for REPEATED_MEASURES_METRIC.
+REPEATED_MEASURES_METRICS <- c(
+  "icc_agreement",
+  "icc_consistency",
+  "concordance_correlation",
+  "rmse",
+  "mean_absolute_difference",
+  "mean_difference",
+  "within_subject_sd",
+  "coefficient_of_variation",
+  "cohen_kappa",
+  "weighted_kappa",
+  "fleiss_kappa",
+  "percent_agreement",
+  "sensitivity",
+  "specificity"
+)
+
 #' @title Names of DQ dimensions
 #' @name dimensions
 #' @description
@@ -24,8 +45,9 @@ DISTRIBUTIONS <- list(
 #'
 #' @return Only a definition, not a function, so no return value
 #'
-dimensions = c("Completeness", "Consistency", "Accuracy")
+dimensions <- c("Completeness", "Consistency", "Accuracy")
 
+# nolint start: line_length_linter.
 #' Data Types
 #'
 #' ## Data Types of Study Data
@@ -66,6 +88,7 @@ dimensions = c("Completeness", "Consistency", "Accuracy")
 #' @rawRd \alias{variable list}
 #'
 #' @export
+# nolint end
 DATA_TYPES <- list(
   INTEGER = "integer",
   STRING = "string",
@@ -73,6 +96,10 @@ DATA_TYPES <- list(
   DATETIME = "datetime",
   TIME = "time"
 )
+
+# Internal report-table type for compact values such as "12 (3.4%)".
+DATA_TYPE_LOGICAL <- "logical"
+DATA_TYPE_NUMBER_PAREN <- "number_paren"
 
 #' Scale Levels
 #'
@@ -104,8 +131,8 @@ SCALE_LEVELS <-
     ORDINAL = "ordinal",
     INTERVAL = "interval",
     RATIO = "ratio",
-    'NA' = "na"
-  ) # TODO: validate item level metadata `SCALE_LEVEL` entries somewhere.
+    "NA" = "na"
+  )
 
 #' All available data types, mapped from their respective
 #' R types
@@ -158,92 +185,157 @@ VARIABLE_ROLES <- list(
 #' @name MAXIMUM_LONG_STRING
 #' @title Cross-item level metadata attribute name
 #' @description
+#' Cross-item metadata attribute name.
 #'
-#' TODO
-#'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @family SSI
 NULL
 
 #' @name MAHALANOBIS_RATIO
 #' @title Cross-item level metadata attribute name
 #' @description
+#' Cross-item metadata attribute name.
 #'
-#' TODO
-#'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @family SSI
 NULL
 
 #' @name IRV
 #' @title Cross-item level metadata attribute name
 #' @description
+#' Cross-item metadata attribute name.
 #'
-#' TODO
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
+#' @family SSI
+NULL
+
+#' @name PSYCHOMETRIC_SYN
+#' @title Admissible range for the psychometric-synonyms index
+#' @description
+#' In cross-item metadata, this column defines the admissible interval for a
+#' computed psychometric-synonyms index. The index is the within-person Pearson
+#' correlation across item pairs whose study-wide Pearson correlation is above
+#' the threshold set by [dataquieR.psychometric_cor_pairs]. Values outside the
+#' interval indicate potentially careless responding.
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
+#' @family SSI
+NULL
+
+#' @name PSYCHOMETRIC_ANT
+#' @title Admissible range for the psychometric-antonyms index
+#' @description
+#' In cross-item metadata, this column defines the admissible interval for a
+#' computed psychometric-antonyms index. The index is the within-person Pearson
+#' correlation across item pairs whose study-wide Pearson correlation is below
+#' the negative threshold set by [dataquieR.psychometric_cor_pairs]. Values
+#' outside the interval indicate potentially careless responding.
+#'
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
+#' @family SSI
+NULL
+
+#' @name SUM_ATTENTION_CHECK_ITEMS
+#' @title Admissible range for the sum of attention-check errors
+#' @description
+#' In cross-item metadata, this column defines the admissible interval for the
+#' number of incorrect responses to attention-check items. Attention-check
+#' items are item-level metadata entries whose [ITEM_TYPE] starts with `BOGUS:`
+#' or `INSTRUCTED:` followed by pipe-separated expected values. An unexpected
+#' or missing study-data value counts as one incorrect response. Values outside
+#' the interval indicate potentially careless responding.
+#'
+#' @seealso [meta_data_cross_item], [ITEM_TYPE]
+#' @family meta_data_cross_item
 #' @family SSI
 NULL
 
 #' @name TOTRESPT
 #' @title Cross-item level metadata attribute name
 #' @description
+#' Cross-item metadata attribute name.
 #'
-#' TODO
-#'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @family SSI
 NULL
 
 #' @name RELCOMPL_SPEED
 #' @title Cross-item level metadata attribute name
 #' @description
+#' Cross-item metadata attribute name.
 #'
-#' TODO
-#'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @family SSI
 NULL
 
 #' @name RESPT_PER_ITEM
 #' @title Cross-item level metadata attribute name
 #' @description
+#' Cross-item metadata attribute name.
 #'
-#' TODO
-#'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @family SSI
 NULL
 
 #' @name RELCOMPL_SPEED
 #' @title Cross-item level metadata attribute name
 #' @description
+#' Cross-item metadata attribute name.
 #'
-#' TODO
-#'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @family SSI
 NULL
 
 #' @name MISS_RESP
 #' @title Cross-item level metadata attribute name
 #' @description
+#' Cross-item metadata attribute name.
 #'
-#' TODO
-#'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @family SSI
 NULL
 
+#' @name PSYCHOMETRIC_ANT
+#' @title Cross-item level metadata attribute name
+#' @description
+#' Cross-item metadata attribute name.
+#'
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
+#' @family SSI
+NULL
 
+#' @name PSYCHOMETRIC_SYN
+#' @title Cross-item level metadata attribute name
+#' @description
+#' Cross-item metadata attribute name.
+#'
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
+#' @family SSI
+NULL
+
+#' @name SUM_ATTENTION_CHECK_ITEMS
+#' @title Cross-item level metadata attribute name
+#' @description
+#' Cross-item metadata attribute name.
+#'
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
+#' @family SSI
+NULL
+
+# nolint start: line_length_linter.
 #' @name COMPUTED_VARIABLE_ROLES
 #' @title `SSI` related Cross-item level metadata attribute names
 #' Computed Variable roles can be one of the following:
@@ -256,11 +348,15 @@ NULL
 #'   - `RESPT_PER_ITEM` Social Science: Computed Indicator Variable, `RESPT_PER_ITEM`
 #'   - `RELCOMPL_SPEED` Social Science: Computed Indicator Variable, `RELCOMPL_SPEED`
 #'   - `MISS_RESP` Social Science: Computed Indicator Variable, `MISS_RESP`
+#'   - `PSYCHOMETRIC_ANT` Social Science: Computed Indicator Variable, `PSYCHOMETRIC_ANT`
+#'   - `PSYCHOMETRIC_SYN` Social Science: Computed Indicator Variable, `PSYCHOMETRIC_SYN`
+#'   - `SUM_ATTENTION_CHECK_ITEMS` Social Science: Computed Indicator Variable, `SUM_ATTENTION_CHECK_ITEMS`
 #'   - `NA` Social Science: Computed Indicator Variable -- N/A
 #'
 #' @seealso [VARIABLE_ROLES]
-#' @family meta_data_cross
+#' @family meta_data_cross_item
 #' @family SSI
+# nolint end
 NULL
 
 #' Character used  by default as a separator in metadata such as
@@ -307,6 +403,7 @@ VARATT_REQUIRE_LEVELS_ORDER <- c(
   VARATT_REQUIRE_LEVELS$TECHNICAL
 )
 
+# nolint start: line_length_linter.
 #' Well-known metadata column names, names of metadata columns
 #'
 #' names of the variable attributes in the metadata frame holding
@@ -337,151 +434,286 @@ VARATT_REQUIRE_LEVELS_ORDER <- c(
 #' print(WELL_KNOWN_META_VARIABLE_NAMES$VAR_NAMES)
 #' # print(VAR_NAMES) # should usually also work
 #' @export
+# nolint end
 WELL_KNOWN_META_VARIABLE_NAMES <- list(
-  VAR_NAMES = structure("VAR_NAMES", var_att_required =
-                          VARATT_REQUIRE_LEVELS$REQUIRED),
-  LABEL = structure("LABEL", var_att_required =
-                      VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  DATA_TYPE = structure("DATA_TYPE", var_att_required =
-                          VARATT_REQUIRE_LEVELS$REQUIRED),
-  SCALE_LEVEL = structure("SCALE_LEVEL", var_att_required =
-                            VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  UNIT = structure("UNIT", var_att_required =
-                            VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  VALUE_LABELS = structure("VALUE_LABELS", var_att_required =
-                             VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  VALUE_LABEL_TABLE = structure("VALUE_LABEL_TABLE", var_att_required =
-                             VARATT_REQUIRE_LEVELS$OPTIONAL),
-  MISSING_LIST = structure("MISSING_LIST", var_att_required =
-                             VARATT_REQUIRE_LEVELS$COMPATIBILITY),
-  JUMP_LIST = structure("JUMP_LIST", var_att_required =
-                          VARATT_REQUIRE_LEVELS$COMPATIBILITY),
-  MISSING_LIST_TABLE = structure("MISSING_LIST_TABLE", var_att_required =
-                                   VARATT_REQUIRE_LEVELS$REQUIRED),
-  HARD_LIMITS = structure("HARD_LIMITS", var_att_required =
-                            VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  DETECTION_LIMITS = structure("DETECTION_LIMITS", var_att_required =
-                                 VARATT_REQUIRE_LEVELS$OPTIONAL),
-  SOFT_LIMITS = structure("SOFT_LIMITS", var_att_required =
-                            VARATT_REQUIRE_LEVELS$OPTIONAL),
-  CONTRADICTIONS = structure("CONTRADICTIONS", var_att_required =
-                               VARATT_REQUIRE_LEVELS$OPTIONAL),
-  DISTRIBUTION = structure("DISTRIBUTION", var_att_required =
-                             VARATT_REQUIRE_LEVELS$OPTIONAL),
-  DECIMALS = structure("DECIMALS", var_att_required =
-                         VARATT_REQUIRE_LEVELS$OPTIONAL),
-  DATA_ENTRY_TYPE = structure("DATA_ENTRY_TYPE", var_att_required =
-                                VARATT_REQUIRE_LEVELS$OPTIONAL),
-  END_DIGIT_CHECK = structure("END_DIGIT_CHECK", var_att_required =
-                                VARATT_REQUIRE_LEVELS$OPTIONAL),
-  CO_VARS = structure("CO_VARS", var_att_required =
-                        VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  GROUP_VAR_OBSERVER = structure("GROUP_VAR_OBSERVER", var_att_required =
-                             VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  GROUP_VAR_DEVICE = structure("GROUP_VAR_DEVICE", var_att_required =
-                             VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  KEY_OBSERVER = structure("KEY_OBSERVER", var_att_required =
-                             VARATT_REQUIRE_LEVELS$COMPATIBILITY),
-  KEY_DEVICE = structure("KEY_DEVICE", var_att_required =
-                           VARATT_REQUIRE_LEVELS$COMPATIBILITY),
-  TIME_VAR = structure("TIME_VAR", var_att_required =
-                             VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  TIME_VAR_END = structure("TIME_VAR_END", var_att_required =
-                         VARATT_REQUIRE_LEVELS$OPTIONAL),
-  KEY_DATETIME = structure("KEY_DATETIME", var_att_required =
-                             VARATT_REQUIRE_LEVELS$COMPATIBILITY),
-  PART_VAR = structure("PART_VAR", var_att_required =
-                         VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  STUDY_SEGMENT = structure("STUDY_SEGMENT", var_att_required =
-                              VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  KEY_STUDY_SEGMENT = structure("KEY_STUDY_SEGMENT", var_att_required =
-                                  VARATT_REQUIRE_LEVELS$COMPATIBILITY),
-  VARIABLE_ROLE = structure("VARIABLE_ROLE", var_att_required =
-                              VARATT_REQUIRE_LEVELS$OPTIONAL),
-  VARIABLE_ORDER = structure("VARIABLE_ORDER", var_att_required =
-                               VARATT_REQUIRE_LEVELS$OPTIONAL),
-  LONG_LABEL = structure("LONG_LABEL", var_att_required =
-                           VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  SOFT_LIMIT_LOW = structure("SOFT_LIMIT_LOW", var_att_required =
-                               VARATT_REQUIRE_LEVELS$TECHNICAL),
-  SOFT_LIMIT_UP = structure("SOFT_LIMIT_UP", var_att_required =
-                              VARATT_REQUIRE_LEVELS$TECHNICAL),
-  HARD_LIMIT_LOW = structure("HARD_LIMIT_LOW", var_att_required =
-                               VARATT_REQUIRE_LEVELS$TECHNICAL),
-  HARD_LIMIT_UP = structure("HARD_LIMIT_UP", var_att_required =
-                              VARATT_REQUIRE_LEVELS$TECHNICAL),
-  DETECTION_LIMIT_LOW = structure("DETECTION_LIMIT_LOW", var_att_required =
-                                    VARATT_REQUIRE_LEVELS$TECHNICAL),
-  DETECTION_LIMIT_UP = structure("DETECTION_LIMIT_UP", var_att_required =
-                                   VARATT_REQUIRE_LEVELS$TECHNICAL),
-  INCL_SOFT_LIMIT_LOW = structure("INCL_SOFT_LIMIT_LOW", var_att_required =
-                                    VARATT_REQUIRE_LEVELS$TECHNICAL),
-  INCL_SOFT_LIMIT_UP = structure("INCL_SOFT_LIMIT_UP", var_att_required =
-                                   VARATT_REQUIRE_LEVELS$TECHNICAL),
-  INCL_HARD_LIMIT_LOW = structure("INCL_HARD_LIMIT_LOW", var_att_required =
-                                    VARATT_REQUIRE_LEVELS$TECHNICAL),
-  INCL_HARD_LIMIT_UP = structure("INCL_HARD_LIMIT_UP", var_att_required =
-                                   VARATT_REQUIRE_LEVELS$TECHNICAL),
-  LOCATION_RANGE = structure("LOCATION_RANGE", var_att_required =
-                               VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  LOCATION_METRIC = structure("LOCATION_METRIC", var_att_required =
-                                VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  PROPORTION_RANGE = structure("PROPORTION_RANGE", var_att_required =
-                                 VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  LOCATION_LIMIT_LOW = structure("LOCATION_LIMIT_LOW", var_att_required =
-                                   VARATT_REQUIRE_LEVELS$TECHNICAL),
-  LOCATION_LIMIT_UP = structure("LOCATION_LIMIT_UP", var_att_required =
-                                  VARATT_REQUIRE_LEVELS$TECHNICAL),
-  INCL_LOCATION_LIMIT_LOW = structure("INCL_LOCATION_LIMIT_LOW", var_att_required =
-                                        VARATT_REQUIRE_LEVELS$TECHNICAL),
-  INCL_LOCATION_LIMIT_UP = structure("INCL_LOCATION_LIMIT_UP", var_att_required =
-                                       VARATT_REQUIRE_LEVELS$TECHNICAL),
-  PROPORTION_LIMIT_LOW = structure("PROPORTION_LIMIT_LOW", var_att_required =
-                                     VARATT_REQUIRE_LEVELS$TECHNICAL),
-  PROPORTION_LIMIT_UP = structure("PROPORTION_LIMIT_UP", var_att_required =
-                                    VARATT_REQUIRE_LEVELS$TECHNICAL),
-  INCL_PROPORTION_LIMIT_LOW = structure("INCL_PROPORTION_LIMIT_LOW", var_att_required =
-                                          VARATT_REQUIRE_LEVELS$TECHNICAL),
-  INCL_PROPORTION_LIMIT_UP = structure("INCL_PROPORTION_LIMIT_UP", var_att_required =
-                                         VARATT_REQUIRE_LEVELS$TECHNICAL),
+  VAR_NAMES = structure("VAR_NAMES",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$REQUIRED
+  ),
+  LABEL = structure("LABEL",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  DATA_TYPE = structure("DATA_TYPE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$REQUIRED
+  ),
+  SCALE_LEVEL = structure("SCALE_LEVEL",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  UNIT = structure("UNIT",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  VALUE_LABELS = structure("VALUE_LABELS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  VALUE_LABEL_TABLE = structure("VALUE_LABEL_TABLE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  MISSING_LIST = structure("MISSING_LIST",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$COMPATIBILITY
+  ),
+  JUMP_LIST = structure("JUMP_LIST",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$COMPATIBILITY
+  ),
+  MISSING_LIST_TABLE = structure("MISSING_LIST_TABLE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$REQUIRED
+  ),
+  HARD_LIMITS = structure("HARD_LIMITS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  DETECTION_LIMITS = structure("DETECTION_LIMITS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  SOFT_LIMITS = structure("SOFT_LIMITS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  CONTRADICTIONS = structure("CONTRADICTIONS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  DISTRIBUTION = structure("DISTRIBUTION",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  DECIMALS = structure("DECIMALS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  DATA_ENTRY_TYPE = structure("DATA_ENTRY_TYPE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  END_DIGIT_CHECK = structure("END_DIGIT_CHECK",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  CO_VARS = structure("CO_VARS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  GROUP_VAR_OBSERVER = structure("GROUP_VAR_OBSERVER",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  GROUP_VAR_DEVICE = structure("GROUP_VAR_DEVICE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  KEY_OBSERVER = structure("KEY_OBSERVER",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$COMPATIBILITY
+  ),
+  KEY_DEVICE = structure("KEY_DEVICE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$COMPATIBILITY
+  ),
+  TIME_VAR = structure("TIME_VAR",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  TIME_VAR_END = structure("TIME_VAR_END",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  KEY_DATETIME = structure("KEY_DATETIME",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$COMPATIBILITY
+  ),
+  PART_VAR = structure("PART_VAR",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  STUDY_SEGMENT = structure("STUDY_SEGMENT",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  KEY_STUDY_SEGMENT = structure("KEY_STUDY_SEGMENT",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$COMPATIBILITY
+  ),
+  VARIABLE_ROLE = structure("VARIABLE_ROLE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  VARIABLE_ORDER = structure("VARIABLE_ORDER",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  LONG_LABEL = structure("LONG_LABEL",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  SOFT_LIMIT_LOW = structure("SOFT_LIMIT_LOW",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  SOFT_LIMIT_UP = structure("SOFT_LIMIT_UP",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  HARD_LIMIT_LOW = structure("HARD_LIMIT_LOW",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  HARD_LIMIT_UP = structure("HARD_LIMIT_UP",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  DETECTION_LIMIT_LOW = structure("DETECTION_LIMIT_LOW",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  DETECTION_LIMIT_UP = structure("DETECTION_LIMIT_UP",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  INCL_SOFT_LIMIT_LOW = structure("INCL_SOFT_LIMIT_LOW",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  INCL_SOFT_LIMIT_UP = structure("INCL_SOFT_LIMIT_UP",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  INCL_HARD_LIMIT_LOW = structure("INCL_HARD_LIMIT_LOW",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  INCL_HARD_LIMIT_UP = structure("INCL_HARD_LIMIT_UP",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  LOCATION_RANGE = structure("LOCATION_RANGE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  LOCATION_METRIC = structure("LOCATION_METRIC",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  PROPORTION_RANGE = structure("PROPORTION_RANGE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  REPEATED_MEASURES_VARS = structure("REPEATED_MEASURES_VARS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  LOCATION_LIMIT_LOW = structure("LOCATION_LIMIT_LOW",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  LOCATION_LIMIT_UP = structure("LOCATION_LIMIT_UP",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  INCL_LOCATION_LIMIT_LOW = structure("INCL_LOCATION_LIMIT_LOW",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  INCL_LOCATION_LIMIT_UP = structure("INCL_LOCATION_LIMIT_UP",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  PROPORTION_LIMIT_LOW = structure("PROPORTION_LIMIT_LOW",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  PROPORTION_LIMIT_UP = structure("PROPORTION_LIMIT_UP",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  INCL_PROPORTION_LIMIT_LOW = structure("INCL_PROPORTION_LIMIT_LOW",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  INCL_PROPORTION_LIMIT_UP = structure("INCL_PROPORTION_LIMIT_UP",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
   #  VARSHORTLABEL = structure("varshortlabel", var_att_required =
   #                                     VARATT_REQUIRE_LEVELS$OPTIONAL),
-  RECODE_CASES = structure("RECODE_CASES", var_att_required =
-                       VARATT_REQUIRE_LEVELS$OPTIONAL),
-  RECODE_CONTROL = structure("RECODE_CONTROL", var_att_required =
-                             VARATT_REQUIRE_LEVELS$OPTIONAL),
-  GRADING_RULESET = structure("GRADING_RULESET", var_att_required =
-                                VARATT_REQUIRE_LEVELS$OPTIONAL),
+  RECODE_CASES = structure("RECODE_CASES",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  RECODE_CONTROL = structure("RECODE_CONTROL",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  EVENT_LEVELS = structure("EVENT_LEVELS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  CONTROL_LEVELS = structure("CONTROL_LEVELS",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
+  GRADING_RULESET = structure("GRADING_RULESET",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
   STANDARDIZED_VOCABULARY_TABLE = structure("STANDARDIZED_VOCABULARY_TABLE",
-                                            var_att_required =
-                                              VARATT_REQUIRE_LEVELS$OPTIONAL),
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
   DATAFRAMES = structure("DATAFRAMES",
-                         var_att_required =
-                           VARATT_REQUIRE_LEVELS$OPTIONAL),
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
   ENCODING = structure("ENCODING",
-                         var_att_required =
-                           VARATT_REQUIRE_LEVELS$OPTIONAL),
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
   UNIVARIATE_OUTLIER_CHECKTYPE = structure("UNIVARIATE_OUTLIER_CHECKTYPE",
-                                           var_att_required =
-                                             VARATT_REQUIRE_LEVELS$RECOMMENDED),
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
   N_RULES = structure("N_RULES",
-                       var_att_required =
-                         VARATT_REQUIRE_LEVELS$RECOMMENDED),
-  EXTENDED_DATA_TYPE = structure("EXTENDED_DATA_TYPE", var_att_required =
-                                   VARATT_REQUIRE_LEVELS$OPTIONAL),
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$RECOMMENDED
+  ),
+  EXTENDED_DATA_TYPE = structure("EXTENDED_DATA_TYPE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  ),
   COMPUTED_VARIABLE_ROLE = structure("COMPUTED_VARIABLE_ROLE",
-                                     var_att_required =
-                                       VARATT_REQUIRE_LEVELS$TECHNICAL
-                                     )
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$TECHNICAL
+  ),
+  ITEM_TYPE = structure("ITEM_TYPE",
+    var_att_required =
+      VARATT_REQUIRE_LEVELS$OPTIONAL
+  )
 )
 
+#' Package attach hook
+#'
+#' @noRd
 .onAttach <- function(...) { # nocov start
-  # if (packageVersion("ggplot2") >= as.package_version("4.0.0")) {
-  #   packageStartupMessage(paste(
-  #     "ggplot2 >= 4.0.0 uses S7 classes, which can cause performance issues.",
-  #     "We are currently trying to address these, in doubt, try to downgrade",
-  #     "ggplot2, if you consider trouble after updating ggplot2"))
-  # }
+  # Historical ggplot2 S7 startup warning removed here. Inspect commit
+  # 6046501c91 before restoring package-attach guidance.
 
   if (length(user_hints$l) > 0) {
     packageStartupMessage(paste(user_hints$l, collapse = "\n"))
@@ -489,23 +721,31 @@ WELL_KNOWN_META_VARIABLE_NAMES <- list(
 }
 # nocov end
 
+#' Package load hook
+#'
+#' @noRd
 .onLoad <- function(...) { # nocov start
 
   if ((suppressWarnings(util_ensure_suggested("jsonlite", err = FALSE)))) {
     methods::setClass("dataquieR_translated")
-    methods::setMethod(methods::getGeneric("asJSON", package = "jsonlite"),
-              "dataquieR_translated",
-              asJSON.dataquieR_translated)
+    methods::setMethod(
+      methods::getGeneric("asJSON", package = "jsonlite"),
+      "dataquieR_translated",
+      asJSON.dataquieR_translated
+    )
   }
 
 
   delayedAssign("odm_installed",
-         suppressWarnings(
-           util_ensure_suggested("dataquieR2odm",
-                                 goal = "Read ODM files",
-                                 err = FALSE)),
-         eval.env = asNamespace("dataquieR"),
-         asNamespace("dataquieR"))
+    suppressWarnings(
+      util_ensure_suggested("dataquieR2odm",
+        goal = "Read ODM files",
+        err = FALSE
+      )
+    ),
+    eval.env = asNamespace("dataquieR"),
+    asNamespace("dataquieR")
+  )
 
   to_set <-
     grep("^dataquieR.*_default$", ls(asNamespace("dataquieR")), value = TRUE)
@@ -514,105 +754,116 @@ WELL_KNOWN_META_VARIABLE_NAMES <- list(
     nm <- sub("_default$", "", o)
     if (is.null(getOption(nm))) {
       do.call("options", setNames(list(get(o, asNamespace("dataquieR"))),
-                                  nm = nm))
+          nm = nm
+        ))
     }
   }
 
   ## cowplot integration (only if installed)
   if ((suppressWarnings(util_ensure_suggested("cowplot", err = FALSE)))) {
-    util_s3_register("cowplot::as_grob", "dq_lazy_ggplot_s7", as_grob.dq_lazy_ggplot_s7)
-    util_s3_register("cowplot::as_grob", "dq_lazy_ggplot",    as_grob.dq_lazy_ggplot)
+    util_s3_register("cowplot::as_grob", "dq_lazy_ggplot_s7", as_grob.dq_lazy_ggplot_s7) # nolint: line_length_linter.
+    util_s3_register("cowplot::as_grob", "dq_lazy_ggplot", as_grob.dq_lazy_ggplot) # nolint: line_length_linter.
   }
 
   ## plotly integration (only if installed)
 
   if ((suppressWarnings(util_ensure_suggested("plotly", err = FALSE)))) {
-    util_s3_register("plotly::ggplotly",     "dq_lazy_ggplot", ggplotly.dq_lazy_ggplot)
-    util_s3_register("plotly::plotly_build", "dq_lazy_ggplot", plotly_build.dq_lazy_ggplot)
-    util_s3_register("plotly::ggplotly",     "dq_lazy_ggplot_s7", ggplotly.dq_lazy_ggplot_s7)
-    util_s3_register("plotly::plotly_build", "dq_lazy_ggplot_s7", plotly_build.dq_lazy_ggplot_s7)
-    util_s3_register("plotly::to_basic", "GeomPointrangeRobust", to_basic.GeomPointrangeRobust)
+    util_s3_register("plotly::ggplotly", "dq_lazy_ggplot", ggplotly.dq_lazy_ggplot) # nolint: line_length_linter.
+    util_s3_register("plotly::plotly_build", "dq_lazy_ggplot", plotly_build.dq_lazy_ggplot) # nolint: line_length_linter.
+    util_s3_register("plotly::ggplotly", "dq_lazy_ggplot_s7", ggplotly.dq_lazy_ggplot_s7) # nolint: line_length_linter.
+    util_s3_register("plotly::plotly_build", "dq_lazy_ggplot_s7", plotly_build.dq_lazy_ggplot_s7) # nolint: line_length_linter.
+    util_s3_register("plotly::to_basic", "GeomPointrangeRobust", to_basic.GeomPointrangeRobust) # nolint: line_length_linter.
   }
 
   if (packageVersion("ggplot2") >= as.package_version("3.5.2")) {
     f <- get("is_ggplot",
-             envir = environment(ggplot2::ggplot))
+      envir = environment(ggplot2::ggplot)
+    )
   } else {
     f <- get("is.ggplot",
-             envir = environment(ggplot2::ggplot))
-
-  }
-  assign("util_is_gg_plot",
-         f,
-         environment(util_is_gg_plot))
-
-  if (getRversion() >= "2.15.1") {
-    utils::globalVariables(
-      c(
-        names(WELL_KNOWN_META_VARIABLE_NAMES),
-        "....alt_call_res",
-        "colcode",
-        "colscale",
-        "continuous",
-        "level_names",
-        "APP_SCORE",
-        "FITTED_VALUE",
-        "GRADING",
-        "IMPLEMENTATION",
-        "INTERVALS",
-        "LCL",
-        "LOWER_CL",
-        "PROB",
-        "TIME",
-        "UCL",
-        "UPPER_CL",
-        "VARIABLES",
-        "PCT_con_con",
-        "Variables",
-        "category",
-        "lwl",
-        "margins",
-        "percent",
-        "upl",
-        "x",
-        "y",
-        "z2",
-        "ds1",
-        "meta_data",
-        "variable",
-        "value",
-        "Rules",
-        "progress",
-        "progress_msg",
-        "REQUIRED", # a var att requirement level, using NSE
-        "label_col", # generated by prep_prepare_dataframes like ds1
-        "tr", # htmltools withTags
-        "td", # htmltools withTags
-        "th", # htmltools withTags
-        "table", # htmltools withTags
-        "." # dplyr
-      )
+      envir = environment(ggplot2::ggplot)
     )
   }
+  assign(
+    "util_is_gg_plot",
+    f,
+    environment(util_is_gg_plot)
+  )
+
+  # The R >= 2.15.1 guard around utils::globalVariables() is implicit now
+  # that the package depends on R (>= 4.1.0).
+  utils::globalVariables(
+    c(
+      names(WELL_KNOWN_META_VARIABLE_NAMES),
+      "....alt_call_res",
+      "colcode",
+      "colscale",
+      "continuous",
+      "level_names",
+      "APP_SCORE",
+      "FITTED_VALUE",
+      "GRADING",
+      "IMPLEMENTATION",
+      "INTERVALS",
+      "LCL",
+      "LOWER_CL",
+      "PROB",
+      "TIME",
+      "UCL",
+      "UPPER_CL",
+      "VARIABLES",
+      "PCT_con_con",
+      "Variables",
+      "category",
+      "lwl",
+      "margins",
+      "percent",
+      "upl",
+      "x",
+      "y",
+      "z2",
+      "ds1",
+      "meta_data",
+      "variable",
+      "value",
+      "Rules",
+      "progress",
+      "progress_msg",
+      "REQUIRED", # a var att requirement level, using NSE
+      "label_col", # generated by prep_prepare_dataframes like ds1
+      "tr", # htmltools withTags
+      "td", # htmltools withTags
+      "th", # htmltools withTags
+      "table", # htmltools withTags
+      "." # dplyr
+    )
+  )
 
   if (requireNamespace("pkgload", quietly = TRUE)) {
     is_dev_package <- pkgload::is_dev_package
   } else {
-    is_dev_package <- function(...) { return(FALSE) }
+    is_dev_package <- function(...) {
+      return(FALSE)
+    }
   }
 
   for (name in names(WELL_KNOWN_META_VARIABLE_NAMES)) {
     if (exists(name, asNamespace("dataquieR")) &&
         !is_dev_package("dataquieR")) {
       util_warning("Variable %s is in dataquieR too!", name,
-                   applicability_problem = FALSE)
+        applicability_problem = FALSE
+      )
     }
-    assign(name, WELL_KNOWN_META_VARIABLE_NAMES[[name]],
-           asNamespace("dataquieR"))
+    assign(
+      name, WELL_KNOWN_META_VARIABLE_NAMES[[name]],
+      asNamespace("dataquieR")
+    )
   }
   if (!is_dev_package("dataquieR")) {
-    namespaceExport(asNamespace("dataquieR"),
-                    names(WELL_KNOWN_META_VARIABLE_NAMES))
+    namespaceExport(
+      asNamespace("dataquieR"),
+      names(WELL_KNOWN_META_VARIABLE_NAMES)
+    )
   }
 
   if (file.exists(system.file("ssi.rds", package = "dataquieR"))) {
@@ -621,22 +872,31 @@ WELL_KNOWN_META_VARIABLE_NAMES <- list(
       COMPUTED_VARIABLE_ROLES <-
         as.list(setNames(nm = .ssi$SSI_METRICS))
       COMPUTED_VARIABLE_ROLES$`NA` <- "na"
-      assign("COMPUTED_VARIABLE_ROLES", COMPUTED_VARIABLE_ROLES,
-             asNamespace("dataquieR"))
+      assign(
+        "COMPUTED_VARIABLE_ROLES", COMPUTED_VARIABLE_ROLES,
+        asNamespace("dataquieR")
+      )
       for (name in names(COMPUTED_VARIABLE_ROLES)) {
         if (exists(name, asNamespace("dataquieR")) &&
             !is_dev_package("dataquieR")) {
           util_warning("Variable %s is in dataquieR too!", name,
-                       applicability_problem = FALSE)
+            applicability_problem = FALSE
+          )
         }
-        assign(name, COMPUTED_VARIABLE_ROLES[[name]],
-               asNamespace("dataquieR"))
+        assign(
+          name, COMPUTED_VARIABLE_ROLES[[name]],
+          asNamespace("dataquieR")
+        )
       }
       if (!is_dev_package("dataquieR")) {
-        namespaceExport(asNamespace("dataquieR"),
-                        "COMPUTED_VARIABLE_ROLES")
-        namespaceExport(asNamespace("dataquieR"),
-                        setdiff(names(COMPUTED_VARIABLE_ROLES), "NA"))
+        namespaceExport(
+          asNamespace("dataquieR"),
+          "COMPUTED_VARIABLE_ROLES"
+        )
+        namespaceExport(
+          asNamespace("dataquieR"),
+          setdiff(names(COMPUTED_VARIABLE_ROLES), "NA")
+        )
       }
     })
   }
@@ -652,16 +912,19 @@ WELL_KNOWN_META_VARIABLE_NAMES <- list(
       util_load_manual()
     }
     if (!length(..manual$titles)) {
-      wrnPat <- paste("Did not find the reference manual for %s.",
-                      "This can cause all-white summmaries")
+      wrn_msg <- sprintf(
+        "Did not find the reference manual for %s. This can cause all-white summmaries", # nolint: line_length_linter.
+        dQuote(rlang::ns_env_name())
+      )
       if (suppressWarnings(util_ensure_suggested("cli", err = FALSE))) {
-        wrnPat <- cli::cli_alert_warning(
-          cli::bg_black(cli::col_yellow(wrnPat)))
+        wrn_msg <- cli::cli_alert_warning(
+          cli::bg_black(cli::col_yellow(wrn_msg))
+        )
       }
-      rlang::warn(sprintf(
-        wrnPat,
-        dQuote(rlang::ns_env_name())),
-        .frequency = "regularly", .frequency_id = "dataquieRManual")
+      rlang::warn(
+        wrn_msg,
+        .frequency = "regularly", .frequency_id = "dataquieRManual"
+      )
     }
     return(..manual)
   }, environment(util_load_manual))
@@ -678,63 +941,73 @@ WELL_KNOWN_META_VARIABLE_NAMES <- list(
   }, environment(.onLoad))
 
   makeActiveBinding("MAX_LONG_LABEL_LEN", function() {
-    min(.MAX_LABEL_LEN, getOption("dataquieR.MAX_LONG_LABEL_LEN",
-                                  dataquieR.MAX_LONG_LABEL_LEN_default),
-        na.rm = TRUE)
+    .util_validate_label_length_limit(
+      getOption(
+        "dataquieR.MAX_LONG_LABEL_LEN",
+        dataquieR.MAX_LONG_LABEL_LEN_default
+      ),
+      option = "dataquieR.MAX_LONG_LABEL_LEN",
+      clamp_to_max = TRUE
+    )
   }, env = environment(.onLoad))
 
   makeActiveBinding("MAX_LABEL_LEN", function() {
-    min(.MAX_LABEL_LEN, getOption("dataquieR.MAX_LABEL_LEN",
-                                  dataquieR.MAX_LABEL_LEN_default),
-        na.rm = TRUE)
+    .util_validate_label_length_limit(
+      getOption(
+        "dataquieR.MAX_LABEL_LEN",
+        dataquieR.MAX_LABEL_LEN_default
+      ),
+      option = "dataquieR.MAX_LABEL_LEN",
+      clamp_to_max = TRUE
+    )
   }, env = environment(.onLoad))
 
   util_fix_rstudio_bugs()
 
   if (!l10n_info()[["UTF-8"]]) {
+    # We already require R (>= 4.1.0); only R 4.1.x on Windows still
+    # lacks the UTF-8 default introduced in R 4.2.0.
     update_recommended <-
-      (.Platform$OS.type == "windows" &&
-       (R.version$major < 4 || (R.version$major >= 4 && R.version$minor < 2)))
+      (.Platform$OS.type == "windows" && getRversion() < "4.2.0")
     util_user_hint(sprintf(
-      paste("Your R session is not using a UTF-8 character set,",
-      "be prepared to encoding problems. Also use %s. %s"),
+      paste(
+        "Your R session is not using a UTF-8 character set,",
+        "be prepared to encoding problems. Also use %s. %s"
+      ),
       "Sys.setlocale() to select a UTF-8 locale in your .Rprofile",
       ifelse(update_recommended,
         paste(
           "\nOn Windows, you should consider updating R to a version >= 4.2.0,",
-            "which supports UTF-8."),
-          "")
+          "which supports UTF-8."
+        ),
+        ""
+      )
     ))
   }
 
-  unit_env <- new.env(parent = emptyenv())
+  # The UDUNITS-backed active bindings below are populated lazily on first
+  # access via util_get_valid_udunits() / util_get_valid_udunits_prefixes().
+  # That keeps package load free of any units / udunits-2 calls, so the
+  # package loads even when the (optional, Suggests:) units package or its
+  # native UDUNITS-2 library are missing.
 
   makeActiveBinding("UNITS", function() {
-    if (!exists("valud", envir = unit_env)) {
-      if (!requireNamespace("xml2", quietly = TRUE)) { # for units
-        return(character(0))
-      }
-      valud <- suppressMessages(units::valid_udunits())
-      assign("valud", valud, envir = unit_env)
+    valud <- util_get_valid_udunits()
+    if (is.null(valud)) {
+      return(character(0))
     }
-    valud <- get("valud", envir = unit_env)
     u <- valud[["symbol"]]
-    u <- u[!util_empty(u)]
-    u
+    u[!util_empty(u)]
   }, env = asNamespace(packageName()))
 
   makeActiveBinding("UNIT_IS_COUNT", function() {
-    if (!exists("valud", envir = unit_env)) {
-      if (!requireNamespace("xml2", quietly = TRUE)) { # for units
-        return(character(0))
-      }
-      valud <- suppressMessages(units::valid_udunits())
-      assign("valud", valud, envir = unit_env)
+    valud <- util_get_valid_udunits()
+    if (is.null(valud)) {
+      return(character(0))
     }
-    valud <- get("valud", envir = unit_env)
-    valud <- valud[!util_empty(valud[["symbol"]]), , FALSE]
+    valud <- valud[!util_empty(valud[["symbol"]]), , drop = FALSE]
     u <- valud[is.na(valud$def) ==
-             is.na(suppressWarnings(as.numeric(valud$def))), "symbol", TRUE]
+        is.na(suppressWarnings(as.numeric(valud$def))), "symbol", drop = TRUE]
     u <- u[!util_empty(u)]
     u <- setNames(nm = u)
     attr(u, "def") <-
@@ -743,130 +1016,93 @@ WELL_KNOWN_META_VARIABLE_NAMES <- list(
   }, env = asNamespace(packageName()))
 
   makeActiveBinding("UNIT_SOURCES", function() {
-    if (!exists("valud", envir = unit_env)) {
-      if (!requireNamespace("xml2", quietly = TRUE)) { # for units
-        return(character(0))
-      }
-      valud <- suppressMessages(units::valid_udunits())
-      assign("valud", valud, envir = unit_env)
+    valud <- util_get_valid_udunits()
+    if (is.null(valud)) {
+      return(character(0))
     }
-    valud <- get("valud", envir = unit_env)
-    valud <- valud[!util_empty(valud[["symbol"]]), , FALSE]
-    u <- setNames(nm = valud[["symbol"]], valud[["source_xml"]])
-    u
+    valud <- valud[!util_empty(valud[["symbol"]]), , drop = FALSE]
+    setNames(nm = valud[["symbol"]], valud[["source_xml"]])
   }, env = asNamespace(packageName()))
 
   makeActiveBinding("UNIT_PREFIXES", function() {
-    if (!exists("p", envir = unit_env)) {
-      if (!requireNamespace("xml2", quietly = TRUE)) { # for units
+    if (!exists("p", envir = .dq_units_cache, inherits = FALSE)) {
+      ..pf <- util_get_valid_udunits_prefixes()
+      if (is.null(..pf)) {
         return(character(0))
       }
-      p <- suppressMessages(unique(
-        unname(unlist(units::valid_udunits_prefixes()[, 1:3]))))
+      p <- suppressMessages(unique(unname(unlist(..pf[, 1:3, drop = FALSE]))))
       p <- p[!util_empty(p)]
-      assign("p", trimws(unlist(strsplit(p, ",", fixed = TRUE))), envir =
-               unit_env)
+      assign("p", trimws(unlist(strsplit(p, ",", fixed = TRUE))),
+        envir = .dq_units_cache
+      )
     }
-    get("p", envir = unit_env)
+    get("p", envir = .dq_units_cache, inherits = FALSE)
   }, env = asNamespace(packageName()))
 
   makeActiveBinding("UNIT_PREFIX_FACTORS", function() {
-    if (!exists("pf", envir = unit_env)) {
-      if (!requireNamespace("xml2", quietly = TRUE)) { # for units
+    if (!exists("pf", envir = .dq_units_cache, inherits = FALSE)) {
+      ..pf <- util_get_valid_udunits_prefixes()
+      if (is.null(..pf)) {
         return(character(0))
       }
-      ..pf <- suppressMessages(units::valid_udunits_prefixes())
-      pf <- suppressMessages(unique(
-        unname(unlist(..pf[, 1:3]))))
+      pf <- suppressMessages(unique(unname(unlist(..pf[, 1:3, drop = FALSE]))))
       pf <- pf[!util_empty(pf)]
       pf <- vapply(trimws(unlist(strsplit(pf, ",", fixed = TRUE))),
-                          function(pfx) {
-                            r <- ..pf[..pf[[1]] == pfx |
-                                   ..pf[[2]] == pfx |
-                                   ..pf[[3]] == pfx, "value", drop = TRUE]
-                            if (length(r) == 0) {
-                              r <- 0
-                            }
-                            r
-                          },
-                          FUN.VALUE = numeric(1))
+        function(pfx) {
+          r <- ..pf[..pf[[1]] == pfx |
+              ..pf[[2]] == pfx |
+              ..pf[[3]] == pfx, "value", drop = TRUE]
+          if (length(r) == 0) {
+            r <- 0
+          }
+          r
+        },
+        FUN.VALUE = numeric(1)
+      )
       pf <- pf[pf != 0]
       dps <- duplicated(names(pf))
       if (any(dps)) {
         util_warning(
-          c("Removing duplicated unit prefixes %s from udunits. Please",
+          c(
+            "Removing duplicated unit prefixes %s from udunits. Please",
             "verify, if your installation of the package units returns valid",
-            "prefixes."),
+            "prefixes."
+          ),
           util_pretty_vector_string(sort(unique(names(pf)[dps])))
         )
         pf <- pf[!dps]
       }
-      assign("pf",
-             pf,
-             envir =
-               unit_env)
+      assign("pf", pf, envir = .dq_units_cache)
     }
-    get("pf", envir = unit_env)
+    get("pf", envir = .dq_units_cache, inherits = FALSE)
   }, env = asNamespace(packageName()))
 
-  namespaceExport(asNamespace("dataquieR"),
-                  c("UNITS", "UNIT_PREFIXES", "UNIT_SOURCES", "UNIT_IS_COUNT"))
+  namespaceExport(
+    asNamespace("dataquieR"),
+    c("UNITS", "UNIT_PREFIXES", "UNIT_SOURCES", "UNIT_IS_COUNT")
+  )
 
   suppressMessages({
-    # methods::setMethod('vapply', methods::signature(X="dataquieR_resultset2"),
-    #                    function(X, FUN, FUN.VALUE, ..., USE.NAMES = TRUE) {
-    #                      vapply(setNames(nm = names(X)), function(nm) {
-    #                        FUN(X[[nm]], ...)
-    #                      }, FUN.VALUE = FUN.VALUE, USE.NAMES = USE.NAMES)
-    #                    })
-    #
-    # methods::setMethod('lapply', methods::signature(X="dataquieR_resultset2"),
-    #                    function(X, FUN, ...) {
-    #                      lapply(setNames(nm = names(X)), function(nm) {
-    #                        FUN(X[[nm]], ...)
-    #                      })
-    #                    })
-    #
-    # methods::setMethod('sapply', methods::signature(X="dataquieR_resultset2"),
-    #                    function(X, FUN, ..., simplify = TRUE, USE.NAMES = TRUE) {
-    #                      sapply(setNames(nm = names(X)), function(nm) {
-    #                        FUN(X[[nm]], ...)
-    #                      }, simplify = simplify, USE.NAMES = USE.NAMES)
-    #                    })
-
-    # methods::setMethod('vapply', methods::signature(X="dataquieR_resultset2"),
-    #                    function(X, FUN, FUN.VALUE, ..., USE.NAMES = TRUE) {
-    #                      vapply(setNames(nm = names(X)), function(nm) {
-    #                        FUN(X[[nm]], ...)
-    #                      }, FUN.VALUE = FUN.VALUE, USE.NAMES = USE.NAMES)
-    #                    }, where = globalenv())
-    #
-    # methods::setMethod('lapply', methods::signature(X="dataquieR_resultset2"),
-    #                    function(X, FUN, ...) {
-    #                      lapply(setNames(nm = names(X)), function(nm) {
-    #                        FUN(X[[nm]], ...)
-    #                      })
-    #                    }, where = globalenv())
-    #
-    # methods::setMethod('sapply', methods::signature(X="dataquieR_resultset2"),
-    #                    function(X, FUN, ..., simplify = TRUE, USE.NAMES = TRUE) {
-    #                      sapply(setNames(nm = names(X)), function(nm) {
-    #                        FUN(X[[nm]], ...)
-    #                      }, simplify = simplify, USE.NAMES = USE.NAMES)
-    #                    }, where = globalenv())
+    # Historical S4 apply methods for dataquieR_resultset2 removed here.
+    # Inspect commits 01a4391dd0 and e5e697f5d0 before restoring them.
 
 
     if (!inherits(try(as.environment("tools:rstudio"),
-                      silent = TRUE), "try-error") &&
+          silent = TRUE
+        ), "try-error") &&
         exists(".rs.getNames", as.environment("tools:rstudio"))) {
       # no need to load the full object just to fetch the names.
-      .dataquieR_orig_util_rs_get_names <- # FIXME: don't, if already done
+      .dataquieR_orig_util_rs_get_names <-
         get(".rs.getNames", as.environment("tools:rstudio"))
-      if (!is.null(attr(.dataquieR_orig_util_rs_get_names,
-                        ".dataquieR_orig_util_rs_get_names"))) {
+      if (!is.null(util_attr(.dataquieR_orig_util_rs_get_names,
+            ".dataquieR_orig_util_rs_get_names",
+            exact = TRUE
+          ))) {
         .dataquieR_orig_util_rs_get_names <-
-          attr(.dataquieR_orig_util_rs_get_names,
-               ".dataquieR_orig_util_rs_get_names")
+          util_attr(.dataquieR_orig_util_rs_get_names,
+            ".dataquieR_orig_util_rs_get_names",
+            exact = TRUE
+          )
       }
       util_rs_get_names <- function(object) {
         if (inherits(object, "dataquieR_resultset2")) {
@@ -880,21 +1116,27 @@ WELL_KNOWN_META_VARIABLE_NAMES <- list(
       }
       environment(util_rs_get_names) <-
         environment(.dataquieR_orig_util_rs_get_names)
-      attr(.dataquieR_orig_util_rs_get_names,
-           ".dataquieR_orig_util_rs_get_names") <-
+      attr(
+        .dataquieR_orig_util_rs_get_names,
+        ".dataquieR_orig_util_rs_get_names"
+      ) <-
         .dataquieR_orig_util_rs_get_names
       attr(util_rs_get_names, ".dataquieR_orig_util_rs_get_names") <-
         .dataquieR_orig_util_rs_get_names
-      assign(".dataquieR_orig_util_rs_get_names",
-             .dataquieR_orig_util_rs_get_names,
-             environment(util_rs_get_names))
+      assign(
+        ".dataquieR_orig_util_rs_get_names",
+        .dataquieR_orig_util_rs_get_names,
+        environment(util_rs_get_names)
+      )
       assign(".rs.getNames", util_rs_get_names, as.environment("tools:rstudio"))
     }
   })
 
-  assign("MEM_COMPRESS_CAPABILITIES",
-         names(which(.util_mem_compress_capabilities())),
-         environment(.util_mem_compress_capabilities))
+  assign(
+    "MEM_COMPRESS_CAPABILITIES",
+    names(which(.util_mem_compress_capabilities())),
+    environment(.util_mem_compress_capabilities)
+  )
 
   if (requireNamespace("S7", quietly = TRUE)) {
     # register all S7 methods for the package (recommended by S7)
@@ -903,8 +1145,6 @@ WELL_KNOWN_META_VARIABLE_NAMES <- list(
     # ensure your dq_lazy S7 class + operator methods exist in THIS session
     suppressMessages(dq_lazy_register_s7())
   }
-
-
 }
 # nocov end
 
@@ -918,6 +1158,7 @@ MEM_COMPRESS_CAPABILITIES <- "none"
 #'
 #'
 
+# nolint start: line_length_linter.
 #' @name value/missing-lists
 #' @aliases cause_label_df missing_matchtable CODE_VALUE CODE_LABEL CODE_CLASS CODE_INTERPRET value_label_table
 #' @description
@@ -940,6 +1181,15 @@ MEM_COMPRESS_CAPABILITIES <- "none"
 #'                              For v1.0 metadata, you need to refer to
 #'                              `VAR_NAMES` here.
 #'
+#' Item-level metadata columns such as `CODE_LIST_TABLE` and
+#' `MISSING_LIST_TABLE` refer to such tables by their data-frame cache names.
+#' If the complete metadata workbook is loaded with
+#' [prep_load_workbook_like_file()] or passed as `meta_data_v2`, the sheet name
+#' alone is sufficient, e.g., `"tab1"`. If only the item-level metadata sheet is
+#' supplied and the referenced table is loaded separately, use the exact cached
+#' table name. For workbook sheets this is commonly a qualified
+#' workbook/sheet name such as `"meta_data_v2.xlsx|tab1"`.
+#'
 #' @seealso [Online](https://dataquality.qihs.uni-greifswald.de/VIN_Item_Level_Metadata.html#MISSING_LIST_TABLE)
 #' @seealso [com_item_missingness()]
 #' @seealso [com_segment_missingness()]
@@ -951,18 +1201,22 @@ MEM_COMPRESS_CAPABILITIES <- "none"
 #' @seealso [VALUE_LABEL_TABLE]
 #' @seealso [STANDARDIZED_VOCABULARY_TABLE]
 #' @seealso [cause_label_df]
+# nolint end
 NULL
 
+# nolint start: line_length_linter.
 #' Data frame with contradiction rules
 #' @name check_table
-#' @seealso [meta_data_cross]
+#' @seealso [meta_data_cross_item]
 #' @description
 #' Two versions exist, the newer one is used by [con_contradictions_redcap] and
 #' is described [here](https://dataquality.qihs.uni-greifswald.de/VIN_con_impl_contradictions_redcap.html#Example_output).,
 #' the older one used by [con_contradictions] is described
 #' [here](https://dataquality.qihs.uni-greifswald.de/VIN_con_impl_contradictions.html#Example_output).
+# nolint end
 NULL
 
+# nolint start: line_length_linter.
 #' Data frame with metadata about the study data on variable level
 #'
 #' @name meta_data
@@ -974,6 +1228,7 @@ NULL
 #' @seealso [meta_data_segment]
 #' @seealso [meta_data_dataframe]
 #'
+# nolint end
 NULL
 
 #' Data frame with the study data whose quality is being assessed
@@ -994,12 +1249,9 @@ NULL
 #' Default Name of the Table featuring Code Lists
 #'
 #' @export
-CODE_LIST_TABLE = "CODE_LIST_TABLE"
+CODE_LIST_TABLE <- "CODE_LIST_TABLE"
 
-# this has already been defined
-# @inherit meta_data_segment
-# @export
-# STUDY_SEGMENT <- "STUDY_SEGMENT"
+# STUDY_SEGMENT is already defined with its roxygen documentation above.
 
 #' Segment level metadata attribute name
 #'
@@ -1156,6 +1408,7 @@ DF_ID_REF_TABLE <- "DF_ID_REF_TABLE"
 #' @export
 DF_RECORD_CHECK <- "DF_RECORD_CHECK"
 
+# nolint start: line_length_linter.
 #' Data frame level metadata attribute name
 #'
 #' Defines expectancies on the uniqueness of the IDs
@@ -1164,6 +1417,7 @@ DF_RECORD_CHECK <- "DF_RECORD_CHECK"
 #' @seealso [meta_data_dataframe]
 #'
 #' @export
+# nolint end
 DF_UNIQUE_ID <- "DF_UNIQUE_ID"
 
 #' Data frame level metadata attribute name
@@ -1188,22 +1442,23 @@ DF_UNIQUE_ROWS <- "DF_UNIQUE_ROWS"
 
 #' Well known columns on the `item_computation_level` sheet
 #' @name meta_data_computation
-#' @family meta_data_cross
+#' @family meta_data_cross_item
 #' @description
 #' Computation rules
-#' TODO
 #'
 NULL
 
+# nolint start: line_length_linter.
 #' Well known columns on the `cross-item_level` sheet
-#' @name meta_data_cross
+#' @name meta_data_cross_item
 #' @seealso [check_table]
 #' @seealso [Online Documentation](https://dataquality.qihs.uni-greifswald.de/VIN_Cross_Item_Level_Metadata.html)
-#' @family meta_data_cross
+#' @family meta_data_cross_item
 #' @description
 #' Metadata describing groups of variables, e.g., for their multivariate
 #' distribution or for defining contradiction rules.
 #'
+# nolint end
 NULL
 
 #' Valid unit symbols according to [units::valid_udunits()]
@@ -1256,31 +1511,27 @@ NULL
 #'
 #' if missing, `dataquieR` will create such labels
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 CHECK_LABEL <- "CHECK_LABEL"
 
 #' Cross-item level metadata attribute name
-#' TODO
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @export
 SCALE_NAME <- "SCALE_NAME"
 
 #' Cross-item level metadata attribute name
-#' TODO
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @export
 SCALE_ACRONYM <- "SCALE_ACRONYM"
 
 #' Cross-item level metadata attribute name
-#' TODO
-#' internal use, only
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @export
 VARIABLE_LIST_ORDER <- "VARIABLE_LIST_ORDER"
 
@@ -1290,8 +1541,8 @@ VARIABLE_LIST_ORDER <- "VARIABLE_LIST_ORDER"
 #'
 #' if missing, `dataquieR` will create such IDs
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 CHECK_ID <- "CHECK_ID"
@@ -1305,12 +1556,13 @@ CHECK_ID <- "CHECK_ID"
 #' if missing, `dataquieR` will create such IDs from [CONTRADICTION_TERM],
 #' if specified.
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 VARIABLE_LIST <- "VARIABLE_LIST"
 
+# nolint start: line_length_linter.
 #' Cross-item level metadata attribute name
 #'
 #' Note: in some `prep_`-functions, this field is named `RULE`
@@ -1318,23 +1570,26 @@ VARIABLE_LIST <- "VARIABLE_LIST"
 #' Specifies a contradiction rule. Use `REDCap` like syntax, see
 #' [online vignette](https://dataquality.qihs.uni-greifswald.de/VIN_con_impl_contradictions_redcap.html)
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #' @aliases RULE
 #'
 #' @export
+# nolint end
 CONTRADICTION_TERM <- "CONTRADICTION_TERM"
 
+# nolint start: line_length_linter.
 #' Cross-item level metadata attribute name
 #'
 #' Specifies the type of a contradiction. According to the data quality
 #' concept, there are logical and empirical contradictions, see
 #' [online vignette](https://dataquality.qihs.uni-greifswald.de/VIN_con_impl_contradictions_redcap.html)
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
+# nolint end
 CONTRADICTION_TYPE <- "CONTRADICTION_TYPE"
 
 #' Cross-item level metadata attribute name
@@ -1345,8 +1600,8 @@ CONTRADICTION_TYPE <- "CONTRADICTION_TYPE"
 #' a set of methods, the maximum for [N_RULES] changes. See also
 #' [`UNIVARIATE_OUTLIER_CHECKTYPE`].
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 MULTIVARIATE_OUTLIER_CHECKTYPE <- "MULTIVARIATE_OUTLIER_CHECKTYPE"
@@ -1357,7 +1612,7 @@ MULTIVARIATE_OUTLIER_CHECKTYPE <- "MULTIVARIATE_OUTLIER_CHECKTYPE"
 #' @family meta_data_computation
 #'
 #' @export
-COMPUTATION_RULE = "COMPUTATION_RULE"
+COMPUTATION_RULE <- "COMPUTATION_RULE"
 
 #' Cross-item level metadata attribute name
 #'
@@ -1370,8 +1625,8 @@ COMPUTATION_RULE = "COMPUTATION_RULE"
 #'
 #' See also [`MULTIVARIATE_OUTLIER_CHECKTYPE`].
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 MULTIVARIATE_OUTLIER_CHECK <- "MULTIVARIATE_OUTLIER_CHECK"
@@ -1388,8 +1643,8 @@ MULTIVARIATE_OUTLIER_CHECK <- "MULTIVARIATE_OUTLIER_CHECK"
 #'
 #' See also [`MULTIVARIATE_OUTLIER_CHECKTYPE`].
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 MAHALANOBIS_THRESHOLD <- "MAHALANOBIS_THRESHOLD"
@@ -1401,8 +1656,8 @@ MAHALANOBIS_THRESHOLD <- "MAHALANOBIS_THRESHOLD"
 #' for open intervals and square brackets for closed intervals.
 #' Values must be separated by a semicolon.
 #'
-#' @family meta_data_cross
-#' @seealso [meta_data_cross]
+#' @family meta_data_cross_item
+#' @seealso [meta_data_cross_item]
 #'
 #' @export
 ASSOCIATION_RANGE <- "ASSOCIATION_RANGE"
@@ -1412,8 +1667,8 @@ ASSOCIATION_RANGE <- "ASSOCIATION_RANGE"
 #' The metric underlying the association in [ASSOCIATION_RANGE]. The input is
 #' a string that specifies the analysis algorithm to be used.
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 ASSOCIATION_METRIC <- "ASSOCIATION_METRIC"
@@ -1423,8 +1678,8 @@ ASSOCIATION_METRIC <- "ASSOCIATION_METRIC"
 #' The allowable direction of an association. The input is a string that can be
 #' either "positive" or "negative".
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 ASSOCIATION_DIRECTION <- "ASSOCIATION_DIRECTION"
@@ -1434,34 +1689,44 @@ ASSOCIATION_DIRECTION <- "ASSOCIATION_DIRECTION"
 #' The allowable form of association. The string specifies the form based on a
 #' selected list.
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 ASSOCIATION_FORM <- "ASSOCIATION_FORM"
 
 #' Cross-item level metadata attribute name
 #'
-#' Specifies the type of reliability or validity analysis. The string specifies
-#' the analysis algorithm to be used, and can be either "inter-class" or
-#' "intra-class".
+#' Specifies the metric used to evaluate repeated measurements.
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
-REL_VAL <- "REL_VAL"
+REPEATED_MEASURES_METRIC <- "REPEATED_MEASURES_METRIC"
 
 #' Cross-item level metadata attribute name
 #'
-#' Defines the measurement variable to be used as a known gold standard. Only
-#' one variable can be defined as the gold standard.
+#' Optional setting identifier(s) for repeated-measurement metrics. If multiple
+#' metrics are requested, values are matched in the same order as
+#' `REPEATED_MEASURES_METRIC`.
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
-GOLDSTANDARD <- "GOLDSTANDARD"
+REPEATED_MEASURES_METRIC_SETTING <- "REPEATED_MEASURES_METRIC_SETTING"
+
+#' Cross-item level metadata attribute name
+#'
+#' Defines the measurement variable to be treated as the reference measurement.
+#' Empty values indicate repeated measurements without a designated reference.
+#'
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
+#'
+#' @export
+REPEATED_MEASURES_REFERENCE <- "REPEATED_MEASURES_REFERENCE"
 
 #' Cross-item level metadata attribute name
 #'
@@ -1471,8 +1736,8 @@ GOLDSTANDARD <- "GOLDSTANDARD"
 #'
 #' LABEL LIMITS MISSING_NA MISSING_LABEL MISSING_INTERPRET
 #'
-#' @seealso [meta_data_cross]
-#' @family meta_data_cross
+#' @seealso [meta_data_cross_item]
+#' @family meta_data_cross_item
 #'
 #' @export
 DATA_PREPARATION <- "DATA_PREPARATION"
@@ -1492,20 +1757,21 @@ CODE_INTERPRET <- "CODE_INTERPRET"
 #' @export
 CODE_CLASS <- "CODE_CLASS"
 
-# TODO Only existence of CODE_ORDER is checked, order not yet used
-#' Only existence is checked, order not yet used
+#' Optional ordering column for value-label tables.
 #' @export
 CODE_ORDER <- "CODE_ORDER"
 
 #' types of value codes
 #' @export
-CODE_CLASSES <- list(MISSING = "MISSING",
-                  JUMP = "JUMP",
-                  VALUE = "VALUE")
+CODE_CLASSES <- list(
+  MISSING = "MISSING",
+  JUMP = "JUMP",
+  VALUE = "VALUE"
+)
 
 #' Name of the sheet with rules to introduce missing codes in the pipeline
 #' @export
-MISSING_CODE_RULES = "MISSING_CODE_RULES"
+MISSING_CODE_RULES <- "MISSING_CODE_RULES"
 
 #' Dimension Titles for Prefixes
 #'
@@ -1533,11 +1799,15 @@ CODE_LIST_TABLE <- "CODE_LIST_TABLE"
 # for global options for dataquieR not exposed to the user like options()
 dataquieR.properties <- new.env(parent = emptyenv())
 
+#' Internal helper: set properties
+#'
+#' @noRd
 .set_properties <- function(p) {
   list2env(p, dataquieR.properties)
 }
 
-with_pipeline <- withr::with_(new = FALSE,
+with_pipeline <- withr::with_(
+  new = FALSE,
   function(x) {
     res <- force(.dq2_globs$.called_in_pipeline)
     if (missing(x)) {
@@ -1546,9 +1816,11 @@ with_pipeline <- withr::with_(new = FALSE,
       .dq2_globs$.called_in_pipeline <- x
     }
     res
-  })
+  }
+)
 
-without_pipeline <- withr::with_(new = FALSE,
+without_pipeline <- withr::with_(
+  new = FALSE,
   function(x) {
     res <- force(.dq2_globs$.called_in_pipeline)
     if (missing(x)) {
@@ -1557,18 +1829,22 @@ without_pipeline <- withr::with_(new = FALSE,
       .dq2_globs$.called_in_pipeline <- x
     }
     res
-  })
+  }
+)
 
+#' Internal helper: called in pipeline2
+#'
+#' @noRd
 .called_in_pipeline2 <- function() {
   n <- 1L
   repeat {
     cl <- rlang::caller_call(n)
-    if (is.null(cl)) return(FALSE)  # End of call stack reached
+    if (is.null(cl)) return(FALSE) # End of call stack reached
 
     if (identical(rlang::call_name(cl), "dq_report2")) {
       # Try to resolve the actual function and its environment
       fn <- rlang::caller_fn(n)
-      if (is.null(fn)) return(TRUE)  # If we can't resolve it, assume match
+      if (is.null(fn)) return(TRUE) # If we can't resolve it, assume match
       # is good
 
       fn_env_top <- base::topenv(rlang::fn_env(fn))
@@ -1579,10 +1855,13 @@ without_pipeline <- withr::with_(new = FALSE,
       return(is_from_pkg)
     }
 
-    n <- n + 1L  # Check next caller up the stack
+    n <- n + 1L # Check next caller up the stack
   }
 }
 
+#' Internal helper: dq lazy register s7
+#'
+#' @noRd
 dq_lazy_register_s7 <- function() {
   if (.dq_lazy_state$s7_ready) return(invisible(TRUE))
   if (!requireNamespace("S7", quietly = TRUE)) return(invisible(FALSE))
@@ -1598,12 +1877,14 @@ dq_lazy_register_s7 <- function() {
   # NOTE: S7’s method-registration API is `S7::method()` in recent versions.
   # We guard it so you get a clear error if the API name differs.
   if (!exists("method", envir = asNamespace("S7"), inherits = FALSE)) {
-    stop("S7 is installed but S7::method() was not found; adjust registration for your S7 version.")
+    util_error(
+      "S7 is installed but S7::method() was not found; adjust registration for your S7 version." # nolint: line_length_linter.
+    )
   }
 
   base_ops <- get("base_ops", envir = asNamespace("S7"))
 
-  S7::method(base_ops[["|"]], signature = list(cls, S7::class_any)) <- function(e1, e2) {
+  S7::method(base_ops[["|"]], signature = list(cls, S7::class_any)) <- function(e1, e2) { # nolint: line_length_linter.
     p1 <- prep_realize_ggplot(dq_lazy_unwrap(e1))
     e2 <- dq_lazy_unwrap(e2)
     if (inherits(e2, "dq_lazy_ggplot")) e2 <- prep_realize_ggplot(e2)
@@ -1611,7 +1892,7 @@ dq_lazy_register_s7 <- function() {
     f(p1, e2)
   }
 
-  S7::method(base_ops[["/"]], signature = list(cls, S7::class_any)) <- function(e1, e2) {
+  S7::method(base_ops[["/"]], signature = list(cls, S7::class_any)) <- function(e1, e2) { # nolint: line_length_linter.
     p1 <- prep_realize_ggplot(dq_lazy_unwrap(e1))
     e2 <- dq_lazy_unwrap(e2)
     if (inherits(e2, "dq_lazy_ggplot")) e2 <- prep_realize_ggplot(e2)
@@ -1619,28 +1900,28 @@ dq_lazy_register_s7 <- function() {
     f(p1, e2)
   }
 
-  S7::method(base_ops[["+"]], signature = list(cls, S7::class_any)) <- function(e1, e2) {
+  S7::method(base_ops[["+"]], signature = list(cls, S7::class_any)) <- function(e1, e2) { # nolint: line_length_linter.
     p1 <- prep_realize_ggplot(dq_lazy_unwrap(e1))
     e2 <- dq_lazy_unwrap(e2)
     if (inherits(e2, "dq_lazy_ggplot")) e2 <- prep_realize_ggplot(e2)
     p1 + e2
   }
 
-  S7::method(base_ops[["-"]], signature = list(cls, S7::class_any)) <- function(e1, e2) {
+  S7::method(base_ops[["-"]], signature = list(cls, S7::class_any)) <- function(e1, e2) { # nolint: line_length_linter.
     p1 <- prep_realize_ggplot(dq_lazy_unwrap(e1))
     e2 <- dq_lazy_unwrap(e2)
     if (inherits(e2, "dq_lazy_ggplot")) e2 <- prep_realize_ggplot(e2)
     p1 - e2
   }
 
-  S7::method(base_ops[["&"]], signature = list(cls, S7::class_any)) <- function(e1, e2) {
+  S7::method(base_ops[["&"]], signature = list(cls, S7::class_any)) <- function(e1, e2) { # nolint: line_length_linter.
     p1 <- prep_realize_ggplot(dq_lazy_unwrap(e1))
     e2 <- dq_lazy_unwrap(e2)
     if (inherits(e2, "dq_lazy_ggplot")) e2 <- prep_realize_ggplot(e2)
     p1 & e2
   }
 
-  S7::method(base_ops[["*"]], signature = list(cls, S7::class_any)) <- function(e1, e2) {
+  S7::method(base_ops[["*"]], signature = list(cls, S7::class_any)) <- function(e1, e2) { # nolint: line_length_linter.
     p1 <- prep_realize_ggplot(dq_lazy_unwrap(e1))
     e2 <- dq_lazy_unwrap(e2)
     if (inherits(e2, "dq_lazy_ggplot")) e2 <- prep_realize_ggplot(e2)

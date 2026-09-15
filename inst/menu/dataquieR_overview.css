@@ -161,6 +161,14 @@ body {
 .dq-overview-section-body {
   min-height: 80px;
 }
+.dq-overview-dashboard-container {
+  height: auto;
+  min-height: 0;
+}
+.dq-overview-table-container {
+  height: 75vh;
+  min-height: 24rem;
+}
 .dq-overview-section-body > .html-widget,
 .dq-overview-section-body > .plotly,
 .dq-overview-section-body .datatables,
@@ -170,6 +178,17 @@ body {
 .dq-overview-section-body img {
   max-width: 100%;
   height: auto;
+}
+.dq-overview-call-cell {
+  display: block;
+  max-height: 12rem;
+  max-width: min(72rem, 90vw);
+  overflow: auto;
+  box-sizing: border-box;
+}
+.dq-overview-call-cell pre {
+  margin: 0;
+  white-space: pre;
 }
 .dq-overview-notes {
   margin-top: 18px;
@@ -272,6 +291,8 @@ body {
 
 /* Code-/Call-Block professioneller statt gelb + outset */
 .dq-overview-footer pre {
+  display: block;
+  max-height: 12rem;
   margin: 0;
   padding: 12px 14px;
   background: #f8fafc;
@@ -283,7 +304,7 @@ body {
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  overflow-x: auto;
+  overflow: auto;
 }
 
 /* Falls der Call in code liegt */

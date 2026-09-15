@@ -1,9 +1,13 @@
 test_that("util_error works", {
   skip_on_cran()
-  expect_error(util_error("The one and everything is %d (%s).", 42,
-                          "Douglas Adams"),
-               regexp = "The one and everything is 42 (Douglas Adams).",
-               fixed = TRUE)
+  expect_error(
+    util_error(
+      "The one and everything is %d (%s).", 42,
+      "Douglas Adams"
+    ),
+    regexp = "The one and everything is 42 (Douglas Adams).",
+    fixed = TRUE
+  )
   x <- function(m) {
     stop(m)
   }

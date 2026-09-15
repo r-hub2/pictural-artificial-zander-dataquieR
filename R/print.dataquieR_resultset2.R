@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Generate a HTML-based report from a [dataquieR] report
 #'
 #' @param x [dataquieR report v2][dq_report2].
@@ -9,47 +10,93 @@
 #' @param block_load_factor [numeric] see [dataquieR.print_block_load_factor]
 #' @param advanced_options [list] options to set during report computation,
 #'                                see [options()]
+#' @param html_table_backend [character] HTML table backend to use for
+#'                           rendering. One of `"auto"`, `"DT2"`, or `"DT"`.
 #' @param ... additional arguments:
 #' @param dashboard [logical] dashboard mode: `TRUE`: create a dashboard only,
 #'                            `FALSE`: don't create a dashboard at all,
 #'                            `NA` or missing: create a "normal" report with
 #'                            a dashboard included.
 #' @param cores [integer] number of cpu cores to use or a named list with
-#'                        arguments for [parallelMap::parallelStart] or NULL,
+#'                        arguments for the internal parallel backend
+#'                        (`util_parallel_start`) or NULL,
 #'                        if parallel has already been started by the caller.
-#'                        Can also be a cluster.
+#'                        Can also be a cluster. In RStudio, caller-created
+#'                        clusters may hang during HTML report finalization
+#'                        while thumbnail and embedded HTML files are written. Prefer
+#'                        passing a number, e.g., `cores = 4`, or a backend
+#'                        list, e.g.,
+#'                        `cores = list(mode = "socket", cpus = 4)`, so
+#'                        `dataquieR` can create and stop the cluster itself.
+#'                        Alternatively run the same command outside RStudio
+#'                        (on Windows start R from the Start menu, on macOS open
+#'                        Terminal and run R, on Linux run R in a terminal).
+#'                        To force a caller-owned
+#'                        cluster in RStudio, set
+#'                        `options(dataquieR.force_rstudio_user_cluster = TRUE)`
+#'                        or pass
+#'                        `advanced_options =
+#'                        list(dataquieR.force_rstudio_user_cluster = TRUE)`.
 #' @param force_overwrite [logical] force to overwrite `dir`, even if it exists
+#' @param output_dir [character] alias for `dir`.
 #'
 #' @return file names of the generated report's HTML files
 #' @export
 #' @importFrom utils browseURL
+# nolint end
 print.dataquieR_resultset2 <- function(
-    x,
-    dir, # TODO: consolidate dir or output_dir see dq_report2 and dq_report_by
-    view = TRUE,
-    disable_plotly = FALSE,
-    block_load_factor = getOption("dataquieR.print_block_load_factor",
-                                  dataquieR.print_block_load_factor_default),
-    advanced_options =  list(),
-    dashboard = NA,
-    force_overwrite = FALSE,
-    ...,
-    cores = list(mode = "socket",
-                 logging = FALSE,
-                 cpus = util_detect_cores(),
-                 load.balancing = TRUE)) {
-
-  util_ensure_suggested("parallel")
-
-
-  util_expect_scalar(block_load_factor,
-                     check_type =
-                       util_is_numeric_in(min = 1, whole_num = FALSE),
-                     convert_if_possible = as.numeric,
-                     error_message =
-                       sprintf(
-                         "%s should be a number above 0",
-                         sQuote("block_load_factor")))
+  x,
+  dir,
+  view = TRUE,
+  disable_plotly = FALSE,
+  block_load_factor = getOption(
+    "dataquieR.print_block_load_factor",
+    dataquieR.print_block_load_factor_default
+  ),
+  advanced_options = list(),
+  html_table_backend = getOption(
+    "dataquieR.html_table_backend",
+    dataquieR.html_table_backend_default
+  ),
+  dashboard = NA,
+  force_overwrite = FALSE,
+  ...,
+  cores = list(
+    mode = "socket",
+    logging = FALSE,
+    cpus = util_detect_cores(),
+    load.balancing = TRUE
+  ),
+  output_dir = NULL
+) {
+  dir_missing <- missing(dir)
+  output_dir_missing <- missing(output_dir)
+  if (!dir_missing && !is.null(dir) &&
+      (!is.character(dir) || length(dir) != 1L)) {
+    util_error("dir must be a character(1)")
+  }
+  if (!output_dir_missing && !is.null(output_dir) &&
+      (!is.character(output_dir) || length(output_dir) != 1L)) {
+    util_error("output_dir must be a character(1)")
+  }
+  dir <- util_resolve_output_dir_alias(
+    dir = if (dir_missing) NULL else dir,
+    output_dir = output_dir,
+    dir_missing = dir_missing,
+    output_dir_missing = output_dir_missing
+  )
+  if (!is.null(block_load_factor)) {
+    util_expect_scalar(block_load_factor,
+      check_type =
+        util_is_numeric_in(min = 1, whole_num = FALSE),
+      convert_if_possible = as.numeric,
+      error_message =
+        sprintf(
+          "%s should be a number above 0",
+          sQuote("block_load_factor")
+        )
+    )
+  }
 
   if (suppressWarnings(util_ensure_suggested("testthat", err = FALSE))) {
     if (testthat::is_testing()) {
@@ -58,41 +105,60 @@ print.dataquieR_resultset2 <- function(
       }
       if (!rlang::is_scalar_integerish(cores) ||
           cores > 2L) {
-        if (!is.null(cores))
+        if (!is.null(cores)) {
           util_warning(
-            "Internal problem: %s should be an integer below %s in the context of %s",
-            sQuote("cores"), dQuote("3"), sQuote("testthat"))
-          cores <- 2
+            "Internal problem: %s should be an integer below %s in the context of %s", # nolint: line_length_linter.
+            sQuote("cores"), dQuote("3"), sQuote("testthat")
+          )
+        }
+        cores <- 2
       }
     }
   }
+
+  util_stop_if_not(is.list(advanced_options))
+  util_expect_scalar(html_table_backend, check_type = is.character)
+  html_table_backend <- tolower(html_table_backend)
+  html_table_backend <- util_match_arg(
+    html_table_backend,
+    c("auto", "dt2", "dt")
+  )
+  advanced_options[["dataquieR.html_table_backend"]] <- html_table_backend
+  util_guard_rstudio_user_cluster(cores, advanced_options)
+
+  iframe_cores <- cores
 
   if (!is.null(cores)) {
     if (inherits(cores, "cluster")) {
       old_def_cl <- parallel::getDefaultCluster()
       parallel::setDefaultCluster(cores)
-      on.exit(parallel::setDefaultCluster(old_def_cl), add = TRUE)
-      old_o_def_cl <- options(
-        parallelMap.cpus = length(parallel::getDefaultCluster()),
-        parallelMap.load.balancing = TRUE,
-        parallelMap.mode = "socket"
-      )
-      on.exit(options(old_o_def_cl), add = TRUE)
+      withr::defer(parallel::setDefaultCluster(old_def_cl))
+      suppressMessages(util_parallel_start(
+        mode = "socket",
+        cpus = length(parallel::getDefaultCluster()),
+        load.balancing = TRUE
+      ))
+      withr::defer(suppressMessages(util_parallel_stop()))
     } else if (inherits(cores, "list")) {
-      suppressMessages(do.call(parallelMap::parallelStart, cores))
-      on.exit({Sys.sleep(2);suppressMessages(parallelMap::parallelStop());}, add = TRUE) # whyever, rstudio needs these two seconds, it hangs, otherwise.
-      on.exit({suppressMessages(gc(full = TRUE));}, add = TRUE)
+      suppressMessages(do.call(util_parallel_start, cores))
+      withr::defer(util_deferred_parallel_stop())
+      withr::defer(
+        {
+          suppressMessages(gc(full = TRUE))
+        }
+      )
     } else {
-      suppressMessages(parallelMap::parallelStart("socket", cpus = cores,
-                                                  logging = FALSE,
-                                                  load.balancing = TRUE))
-      on.exit({Sys.sleep(2);suppressMessages(parallelMap::parallelStop());}, add = TRUE) # whyever, rstudio needs these two seconds, it hangs, otherwise.
-      on.exit(suppressMessages(gc(full = TRUE)), add = TRUE)
+      suppressMessages(util_parallel_start("socket",
+          cpus = cores,
+          logging = FALSE,
+          load.balancing = TRUE
+        ))
+      withr::defer(util_deferred_parallel_stop())
+      withr::defer(suppressMessages(gc(full = TRUE)))
     }
     cores <- NULL
   }
-  util_stop_if_not(is.list(advanced_options))
-  old_O <- options(
+  withr::local_options(
     c(
       list(
         dataquieR.CONDITIONS_WITH_STACKTRACE = FALSE,
@@ -106,10 +172,11 @@ print.dataquieR_resultset2 <- function(
   )
   .old_.dq2_globs_.called_in_pipeline <- .dq2_globs$.called_in_pipeline
   .dq2_globs$.called_in_pipeline <- TRUE
-  on.exit({
-    .dq2_globs$.called_in_pipeline <- .old_.dq2_globs_.called_in_pipeline
-    options(old_O)
-  }, add = TRUE)
+  withr::defer(
+    {
+      .dq2_globs$.called_in_pipeline <- .old_.dq2_globs_.called_in_pipeline
+    }
+  )
 
   opts <- c(as.list(environment()), list(...))
   opts$x <- NULL
@@ -119,20 +186,27 @@ print.dataquieR_resultset2 <- function(
       opts[[arg_name]] <- NULL
     }
   }
-  util_ensure_suggested(pkg = c("htmltools",
-                                "DT", "rmarkdown",
-                                "markdown"),
-                        goal = "generate plain HTML-reports.")
+  util_ensure_suggested(
+    pkg = c(
+      "htmltools",
+      "DT", "rmarkdown",
+      "markdown"
+    ),
+    goal = "generate plain HTML-reports."
+  )
 
   if (nrow(x) * ncol(x) * nres(x) == 0) {
     all_errors <- lapply(x, function(res) {
-      e <- attr(res, "error")
+      e <- util_attr(res, "error", exact = TRUE)
       if (length(e)) {
         util_stop_if_not(length(e) == 1)
         e <- e[[1]]
-        if (!is.null(attr(e, "applicability_problem")) &&
-            is.logical(attr(e, "applicability_problem")) &&
-            identical(attr(e, "applicability_problem"), TRUE)) {
+        applicability_problem <- util_attr(e, "applicability_problem",
+          exact = TRUE
+        )
+        if (!is.null(applicability_problem) &&
+            is.logical(applicability_problem) &&
+            identical(applicability_problem, TRUE)) {
           "Applicability problem(s)"
         } else {
           paste(conditionMessage(e), collapse = "\n") # nocov
@@ -141,24 +215,29 @@ print.dataquieR_resultset2 <- function(
         NULL
       }
     })
-    all_errors <- all_errors[!vapply(all_errors, is.null, FUN.VALUE =
-                                       logical(1))]
+    all_errors <- all_errors[!vapply(all_errors, is.null,
+        FUN.VALUE =
+          logical(1)
+      )]
     all_errors <- unlist(all_errors, recursive = TRUE)
     all_errors <- gsub("\nwhen calling .*$", "", all_errors)
     all_errors <- unique(all_errors)
-    if (length(all_errors) > 0)
-      reason <- paste0(", possible reasons are: \n", paste("-", all_errors, collapse = "\n"))
-    else
+    if (length(all_errors) > 0) {
+      reason <- paste0(", possible reasons are: \n", paste("-", all_errors, collapse = "\n")) # nolint: line_length_linter.
+    } else {
       reason <- "."
-    util_error("Report is empty, no results at all%s",
-               reason)
+    }
+    util_error(
+      "Report is empty, no results at all%s",
+      reason
+    )
   }
 
   dir <- NULL
 
   template <- "default"
 
-  if ("dir" %in% names(opts)) {
+  if ("dir" %in% names(opts) && !is.null(opts[["dir"]])) {
     dir <- opts[["dir"]]
     if (!is.character(dir) || length(dir) != 1) {
       util_error("dir must be a character(1)")
@@ -167,43 +246,58 @@ print.dataquieR_resultset2 <- function(
   }
   if ("template" %in% names(opts)) {
     template <- opts[["template"]]
-    if (!is.character(template) || length(template) != 1)
+    if (!is.character(template) || length(template) != 1) {
       util_error("template must be a character(1)")
+    }
   }
   if ("view" %in% names(opts)) {
     view <- opts[["view"]]
-    if (!is.logical(view) || length(view) != 1 || is.na(view))
+    if (!is.logical(view) || length(view) != 1 || is.na(view)) {
       util_error("view must be a logical(1)")
+    }
   }
   if ("by_report" %in% names(opts)) {
     by_report <- opts[["by_report"]]
-    if (!is.logical(by_report) || length(by_report) != 1 || is.na(by_report))
+    if (!is.logical(by_report) || length(by_report) != 1 || is.na(by_report)) {
       util_error("by_report must be a logical(1)")
+    }
   } else {
     by_report <- FALSE
   }
 
 
   util_setup_rstudio_job("Rendering dq_report2 to HTML...",
-                         n = 2 * nrow(x) * ncol(x))
+    n = 2 * nrow(x) * ncol(x)
+  )
+
   start_time <- Sys.time()
 
   if (length(dir) == 0) {
     dir <- tempfile()
-    util_message("No output directory given (with dir=), setting it to %s",
-                 dQuote(dir))
+    util_message(
+      "No output directory given (with dir=), setting it to %s",
+      dQuote(dir)
+    )
   }
 
-  content_dir <- util_normalize_path(dir)
-  content_file <- file.path(content_dir, "index.html")
+  render_paths <- util_report_render_paths(dir)
+  content_dir <- render_paths$content_dir
+  content_file <- render_paths$content_file
 
-  progress_msg("Page generation", sprintf("Writing to %s", dQuote(content_file)))
+  progress_msg("Page generation", sprintf(
+    "Writing to %s",
+    dQuote(content_file)
+  ))
 
-  dir <- file.path(dir, ".report")
+  dir <- render_paths$report_dir
 
-  util_expect_scalar(force_overwrite, check_type = is.logical,
-                     error_message = sprintf("%s must be a logical value",
-                                             sQuote("force_overwrite")))
+  util_expect_scalar(force_overwrite,
+    check_type = is.logical,
+    error_message = sprintf(
+      "%s must be a logical value",
+      sQuote("force_overwrite")
+    )
+  )
 
   if (!getOption("dataquieR.resume_print", dataquieR.resume_print_default)) {
     util_overwrite_if_requested(dir, force_overwrite)
@@ -214,33 +308,38 @@ print.dataquieR_resultset2 <- function(
   }
 
   dir <- util_normalize_path(dir)
-  old_dir <- setwd(dir)
-  on.exit({
-    setwd(old_dir)
-  }, add = TRUE)
+  withr::local_dir(dir)
 
 
-  old_opt <- options(DT.warn.size=FALSE)
-  on.exit({
-    options(old_opt)
-  }, add = TRUE)
+  withr::local_options(list(DT.warn.size = FALSE))
 
 
   report <- x # the report object is defined here to be available
   rm(x)
+  report <- util_prepare_report_labels_for_view(report)
 
-  # rep_id <- attr(report, "properties")$rep_id
+  # Historical properties-based report ID reuse removed here.
   rep_id <- util_make_report_id() # use a different ID for each rendering
 
   packageName <- utils::packageName()
+  logo <- render_paths$logo
+  logo_src <- system.file("logos",
+    "dataquieR_48x48.png",
+    package = packageName)
+  if (nzchar(logo_src)) {
+    file.copy(logo_src, render_paths$report_logo_file, overwrite = TRUE)
+  }
 
-  if (!inherits(attr(report, "min_render_version"), "numeric_version") ||
-      attr(report, "min_render_version") > as.numeric_version("1.0.0")
+  min_render_version <- util_attr(report, "min_render_version", exact = TRUE)
+  if (!inherits(min_render_version, "numeric_version") ||
+      min_render_version > as.numeric_version("1.0.0")
   ) {
     util_warning(
-      c("This report may be not rendered correctly by",
+      c(
+        "This report may be not rendered correctly by",
         "this version of %s (i.e., %s). I'll try, but consider",
-        "upgradig %s, please:\n install.packages(\"%s\")"),
+        "upgradig %s, please:\n install.packages(\"%s\")"
+      ),
       packageName,
       as.character(packageVersion(packageName)),
       packageName,
@@ -248,14 +347,19 @@ print.dataquieR_resultset2 <- function(
     )
   }
 
-  if (!is.null(attr(report, "translation_version"))) {
-    if (translation_version != attr(report, "translation_version")) {
+  report_translation_version <- util_attr(report, "translation_version",
+    exact = TRUE
+  )
+  if (!is.null(report_translation_version)) {
+    if (translation_version != report_translation_version) {
       util_warning(
-        c("This report may be not rendered correctly by",
+        c(
+          "This report may be not rendered correctly by",
           "this version of %s. The translations may have changed.",
-          "Version in report: %s, version in installed %s: %s"),
+          "Version in report: %s, version in installed %s: %s"
+        ),
         sQuote(packageName),
-        sQuote(attr(report, "translation_version")),
+        sQuote(report_translation_version),
         sQuote(paste(packageName, as.character(packageVersion(packageName)))),
         sQuote(translation_version)
       )
@@ -265,8 +369,10 @@ print.dataquieR_resultset2 <- function(
   util_message("Compiling HTML report, please wait...")
 
 
-  template_file <- system.file("templates", template, "report.html", package =
-                                 packageName)
+  template_file <- system.file("templates", template, "report.html",
+    package =
+      packageName
+  )
 
   if (template_file == "") {
     if (file.exists(template)) {
@@ -276,31 +382,37 @@ print.dataquieR_resultset2 <- function(
     }
   }
 
-  title <- attr(report, "title")
+  title <- util_attr(report, "title", exact = TRUE)
   if (is.null(title)) {
     title <- "Data Quality Report"
   }
 
   .hi <- .hp <- .hm <- NULL
-  content_file <- NULL
+  .hf <- function() invisible(NULL)
   if (!missing(dir)) {
-    content_file <- file.path(dirname(dir), "index.html")
-    list2env(util_init_html_progress(output_dir = content_dir,
-                            content_file = content_file,
-                            title = title,
-                            view = view,
-                            rep_id = rep_id), envir = environment())
+    list2env(util_init_html_progress(
+      output_dir = content_dir,
+      content_file = content_file,
+      title = title,
+      view = view,
+      rep_id = rep_id,
+      logo_rel = render_paths$content_logo_rel
+    ), envir = environment())
   }
 
   if (is.na(dashboard) || dashboard) { # DASHBOARD
     progress_msg("Computing dashboard", "Computing dashboard...start")
-    my_dashboard <- util_setup_dashboard(report, make_links = is.na(dashboard))
+    repsum <- summary(report)
+    my_dashboard <- util_setup_dashboard(report,
+      make_links = is.na(dashboard),
+      repsum = repsum
+    )
     progress_msg("Computing dashboard...", "Computing dashboard...done")
   } else {
+    repsum <- NULL
     my_dashboard <- NULL
   }
 
-  logo <- "logo.png"
   # <link rel="icon" type="image/png" href="{{ logo }}">
   if (!is.na(dashboard) && dashboard) {
     progress_msg("Writing dashboard...", "Start")
@@ -309,90 +421,88 @@ print.dataquieR_resultset2 <- function(
         htmltools::tags$title(title),
         htmltools::htmlTemplate(
           text_ = '<link rel="icon" type="image/png" href="{{ logo }}">',
-          logo = logo,
-          document_ = FALSE)
+          logo = render_paths$content_logo_rel,
+          document_ = FALSE
+        )
       ),
       htmltools::HTML("<!-- done -->"),
       my_dashboard
     )
-    # important: no progress update after this line should replace the index.html any more, so deregister
+    # important: no progress update after this line should replace the
+    # index.html any more, so deregister
     prep_deregister_progress_hook(.hi, verbose = FALSE)
     prep_deregister_progress_hook(.hp, verbose = FALSE)
     prep_deregister_progress_hook(.hm, verbose = FALSE)
     progress_msg("Writing dashboard...", "Done")
     htmltools::save_html(my_dashboard,
-                         libdir = file.path(content_dir, "lib"),
-                         file = content_file)
+      libdir = render_paths$content_lib_dir,
+      file = content_file
+    )
     util_write_renderinfo_js_json(
       content_dir,
       rep_id,
       start_time = start_time,
       end_time = Sys.time()
     )
+    .hf()
     fnms <- setNames(list(content_file), nm = paste0("dash-", title))
     if (util_really_rstudio()) {
       rstudioapi::executeCommand("activateConsole")
     }
-
   } else {
-
-    progress_msg("Creating HTML files in memory...",
-                 "Creating HTML files in memory...start")
-    pages <- util_generate_pages_from_report(report, template,
-                                             disable_plotly = disable_plotly,
-                                             progress = progress,
-                                             progress_msg = progress_msg,
-                                             block_load_factor =
-                                               block_load_factor,
-                                             dir = dir,
-                                             my_dashboard = my_dashboard)
-    progress_msg("Creating HTML files in memory...",
-                 "Creating HTML files in memory...finalize")
-
-    all_ids <- util_extract_all_ids(pages)
-    js_escape_string <- function(x) {
-      x <- gsub("\\\\", "\\\\\\\\", x)  # Backslash first
-      x <- gsub("\"", "\\\\\"", x)      # "
-      x <- gsub("\n", "\\\\n", x)
-      x <- gsub("\r", "\\\\r", x)
-      x <- gsub("\t", "\\\\t", x)
-      x
-    }
-    cat(sep = "",
-        "window.all_ids = {\"all_ids\": ",
-        paste0("[",
-               paste0('"', js_escape_string(all_ids), '"', collapse = ", "),
-               "]"),
-        "}",
-        file = file.path(dir, "anchor_list.js")
+    progress_msg(
+      "Creating HTML files in memory...",
+      "Creating HTML files in memory...start"
     )
-    saveRDS(object = all_ids, file = file.path(dir, "anchor_list.RDS"))
+    pages <- util_generate_pages_from_report(report, template,
+      disable_plotly = disable_plotly,
+      progress = progress,
+      progress_msg = progress_msg,
+      block_load_factor =
+        block_load_factor,
+      dir = dir,
+      my_dashboard = my_dashboard,
+      repsum = repsum
+    )
+    progress_msg(
+      "Creating HTML files in memory...",
+      "Creating HTML files in memory...finalize"
+    )
+
+    util_write_anchor_list(pages, render_paths)
 
     loading <-
       htmltools::includeHTML(
         system.file("loading.html",
-                    package =
-                      packageName))
+          package =
+            packageName
+        )
+      )
 
     jqui <- rmarkdown::html_dependency_jqueryui()
     jqui$stylesheet <- "jquery-ui.min.css"
 
-    deps_prepro <- util_copy_all_deps(dir = dir,
-                                      pages,
-                                      rmarkdown::html_dependency_jquery(),
-                                      jqui,
-                                      html_dependency_clipboard(),
-                                      html_dependency_tippy(),
-                                      rmarkdown::html_dependency_font_awesome(),
-                                      html_dependency_dataquieR(),
-                                      html_dependency_jspdf()
+    deps_prepro <- util_copy_all_deps(
+      dir = dir,
+      pages,
+      rmarkdown::html_dependency_jquery(),
+      jqui,
+      html_dependency_clipboard(),
+      html_dependency_tippy(),
+      rmarkdown::html_dependency_font_awesome(),
+      html_dependency_dataquieR(),
+      html_dependency_jspdf()
     )
 
-    progress_msg("Creating HTML files in memory...",
-                 "Creating HTML files in memory...done")
+    progress_msg(
+      "Creating HTML files in memory...",
+      "Creating HTML files in memory...done"
+    )
 
-    progress_msg("Writing HTML files from memory...",
-                 "Writing HTML files from memory...start")
+    progress_msg(
+      "Writing HTML files from memory...",
+      "Writing HTML files from memory...start"
+    )
 
     fnms <- lapply(
       setNames(nm = seq_along(pages)),
@@ -412,46 +522,55 @@ print.dataquieR_resultset2 <- function(
       by_report = by_report
     )
 
-    util_setup_rstudio_job("Page generation: Finalization",
-                           length(pages))
+    util_setup_rstudio_job(
+      "Page generation: Finalization",
+      length(pages)
+    )
 
-    progress_msg("Writing HTML files from memory...",
-                 "Writing HTML files from memory...thumbnails/iframes")
+    progress_msg(
+      "Writing HTML files from memory...",
+      "Writing HTML files from memory...thumbnails/iframes"
+    )
+
+    if (!is.null(iframe_cores) && !inherits(iframe_cores, "cluster")) {
+      suppressMessages(util_parallel_stop())
+      suppressMessages(gc(full = TRUE))
+    }
 
     util_write_iframe_results(pages,
-                              progress_msg = progress_msg,
-                              progress = progress,
-                              block_load_factor = block_load_factor,
-                              template_file = system.file("templates",
-                                                          template,
-                                                          "iframe.html",
-                                                          package =
-                                                            packageName),
-                              dir = dir)
+      progress_msg = progress_msg,
+      progress = progress,
+      block_load_factor = block_load_factor,
+      copy_dependencies = FALSE,
+      template_file = system.file("templates",
+        template,
+        "iframe.html",
+        package =
+          packageName
+      ),
+      dir = dir,
+      cores = iframe_cores
+    )
 
-    progress_msg("Creating HTML files in memory...",
-                 "Writing HTML files from memory...done")
+    progress_msg(
+      "Creating HTML files in memory...",
+      "Writing HTML files from memory...done"
+    )
 
     end_time <- Sys.time()
 
     util_hide_file_windows(dir)
 
-    progress_msg(sprintf("Wrote %d files", length(fnms)),
-                 sprintf("Wrote %s", util_pretty_vector_string(fnms, n_max = 20)))
+    progress_msg(
+      sprintf("Wrote %d files", length(fnms)),
+      sprintf("Wrote %s", util_pretty_vector_string(fnms, n_max = 20))
+    )
 
-    # important: no progress update after this line should replace the index.html any more, so deregister
+    # important: no progress update after this line should replace the
+    # index.html any more, so deregister
     prep_deregister_progress_hook(.hi, verbose = FALSE)
     prep_deregister_progress_hook(.hp, verbose = FALSE)
     prep_deregister_progress_hook(.hm, verbose = FALSE)
-
-    util_write_index_html(
-      file.path(content_dir, "index.html"),
-      util_index_redirect_lines(
-        title = title,
-        target_rel = paste0(".report/", basename(fnms[[1]])),
-        delay_ms = 300L
-      )
-    )
 
     util_write_renderinfo_js_json(
       content_dir,
@@ -459,6 +578,19 @@ print.dataquieR_resultset2 <- function(
       start_time = start_time,
       end_time = end_time
     )
+
+    # The redirect is the final state transition. Progress handlers must not
+    # be able to replace it after the report metadata has been written.
+    util_write_index_html(
+      content_file,
+      util_index_redirect_lines(
+        title = title,
+        target_rel = paste0(".report/", basename(fnms[[1]])),
+        delay_ms = 300L,
+        logo_rel = render_paths$content_logo_rel
+      )
+    )
+    .hf()
 
     if (util_really_rstudio()) {
       rstudioapi::executeCommand("activateConsole")
@@ -485,27 +617,32 @@ print.list <- function(x, ...) {
   if (length(x) == 0) {
     return(NextMethod())
   }
-  if (isTRUE(getOption('knitr.in.progress'))) {
+  if (isTRUE(getOption("knitr.in.progress"))) {
     return(NextMethod())
   }
   entities <- try(unique(
     vapply(x,
-           function(dqr) attr(attr(dqr, "call"), "entity"),
-           FUN.VALUE = character(1))), silent = TRUE)
+      function(dqr) {
+        call_attr <- util_attr(dqr, "call", exact = TRUE)
+        util_attr(call_attr, "entity", exact = TRUE)
+      },
+      FUN.VALUE = character(1)
+    )
+  ), silent = TRUE)
   if (length(entities) == 1 &&
       !util_is_try_error(entities) &&
       length(x) > 1) {
-    util_ensure_suggested("htmltools")
     f <- withr::local_tempdir(.local_envir = rlang::global_env())
     withr::local_dir(f)
     jqui <- rmarkdown::html_dependency_jqueryui()
     jqui$stylesheet <- "jquery-ui.min.css"
-    entity <- attr(attr(x[[1]], "call"), "entity")
+    call_attr <- util_attr(x[[1]], "call", exact = TRUE)
+    entity <- util_attr(call_attr, "entity", exact = TRUE)
     outputs <- lapply(x, function(dqr) {
       if (is.null(dqr) || inherits(dqr, "dataquieR_NULL")) {
         return(htmltools::tagList())
       }
-      cn <- attr(dqr, "cn")
+      cn <- util_attr(dqr, "cn", exact = TRUE)
       nm <- paste0(cn, ".", entity)
       if (is.null(cn)) {
         title <- ""
@@ -514,138 +651,55 @@ print.list <- function(x, ...) {
       } else {
         title <-
           util_alias2caption(cn,
-                             long = TRUE)
+            long = TRUE
+          )
       }
-      section <- htmltools::tagList(html_dependency_dataquieR(iframe = FALSE),
-                                    html_dependency_jspdf(),
-                                    jqui,
-                                    htmltools::h2(title),
-                                    util_pretty_print(dqr = dqr,
-                                                      nm = nm,
-                                                      is_single_var = TRUE,
-                                                      use_plot_ly = (util_ensure_suggested("plotly",
-                                                                                           goal = "plot interactive figures",
-                                                                                           err = FALSE)),
-                                                      dir = f))
+      section <- htmltools::tagList(
+        rmarkdown::html_dependency_jquery(),
+        html_dependency_dataquieR(iframe = FALSE),
+        html_dependency_jspdf(),
+        jqui,
+        htmltools::h2(title),
+        util_pretty_print(
+          dqr = dqr,
+          nm = nm,
+          is_single_var = TRUE,
+          use_plot_ly = (util_ensure_suggested("plotly",
+              goal = "plot interactive figures",
+              err = FALSE
+            )),
+          dir = f
+        )
+      )
     })
-    outputs <- c(list(htmltools::h1(entity)),
-                 outputs)
+    outputs <- c(
+      list(htmltools::h1(entity)),
+      outputs
+    )
     doc <- do.call(htmltools::tagList, outputs)
     htmltools::save_html(doc, "index.html")
-    # FIXME: knitinprogress
-    if (!("view" %in% names(list(...))) || (!identical(list(...)[["view"]],
-                                                       FALSE))) {
+    if (!("view" %in% names(list(...))) || (!identical(
+      list(...)[["view"]],
+      FALSE
+    ))) {
       viewer <- getOption("viewer", utils::browseURL)
       viewer("index.html")
     }
     invisible(NULL)
   } else if (identical(
-    try(all(vapply(x, function(y) inherits(y, "dataquieR_result") &&
-                   inherits(y, "master_result"), FUN.VALUE = logical(1)),
-            na.rm = TRUE), silent = TRUE), TRUE)) {
-    ERRs <- vapply(x, FUN.VALUE = logical(1), FUN = function(y) {
-      length(attr(y, "error")) > 0
-    })
-    if (any(ERRs)) {
-      for (e in x[ERRs]) {
-        for (cnd in attr(e, "error"))
-          warning(cnd)
-      }
-    }
-    x <- x[!ERRs]
-    all_slots <- unique(unlist(lapply(x, names)))
-    all_slots <- all_slots[vapply(all_slots,
-                                  function(slot)
-                                    all(vapply(x, function(dqr) slot %in%
-                                                 names(dqr),
-                                               FUN.VALUE = logical(1)),
-                                        na.rm = TRUE),
-                                  FUN.VALUE = logical(1))]
-    names(x) <- paste0(rep("r.", length(x)), seq_along(x))
-    nm1 <- unlist(lapply(x, attr, "function_name"))
-    nm2 <- unlist(lapply(x, function(.dqr) {
-      attr(attr(.dqr, "call"), "entity_name")
-    }))
-    if (!!length(nm1) &&
-        length(nm1) == length(nm2)) {
-      names(x) <- paste0(nm1, ".", nm2)
-    }
-    if (length(all_slots) > 0) {
-      x <- lapply(setNames(nm = all_slots), function(slot) {
-        cr <- util_combine_res(lapply(x, `[`, slot))
-        if (length(cr) == 1) {
-          r <- cr[[1]][[slot]]
-          rownames(r) <- NULL
-        } else {
-          old_r <- cr
-          r <- lapply(cr, `[[`, slot)
-          if (slot == "SummaryPlot") {
-            if (util_ensure_suggested("plotly",
-                                      goal = "plot interactive figures",
-                                      err = FALSE)) {
-              as_plotlys <- unique(lapply(old_r, attr, "as_plotly"))
-              as_plotly <- NULL
-              if (length(as_plotlys) == 1) {
-                if (!is.null(as_plotlys[[1]]) &&
-                    exists(as_plotlys[[1]], mode = "function"))
-                  as_plotly <- get(as_plotlys[[1]], mode = "function")
-              }
-              if (is.function(as_plotly)) {
-                my_plots <- lapply(old_r, as_plotly)
-              } else {
-                my_plots <- lapply(r, util_plot_figure_plotly) # IDEA: Do we need sizing_hints, here?
-              }
-              my_plots <- mapply(SIMPLIFY = FALSE,
-                                 p = my_plots,
-                                 nm = names(my_plots), function(p, nm) {
-                                   title <- paste0("", nm)
-                                   title <- util_sub_string_right_from_.(nm)
-                                   if (inherits(p, "plotly")) {
-                                     # p <- plotly::layout(p, width = "30%", height = "30%", margin = list(b = 120))
-                                     p <- plotly::config(p, responsive = TRUE, displaylogo = FALSE)
-                                   }
-                                   react_size <- "
-                  window.dq_rs2_script_init = false;
-                  window.dq_rs2_script_init_fkt = function() {
-                    if (window.dq_rs2_script_init) {
-                      return;
-                    }
-                    window.dq_rs2_script_init = true;
-                    var pys = $(document).find('.js-plotly-plot')
-                    for (var i = 0; i < pys.length; i++) {
-                      var py = pys[i]
-                      Plotly.relayout(py, {
-                                    width: py.getBoundingClientRect().width,
-                                    height: py.getBoundingClientRect().height
-                                  })
-                    }
-                  }
-                  $(window.dq_rs2_script_init_fkt)
-                "
-                                   htmltools::div(style = "float:left;width:30%;height:33%;overflow-y:hidden;",
-                                                  htmltools::h2(style = "position:relative;top:0;height:0;margin:0;padding:0;z-index:9;", title),
-                                                  p,
-                                                  htmltools::tags$script(type = "text/javascript",
-                                                                         htmltools::HTML(react_size)))
-                                 })
-
-              my_plots <- htmltools::tagList(c(my_plots,
-                                               list(htmltools::br(style =
-                                                                    "clear: both;"))))
-              r <- my_plots
-            } else {
-              r <- patchwork::wrap_plots(r, ncol = 2)
-            }
-          }
-          class(r) <- union("dataquieR_result", class(r))
-        }
-        r
-      })
-    } else {
+    try(all(
+      vapply(x, function(y) {
+        inherits(y, "dataquieR_result") &&
+          inherits(y, "master_result")
+      }, FUN.VALUE = logical(1)),
+      na.rm = TRUE
+    ), silent = TRUE), TRUE
+  )) {
+    x <- util_master_result_from_result_list(x, warn_errors = TRUE)
+    if (is.null(x)) {
       return(NextMethod())
     }
-    class(x) <- c("master_result")
-    print.master_result(x)
+    print.master_result(x, ...)
   } else {
     NextMethod()
   }
@@ -666,7 +720,7 @@ util_collect_tag_attrs <- function(x, key = "html_file") {
     if (inherits(tag, "shiny.tag.list") || inherits(tag, "list")) {
       lapply(tag, recurse)
     } else if (inherits(tag, "shiny.tag")) {
-      if (!is.null(attr(tag, key))) {
+      if (!is.null(util_attr(tag, key, exact = TRUE))) {
         found_env$found[[length(found_env$found) + 1]] <- tag
       }
       if (!is.null(tag$children)) {
@@ -677,6 +731,23 @@ util_collect_tag_attrs <- function(x, key = "html_file") {
 
   recurse(x)
   found
+}
+
+#' Stop a report-owned backend only if deferred cleanup is still necessary
+#'
+#' The RStudio pause is retained for early returns that leave a worker cluster
+#' active. Normal report finalization stops it before iframe writing, so a
+#' second pause at function exit only delays an already completed report.
+#'
+#' @return invisible(NULL)
+#' @keywords internal
+#' @noRd
+util_deferred_parallel_stop <- function() {
+  if (!identical(util_parallel_status(), "stopped")) {
+    Sys.sleep(2)
+    suppressMessages(util_parallel_stop())
+  }
+  invisible(NULL)
 }
 
 #' Save ggplot with guaranteed inner panel size (no down-scaling)
@@ -696,13 +767,14 @@ util_collect_tag_attrs <- function(x, key = "html_file") {
 #' @return Nothing. Saves the file and returns invisibly.
 #' @noRd
 util_save_with_inner_size <- function(plot, filename,
-                                      inner_width, inner_height,
-                                      dpi = 300,
-                                      base_text_factor = 11) {
-
-
+  inner_width, inner_height,
+  dpi = 300,
+  base_text_factor = 11) {
   is_pairs_plot <-
-    identical(attr(plot, "sizing_hints")$figure_type_id, "pairs_plot")
+    identical(
+      util_attr(plot, "sizing_hints", exact = TRUE)$figure_type_id,
+      "pairs_plot"
+    )
 
   min_text_pt <- 6.5
   max_text_pt <- 12
@@ -710,8 +782,9 @@ util_save_with_inner_size <- function(plot, filename,
   base_size <- base_text_factor * scale_factor
   base_size <- max(min_text_pt, min(base_size, max_text_pt))
 
-  if (!is_pairs_plot)
+  if (!is_pairs_plot) {
     plot <- plot + util_theme_with_scaling_limits(base_size = base_size)
+  }
 
   pw_widths <- NULL
   pw_heights <- NULL
@@ -726,14 +799,16 @@ util_save_with_inner_size <- function(plot, filename,
     }
   }
 
-  if (!is_pairs_plot) plot <- util_gg_stagger_x_axis_labels(
-                                                plot,
-                                                inner_width = inner_width,
-                                                inner_height = inner_height,
-                                                patchwork_widths = pw_widths,
-                                                patchwork_heights = pw_heights,
-                                                theme_base_size = base_size
-                                              )
+  if (!is_pairs_plot) {
+    plot <- util_gg_stagger_x_axis_labels(
+      plot,
+      inner_width = inner_width,
+      inner_height = inner_height,
+      patchwork_widths = pw_widths,
+      patchwork_heights = pw_heights,
+      theme_base_size = base_size
+    )
+  }
 
   as_plot_gtable <- function(plot) {
     if (inherits(plot, "patchwork")) {
@@ -744,12 +819,16 @@ util_save_with_inner_size <- function(plot, filename,
   }
 
   sum_width_in <- function(x) {
-    if (!length(x)) return(0)
+    if (!length(x)) {
+      return(0)
+    }
     sum(grid::convertWidth(x, "in", valueOnly = TRUE))
   }
 
   sum_height_in <- function(x) {
-    if (!length(x)) return(0)
+    if (!length(x)) {
+      return(0)
+    }
     sum(grid::convertHeight(x, "in", valueOnly = TRUE))
   }
 
@@ -828,7 +907,7 @@ util_save_with_inner_size <- function(plot, filename,
   ), silent = TRUE)
 
   if (util_is_try_error(e)) {
-    msg <- conditionMessage(attr(e, "condition"))
+    msg <- conditionMessage(util_attr(e, "condition", exact = TRUE))
     msg_stripped <- msg
     if (suppressWarnings(util_ensure_suggested("cli", err = FALSE))) {
       msg_stripped <- cli::ansi_strip(msg_stripped)
@@ -844,15 +923,18 @@ util_save_with_inner_size <- function(plot, filename,
       limitsize = FALSE
     ), silent = TRUE)
 
-    util_warning("Could not write %s: %s",
-                 dQuote(filename),
-                 sQuote(msg))
+    util_warning(
+      "Could not write %s: %s",
+      dQuote(filename),
+      sQuote(msg)
+    )
   }
 
   suppressMessages(gc(verbose = FALSE))
   invisible(NULL)
 }
 
+# nolint start: line_length_linter.
 #' Internal theme with scalable font size (not exported)
 #'
 #' Creates a `ggplot2::theme()` object where text elements are scaled
@@ -866,10 +948,11 @@ util_save_with_inner_size <- function(plot, filename,
 #'
 #' @return A ggplot2 theme object with consistently scaled text
 #' @noRd
+# nolint end
 util_theme_with_scaling_limits <- function(base_size,
-                                           rel_axis = 0.72,
-                                           rel_title = 0.9,
-                                           rel_subtitle = 0.8) {
+  rel_axis = 0.72,
+  rel_title = 0.9,
+  rel_subtitle = 0.8) {
   ggplot2::theme(
     text            = ggplot2::element_text(size = base_size),
     axis.text       = ggplot2::element_text(size = base_size * rel_axis),
@@ -896,39 +979,59 @@ util_theme_with_scaling_limits <- function(base_size,
 #' @param progress        `function(percent)`
 #' @param block_load_factor [numeric] see
 #'   [dataquieR.print_block_load_factor]
+#' @param copy_dependencies [logical] whether iframe dependencies still need to
+#'   be copied. Internal report rendering sets this to `FALSE` after the parent
+#'   page step has copied the shared dependency directories.
 #' @param template_file file to use as a template for the HTML output
 #' @param dir [character] directory to store the rendered report's files
+#' @param cores cluster configuration from [print.dataquieR_resultset2()]
 #'
 #' @return invisible(NULL)
 #' @noRd
 util_write_iframe_results <- function(
-    pages,
-    progress_msg,
-    progress,
-    block_load_factor = getOption(
-      "dataquieR.print_block_load_factor",
-      dataquieR.print_block_load_factor_default),
-    template_file,
-    dir
+  pages,
+  progress_msg,
+  progress,
+  block_load_factor = getOption(
+    "dataquieR.print_block_load_factor",
+    dataquieR.print_block_load_factor_default
+  ),
+  copy_dependencies = TRUE,
+  template_file,
+  dir,
+  cores = NULL
 ) {
-
-  util_expect_scalar(
-    block_load_factor,
-    check_type         = util_is_numeric_in(min = 1, whole_num = FALSE),
-    convert_if_possible = as.numeric,
-    error_message       = sprintf("%s should be a number above 0",
-                                  sQuote("block_load_factor"))
-  )
+  if (!is.null(block_load_factor)) {
+    util_expect_scalar(
+      block_load_factor,
+      check_type = util_is_numeric_in(min = 1, whole_num = FALSE),
+      convert_if_possible = as.numeric,
+      error_message = sprintf(
+        "%s should be a number above 0",
+        sQuote("block_load_factor")
+      )
+    )
+  }
 
   ## --- preparation ----------------------------------------------------------
   all_tags <- unlist(lapply(pages, util_collect_tag_attrs), recursive = FALSE)
   # process each output file only once
-  tasks <- Filter(function(tag) !is.null(attr(tag, "html_file")), all_tags)
-  outfiles <- vapply(tasks, attr, FUN.VALUE = character(1), "html_file")
-  html_inners <- lapply(tasks, attr, "html_inner")
+  tasks <- Filter(function(tag) {
+    !is.null(util_attr(tag, "html_file",
+        exact = TRUE
+      ))
+  }, all_tags)
+  outfiles <- vapply(tasks, util_attr,
+    FUN.VALUE = character(1), "html_file",
+    exact = TRUE
+  )
+  html_inners <- lapply(tasks, util_attr, "html_inner", exact = TRUE)
 
-  rp <- util_copy_all_deps(dir = dir,
-                           pages = html_inners)
+  rp <- util_copy_all_deps(
+    dir = dir,
+    pages = html_inners,
+    copy_dependencies = copy_dependencies
+  )
 
   tasks <- Map(function(task, html_inner) {
     html_inner[["dependencies"]] <- NULL
@@ -939,32 +1042,197 @@ util_write_iframe_results <- function(
   tasks <- tasks[!duplicated(outfiles)]
 
   total <- length(tasks)
-  if (total == 0L) return(invisible(NULL))
+  if (total == 0L) {
+    return(invisible(NULL))
+  }
 
   ## --- block-wise processing -------------------------------------------------
-  cl         <- parallel::getDefaultCluster()
-  if (!util_check_shared_filesystem(cl = cl)$shared) {
+  if (!is.null(cores) && !inherits(cores, "cluster")) {
+    cl <- util_start_iframe_writer_cluster(cores, max_tasks = total)
+    withr::defer(util_stop_iframe_writer_cluster(cl))
+  } else if (inherits(cores, "cluster")) {
+    cl <- cores
+  } else {
+    cl <- parallel::getDefaultCluster()
+  }
+
+  if (!is.null(cl) && !util_check_shared_filesystem(cl = cl)$shared) {
     util_message(
-      c("File system not shared amoungst workers (e.g., through NFS),",
-        "falling back to serial writing"))
+      c(
+        "File system not shared amoungst workers (e.g., through NFS),",
+        "falling back to serial writing"
+      )
+    )
     cl <- NULL
   }
-  chunk_size <- max(1, ceiling(block_load_factor * length(cl)))
-  blocks     <- split(tasks, ceiling(seq_along(tasks) / chunk_size))
-  done       <- 0L
+  chunk_size <- util_get_render_block_size(
+    total = total,
+    workers = length(cl),
+    block_load_factor = block_load_factor
+  )
+  blocks <- split(tasks, ceiling(seq_along(tasks) / chunk_size))
+  done <- 0L
 
   for (chunk in blocks) {
     if (!is.null(cl)) {
       parallel::parLapplyLB(cl, chunk, util_write_one,
-                            template_file = template_file, deps = rp$deps)
+        template_file = template_file, deps = rp$deps
+      )
     } else {
-      lapply(chunk, util_write_one, template_file = template_file,
-             deps = rp$deps)
+      lapply(chunk, util_write_one,
+        template_file = template_file,
+        deps = rp$deps
+      )
     }
     done <- done + length(chunk)
     progress(100 * done / total)
-    progress_msg("Writing HTML/thumbnails",
-                 sprintf("Progress: %d of %d", done, total))
+    progress_msg(
+      "Writing HTML/thumbnails",
+      sprintf("Progress: %d of %d", done, total)
+    )
+  }
+
+  invisible(NULL)
+}
+
+#' Choose a rendering block size that keeps default progress informative.
+#'
+#' @param total [integer] number of render tasks.
+#' @param workers [integer] number of worker processes.
+#' @param block_load_factor [numeric] explicit block multiplier, or `NULL`.
+#'
+#' @return [integer] number of tasks in one rendering block.
+#' @keywords internal
+#' @noRd
+util_get_render_block_size <- function(total, workers, block_load_factor) {
+  if (is.null(block_load_factor)) {
+    # Keep roughly ten progress updates without idling workers in small
+    # reports, where fewer than ten tasks would otherwise underfill a pool.
+    return(max(1L, as.integer(workers), ceiling(total / 10)))
+  }
+
+  max(1L, ceiling(block_load_factor * workers))
+}
+
+#' Start a cluster dedicated to iframe/thumbnail writing
+#'
+#' The writer cluster is intentionally never registered as the default cluster.
+#' This keeps RStudio sessions away from stale or caller-managed default
+#' clusters while still allowing the final write step to run in parallel.
+#'
+#' @param cores cluster configuration from [print.dataquieR_resultset2()]
+#' @param max_tasks [integer] maximum number of parallel tasks to run
+#'
+#' @return a `cluster` object or `NULL`
+#' @noRd
+util_start_iframe_writer_cluster <- function(cores, max_tasks = Inf) {
+  iframe_mode <- "socket"
+  iframe_cpus <- cores
+
+  if (inherits(cores, "list")) {
+    if (!is.null(cores$mode)) {
+      iframe_mode <- cores$mode
+    }
+    iframe_cpus <- if (is.null(cores$cpus)) {
+      util_detect_cores()
+    } else {
+      cores$cpus
+    }
+  }
+
+  if (is.null(iframe_mode) ||
+      !is.character(iframe_mode) ||
+      length(iframe_mode) != 1) {
+    iframe_mode <- "socket"
+  }
+
+  if (!iframe_mode %in% c(
+    "local", "socket", "multicore",
+    "BatchJobs", "batchtools"
+  )) {
+    util_warning(c("Unknown parallel mode %s, falling back to %s."),
+      dQuote(iframe_mode), dQuote("local"),
+      applicability_problem = TRUE
+    )
+    iframe_mode <- "local"
+  }
+
+  if (iframe_mode %in% c("local", "BatchJobs", "batchtools")) {
+    return(NULL)
+  }
+
+  if (is.null(iframe_cpus) ||
+      !is.finite(suppressWarnings(as.numeric(iframe_cpus))[1])) {
+    iframe_cpus <- util_detect_cores()
+  }
+  iframe_cpus <- max(1L, as.integer(iframe_cpus))
+  if (is.finite(max_tasks)) {
+    iframe_cpus <- min(iframe_cpus, max(1L, as.integer(max_tasks)))
+  }
+
+  if (iframe_mode == "multicore" && .Platform$OS.type != "windows") {
+    parallel::makeForkCluster(iframe_cpus)
+  } else {
+    parallel::makePSOCKcluster(iframe_cpus)
+  }
+}
+
+#' Stop a cluster dedicated to iframe/thumbnail writing
+#'
+#' @param cl a `cluster` object or `NULL`
+#'
+#' @return invisible(NULL)
+#' @noRd
+util_stop_iframe_writer_cluster <- function(cl) {
+  if (!is.null(cl)) {
+    try(parallel::stopCluster(cl), silent = TRUE)
+  }
+  invisible(NULL)
+}
+
+#' Guard caller-owned clusters in RStudio
+#'
+#' @param cores cluster configuration from [print.dataquieR_resultset2()]
+#' @param advanced_options options passed to [print.dataquieR_resultset2()]
+#'
+#' @return invisible(NULL)
+#' @noRd
+util_guard_rstudio_user_cluster <- function(cores, advanced_options = list()) {
+  if (!inherits(cores, "cluster") || !util_really_rstudio()) {
+    return(invisible(NULL))
+  }
+
+  force_user_cluster <- isTRUE(getOption(
+    "dataquieR.force_rstudio_user_cluster",
+    dataquieR.force_rstudio_user_cluster_default
+  ))
+  if ("dataquieR.force_rstudio_user_cluster" %in% names(advanced_options)) {
+    force_user_cluster <- isTRUE(advanced_options[[
+      "dataquieR.force_rstudio_user_cluster"
+    ]])
+  }
+
+  msg <- paste(
+    "Using a caller-created parallel cluster for HTML report rendering in",
+    "RStudio can make report finalization hang while writing thumbnail and",
+    "iframe files.",
+    "Safer options:",
+    "1. Let dataquieR create and manage the cluster, for example use",
+    "cores = 4 or cores = list(mode = \"socket\", cpus = 4) instead of",
+    "cores = cl.",
+    "2. Run the same command outside RStudio: on Windows start R from",
+    "the Start menu, on macOS open Terminal and run R, and on Linux run",
+    "R in a terminal.",
+    "3. To force this unsupported RStudio setup, set",
+    "options(dataquieR.force_rstudio_user_cluster = TRUE) or pass",
+    "advanced_options = list(dataquieR.force_rstudio_user_cluster = TRUE).",
+    sep = "\n"
+  )
+
+  if (force_user_cluster) {
+    util_warning("%s", msg)
+  } else {
+    util_error("%s", msg)
   }
 
   invisible(NULL)
@@ -979,50 +1247,63 @@ util_write_iframe_results <- function(
 #' @returns `invisible(NULL)`
 #' @noRd
 util_write_one <- function(tag, template_file, deps) {
-  outfile        <- attr(tag, "html_file")
-  thumb          <- attr(tag, "thumbnail_path")
-  ggthumb        <- util_decompress(attr(tag, "ggthumb"))
-  html_inner     <- attr(tag, "html_inner")
-  thumbnail_args <- attr(tag, "thumbnail_args")
+  outfile <- util_attr(tag, "html_file", exact = TRUE)
+  thumb <- util_attr(tag, "thumbnail_path", exact = TRUE)
+  ggthumb <- util_decompress(util_attr(tag, "ggthumb", exact = TRUE))
+  html_inner <- util_attr(tag, "html_inner", exact = TRUE)
+  thumbnail_args <- util_attr(tag, "thumbnail_args", exact = TRUE)
 
   # HTML
   logo <- "logo.png"
-  withCallingHandlers({
-    html_report <- htmltools::htmlTemplate(template_file,
-                                           document_ = TRUE,
-                                           logo = logo,
-                                           deps = deps,
-                                           content = html_inner,
-                                           title = basename(outfile))
-  },
-  warning = function(cond) { # suppress a waning caused by ggplotly for barplots
-    if (startsWith(conditionMessage(cond),
-                   "'bar' objects don't have these attributes: 'mode'") ||
-        startsWith(conditionMessage(cond),
-                   "'box' objects don't have these attributes: 'mode'")) {
-      invokeRestart("muffleWarning")
+  withCallingHandlers(
+    {
+      html_report <- htmltools::htmlTemplate(template_file,
+        document_ = TRUE,
+        logo = logo,
+        deps = deps,
+        content = html_inner,
+        title = basename(outfile)
+      )
+    },
+    # suppress a waning caused by ggplotly for barplots
+    warning = function(cond) {
+      if (startsWith(
+        conditionMessage(cond),
+        "'bar' objects don't have these attributes: 'mode'"
+      ) ||
+        startsWith(
+          conditionMessage(cond),
+          "'box' objects don't have these attributes: 'mode'"
+        )) {
+        invokeRestart("muffleWarning")
+      }
     }
-  })
+  )
 
 
   f <- file(outfile, open = "w", encoding = "utf-8")
-  on.exit(close(f))
+  withr::defer(close(f))
   withCallingHandlers(
     cat(as.character(html_report), file = f),
     warning = function(w) {
-      if (startsWith(conditionMessage(w),
-                     "'bar' objects don't have these attributes: 'mode'") ||
-          startsWith(conditionMessage(w),
-                     "'box' objects don't have these attributes: 'mode'"))
+      if (startsWith(
+        conditionMessage(w),
+        "'bar' objects don't have these attributes: 'mode'"
+      ) ||
+        startsWith(
+          conditionMessage(w),
+          "'box' objects don't have these attributes: 'mode'"
+        )) {
         invokeRestart("muffleWarning")
-    })
+      }
+    }
+  )
 
   # thumbnail (optional)
   figure_type_id <- thumbnail_args$figure_type_id
 
   if (length(figure_type_id) != 1 ||
       !is.character(figure_type_id)) {
-    # FIXME: How can that be?!
     figure_type_id <- "dot_mat"
   }
 
@@ -1035,16 +1316,17 @@ util_write_one <- function(tag, template_file, deps) {
       !is.null(thumbnail_args)) {
     suppressWarnings(suppressMessages(
       util_save_with_inner_size(
-        plot           = ggthumb,
-        filename       = thumb,
-        inner_width    = thumbnail_args$width,
-        inner_height   = thumbnail_args$height,
-        dpi            = thumbnail_args$dpi,
-        base_text_factor = switch(
-          figure_type_id,
+        plot = ggthumb,
+        filename = thumb,
+        inner_width = thumbnail_args$width,
+        inner_height = thumbnail_args$height,
+        dpi = thumbnail_args$dpi,
+        base_text_factor = switch(figure_type_id,
           dot_mat = 11,
-          40)
-      )))
+          40
+        )
+      )
+    ))
   }
   invisible(NULL)
 }
@@ -1071,13 +1353,9 @@ util_write_one <- function(tag, template_file, deps) {
 #' @concept process
 #' @noRd
 util_check_shared_filesystem <- function(dir = ".",
-                                         cl = NULL,
-                                         cleanup = TRUE,
-                                         tmp_prefix = "fs_test_") {
-
-  ## ensure that package 'parallel' is available -----------------------------
-  util_ensure_suggested("parallel")
-
+  cl = NULL,
+  cleanup = TRUE,
+  tmp_prefix = "fs_test_") {
   ## create a temporary test file on the master node -------------------------
   dir <- normalizePath(dir, mustWork = TRUE)
   testfile <- tempfile(tmp_prefix, tmpdir = dir)
@@ -1087,13 +1365,14 @@ util_check_shared_filesystem <- function(dir = ".",
   }
 
   if (cleanup) {
-    on.exit(unlink(testfile, force = TRUE), add = TRUE)
+    withr::defer(unlink(testfile, force = TRUE))
   }
 
   ## retrieve a running cluster, if not passed in ----------------------------
   if (is.null(cl)) {
     cl <- tryCatch(parallel::getDefaultCluster(),
-                   error = function(e) NULL)
+      error = function(e) NULL
+    )
   }
 
   ## if no cluster is available, assume sequential execution -----------------
@@ -1105,14 +1384,20 @@ util_check_shared_filesystem <- function(dir = ".",
     ))
   }
   ## query each worker for file existence ------------------------------------
-  exists_vec <- tryCatch({
-    unlist(parallel::clusterCall(cl, file.exists, testfile),
-           use.names = FALSE)
-  }, error = function(e) {
-    util_warning("clusterCall failed, sequential fallback: %s",
-                 dQuote(conditionMessage(e)))
-    TRUE
-  })
+  exists_vec <- tryCatch(
+    {
+      unlist(parallel::clusterCall(cl, file.exists, testfile),
+        use.names = FALSE
+      )
+    },
+    error = function(e) {
+      util_warning(
+        "clusterCall failed, sequential fallback: %s",
+        dQuote(conditionMessage(e))
+      )
+      TRUE
+    }
+  )
 
   names(exists_vec) <- paste0("worker", seq_along(exists_vec))
 
@@ -1123,11 +1408,78 @@ util_check_shared_filesystem <- function(dir = ".",
   )
 }
 
+#' Collect fixed output paths for HTML report rendering
+#'
+#' @param dir [character] output directory passed to the renderer
+#'
+#' @return [list] normalized report output paths and fixed file names
+#'
+#' @noRd
+util_report_render_paths <- function(dir) {
+  util_stop_if_not(is.character(dir), length(dir) == 1L)
+
+  content_dir <- util_normalize_path(dir)
+  report_dir <- file.path(content_dir, ".report")
+  logo <- "logo.png"
+
+  list(
+    content_dir = content_dir,
+    report_dir = report_dir,
+    content_file = file.path(content_dir, "index.html"),
+    content_lib_dir = file.path(content_dir, "lib"),
+    logo = logo,
+    report_logo_file = file.path(report_dir, logo),
+    content_logo_rel = file.path(".report", logo),
+    report_logo_rel = logo,
+    anchor_js_file = file.path(report_dir, "anchor_list.js"),
+    anchor_rds_file = file.path(report_dir, "anchor_list.RDS")
+  )
+}
+
+#' Write the JavaScript and RDS anchor lookup files for rendered pages
+#'
+#' @param pages [list] generated HTML report pages
+#' @param render_paths [list] paths from `util_report_render_paths()`
+#'
+#' @return [character] extracted anchor IDs, invisibly
+#'
+#' @noRd
+util_write_anchor_list <- function(pages, render_paths) {
+  all_ids <- util_extract_all_ids(pages)
+
+  js_escape_string <- function(x) {
+    x <- gsub("\\\\", "\\\\\\\\", x) # Backslash first
+    x <- gsub("\"", "\\\\\"", x) # "
+    x <- gsub("\n", "\\\\n", x)
+    x <- gsub("\r", "\\\\r", x)
+    x <- gsub("\t", "\\\\t", x)
+    x
+  }
+
+  cat(
+    sep = "",
+    "window.all_ids = {\"all_ids\": ",
+    paste0(
+      "[",
+      paste0('"', js_escape_string(all_ids), '"', collapse = ", "),
+      "]"
+    ),
+    "}",
+    file = render_paths$anchor_js_file
+  )
+  saveRDS(object = all_ids, file = render_paths$anchor_rds_file)
+
+  invisible(all_ids)
+}
+
 # writes in subfolder .report and also renderinfo.json
+#' Internal helper: write renderinfo js json
+#'
+#' @noRd
 util_write_renderinfo_js_json <- function(output_dir,
-                                          rep_id = NULL,
-                                          start_time = NULL,
-                                          end_time = NULL) {
+  rep_id = NULL,
+  start_time = NULL,
+  end_time = NULL) {
   output_dir <- file.path(output_dir, ".report")
 
   if (!dir.exists(output_dir)) {
@@ -1136,8 +1488,9 @@ util_write_renderinfo_js_json <- function(output_dir,
     }
   }
 
-  if (is.null(rep_id))
+  if (is.null(rep_id)) {
     rep_id <- util_make_report_id()
+  }
 
   if (is.null(start_time) ||
       is.null(end_time) ||
@@ -1147,10 +1500,13 @@ util_write_renderinfo_js_json <- function(output_dir,
       length(end_time) != 1) {
     t <- "null"
   } else {
-    t <- paste0("\"",
-               as.character(round(
-                 difftime(end_time, start_time, units = "mins"), 2)),
-          " min", "\"")
+    t <- paste0(
+      "\"",
+      as.character(round(
+        difftime(end_time, start_time, units = "mins"), 2
+      )),
+      " min", "\""
+    )
   }
 
   fn <- file.path(output_dir, "renderinfo.json")
@@ -1203,6 +1559,9 @@ util_write_renderinfo_js_json <- function(output_dir,
   invisible(rep_id)
 }
 
+#' Internal helper: write index html
+#'
+#' @noRd
 util_write_index_html <- function(path, lines, tmp_name = ".index.html") {
   util_stop_if_not(length(path) == 1L)
   util_stop_if_not(is.character(lines))
@@ -1211,11 +1570,14 @@ util_write_index_html <- function(path, lines, tmp_name = ".index.html") {
   tmp <- file.path(dir, tmp_name)
 
   con <- file(tmp, open = "wb")
-  on.exit({
-    if (exists("con", inherits = FALSE) && inherits(try(close(con), silent = TRUE), "try-error")) {
-      NULL
+  withr::defer(
+    {
+      if (exists("con", inherits = FALSE) &&
+          inherits(try(close(con), silent = TRUE), "try-error")) {
+        NULL
+      }
     }
-  }, add = TRUE)
+  )
 
   writeLines(lines, con = con, sep = "\n", useBytes = TRUE)
   flush(con)
@@ -1228,8 +1590,10 @@ util_write_index_html <- function(path, lines, tmp_name = ".index.html") {
       if (file.exists(tmp)) {
         unlink(tmp, force = TRUE)
       }
-      util_error("Failed to atomically replace: %s -> %s",
-                 dQuote(tmp), dQuote(path))
+      util_error(
+        "Failed to atomically replace: %s -> %s",
+        dQuote(tmp), dQuote(path)
+      )
     }
     return(invisible(path))
   }
@@ -1240,8 +1604,10 @@ util_write_index_html <- function(path, lines, tmp_name = ".index.html") {
     if (file.exists(tmp)) {
       unlink(tmp, force = TRUE)
     }
-    util_error("Failed to copy temp index into place: %s -> %s",
-               dQuote(tmp), dQuote(path))
+    util_error(
+      "Failed to copy temp index into place: %s -> %s",
+      dQuote(tmp), dQuote(path)
+    )
   }
 
   if (file.exists(tmp)) {
@@ -1258,14 +1624,16 @@ util_write_index_html <- function(path, lines, tmp_name = ".index.html") {
 
 .outer_by_env <- new.env(parent = emptyenv())
 
+#' Internal helper: index loading lines
+#'
+#' @noRd
 util_index_loading_lines <- function(title,
-                                     message = "Preparing report...",
-                                     detail = NULL,
-                                     reload_ms = 1200L,
-                                     n = Inf,
-                                     percent = 0,
-                                     logo_rel = "logo.png") {
-
+  message = "Preparing report...",
+  detail = NULL,
+  reload_ms = 1200L,
+  n = Inf,
+  percent = 0,
+  logo_rel = "logo.png") {
   title_escaped <- htmltools::htmlEscape(title)
 
   detail_html <- ""
@@ -1285,7 +1653,7 @@ util_index_loading_lines <- function(title,
   indicator_html <- if (show_progress) {
     paste0(
       "<div class=\"progress\" aria-hidden=\"true\">",
-      "<div class=\"progress-bar\" style=\"width:", round(percent), "%\"></div>",
+      "<div class=\"progress-bar\" style=\"width:", round(percent), "%\"></div>", # nolint: line_length_linter.
       "</div>",
       "<div class=\"progress-label\">", round(percent), "%</div>"
     )
@@ -1298,7 +1666,6 @@ util_index_loading_lines <- function(title,
       length(.outer_by_env$outer_by) &&
       !is.null(.outer_by_env$outer_by$i) &&
       !is.null(.outer_by_env$outer_by$n)) {
-
     outer_i <- suppressWarnings(as.integer(.outer_by_env$outer_by$i))
     outer_n <- suppressWarnings(as.integer(.outer_by_env$outer_by$n))
     outer_msg <- .outer_by_env$outer_by$msg
@@ -1328,7 +1695,7 @@ util_index_loading_lines <- function(title,
         "<div class=\"outer-block\">",
         outer_msg_html,
         "<div class=\"progress outer-progress\" aria-hidden=\"true\">",
-        "<div class=\"progress-bar\" style=\"width:", round(outer_percent), "%\"></div>",
+        "<div class=\"progress-bar\" style=\"width:", round(outer_percent), "%\"></div>", # nolint: line_length_linter.
         "</div>",
         "<div class=\"progress-label\">",
         "Overall: ", round(outer_percent), "% &mdash; step ",
@@ -1400,18 +1767,18 @@ util_index_loading_lines <- function(title,
     badge_text <- if (show_progress) paste0(round(percent), "%") else "..."
     # Minimal SVG favicon with embedded logo + badge (bottom-right)
     svg <- paste0(
-      "<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>",
-      "<image href='", htmltools::htmlEscape(logo_rel), "' x='0' y='0' width='64' height='64'/>",
+      "<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>", # nolint: line_length_linter.
+      "<image href='", htmltools::htmlEscape(logo_rel), "' x='0' y='0' width='64' height='64'/>", # nolint: line_length_linter.
       "<circle cx='50' cy='50' r='13' fill='white' opacity='0.92'/>",
       "<circle cx='50' cy='50' r='12' fill='rgba(0,0,0,0.55)'/>",
-      "<text x='50' y='54' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' ",
-      "font-size='14' fill='white'>", htmltools::htmlEscape(badge_text), "</text>",
+      "<text x='50' y='54' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' ", # nolint: line_length_linter.
+      "font-size='14' fill='white'>", htmltools::htmlEscape(badge_text), "</text>", # nolint: line_length_linter.
       "</svg>"
     )
     svg_enc <- utils::URLencode(svg, reserved = TRUE)
     icon_lines <- c(
-      paste0("<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,", svg_enc, "\">"),
-      paste0("<link rel=\"apple-touch-icon\" href=\"", htmltools::htmlEscape(logo_rel), "\">")
+      paste0("<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,", svg_enc, "\">"), # nolint: line_length_linter.
+      paste0("<link rel=\"apple-touch-icon\" href=\"", htmltools::htmlEscape(logo_rel), "\">") # nolint: line_length_linter.
     )
   }
 
@@ -1421,31 +1788,31 @@ util_index_loading_lines <- function(title,
     "<head>",
     "<meta charset=\"UTF-8\">",
     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
-    "<meta http-equiv=\"Cache-Control\" content=\"no-store, no-cache, must-revalidate\">",
+    "<meta http-equiv=\"Cache-Control\" content=\"no-store, no-cache, must-revalidate\">", # nolint: line_length_linter.
     "<meta http-equiv=\"Pragma\" content=\"no-cache\">",
     "<meta http-equiv=\"Expires\" content=\"0\">",
     icon_lines,
-    # paste0("<meta http-equiv=\"refresh\" content=\"", reload_s, "\">"),
+    # Historical meta-refresh loading page removed here.
     "<script>",
     "(function(){",
     "  'use strict';",
     "  var ms = ", as.integer(reload_ms), ";",
     "  setTimeout(function(){",
     "    try { location.reload(); } catch(e) {}",
-    "  }, Math.max(250, ms));",
+    "  }, Math.max(2000, ms));",
     "})();",
     "</script>",
     "<title>...", title_escaped, "... Progressing</title>",
     "<style>",
-    "body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f8f9fa;color:#333;}",
+    "body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f8f9fa;color:#333;}", # nolint: line_length_linter.
     ".box{text-align:center;max-width:42rem;width:100%;padding:1.25rem;}",
-    ".spinner{width:36px;height:36px;border:4px solid rgba(0,0,0,.15);border-top-color:rgba(0,0,0,.55);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto .9rem;}",
+    ".spinner{width:36px;height:36px;border:4px solid rgba(0,0,0,.15);border-top-color:rgba(0,0,0,.55);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto .9rem;}", # nolint: line_length_linter.
     "@keyframes spin{to{transform:rotate(360deg);}}",
-    ".progress{width:220px;height:10px;background:rgba(0,0,0,.15);border-radius:6px;margin:0 auto .5rem;overflow:hidden;}",
-    ".progress-bar{height:100%;background:rgba(0,0,0,.55);transition:width .4s ease;}",
+    ".progress{width:220px;height:10px;background:rgba(0,0,0,.15);border-radius:6px;margin:0 auto .5rem;overflow:hidden;}", # nolint: line_length_linter.
+    ".progress-bar{height:100%;background:rgba(0,0,0,.55);transition:width .4s ease;}", # nolint: line_length_linter.
     ".progress-label{font-size:.85rem;opacity:.75;margin-bottom:.4rem;}",
     ".detail{opacity:.75;font-size:.95rem;}",
-    ".outer-block{position:fixed;top:0;left:0;width:100%;padding-top:1rem;display:flex;flex-direction:column;align-items:center;background:#f8f9fa;z-index:1000;}",
+    ".outer-block{position:fixed;top:0;left:0;width:100%;padding-top:1rem;display:flex;flex-direction:column;align-items:center;background:#f8f9fa;z-index:1000;}", # nolint: line_length_linter.
     ".outer-progress{width:80%;max-width:42rem;}",
     ".outer-msg{font-size:.95rem;font-weight:600;margin-bottom:.35rem;}",
     ".outer-spinner{width:28px;height:28px;margin:0 auto .5rem;}",
@@ -1463,20 +1830,22 @@ util_index_loading_lines <- function(title,
   )
 }
 
+#' Internal helper: index redirect lines
+#'
+#' @noRd
 util_index_redirect_lines <- function(title,
-                                      target_rel,
-                                      delay_ms = 0L,
-                                      logo_rel = "logo.png") {
-
+  target_rel,
+  delay_ms = 0L,
+  logo_rel = "logo.png") {
   title_escaped <- htmltools::htmlEscape(title)
   delay_ms <- max(0L, as.integer(delay_ms))
-  target_js <- paste0('"', (gsub("\\\\", "\\\\\\\\", gsub("\"", "\\\\\"", target_rel))), '"')
+  target_js <- paste0('"', (gsub("\\\\", "\\\\\\\\", gsub("\"", "\\\\\"", target_rel))), '"') # nolint: line_length_linter.
 
   icon_lines <- character(0)
   if (!is.null(logo_rel) && nzchar(logo_rel)) {
     icon_lines <- c(
-      paste0("<link rel=\"icon\" href=\"", htmltools::htmlEscape(logo_rel), "\">"),
-      paste0("<link rel=\"apple-touch-icon\" href=\"", htmltools::htmlEscape(logo_rel), "\">")
+      paste0("<link rel=\"icon\" href=\"", htmltools::htmlEscape(logo_rel), "\">"), # nolint: line_length_linter.
+      paste0("<link rel=\"apple-touch-icon\" href=\"", htmltools::htmlEscape(logo_rel), "\">") # nolint: line_length_linter.
     )
   }
 
@@ -1487,7 +1856,7 @@ util_index_redirect_lines <- function(title,
     "<head>",
     "<meta charset=\"UTF-8\">",
     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
-    "<meta http-equiv=\"Cache-Control\" content=\"no-store, no-cache, must-revalidate\">",
+    "<meta http-equiv=\"Cache-Control\" content=\"no-store, no-cache, must-revalidate\">", # nolint: line_length_linter.
     "<meta http-equiv=\"Pragma\" content=\"no-cache\">",
     "<meta http-equiv=\"Expires\" content=\"0\">",
     icon_lines,
@@ -1497,7 +1866,7 @@ util_index_redirect_lines <- function(title,
     paste0("  var target = ", target_js, ";"),
     "  var ms = ", delay_ms, ";",
     "  function go(){",
-    "    try { location.replace(target); } catch(e) { try { location.href = target; } catch(e2) {} }",
+    "    try { location.replace(target); } catch(e) { try { location.href = target; } catch(e2) {} }", # nolint: line_length_linter.
     "  }",
     "  if (ms <= 0) go(); else setTimeout(go, ms);",
     "})();",
@@ -1509,12 +1878,14 @@ util_index_redirect_lines <- function(title,
   )
 }
 
+#' Internal helper: index error lines
+#'
+#' @noRd
 util_index_error_lines <- function(title,
-                                   message = "An error occurred",
-                                   detail = NULL,
-                                   logo_rel = "logo.png",
-                                   reload_ms = 5000L) {
-
+  message = "An error occurred",
+  detail = NULL,
+  logo_rel = "logo.png",
+  reload_ms = 5000L) {
   title_escaped <- htmltools::htmlEscape(title)
 
   detail_html <- ""
@@ -1530,12 +1901,12 @@ util_index_error_lines <- function(title,
   icon_lines <- character(0)
   if (!is.null(logo_rel) && nzchar(logo_rel)) {
     svg <- paste(
-      "<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>",
+      "<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>", # nolint: line_length_linter.
       "<image href='", htmltools::htmlEscape(logo_rel),
       "' x='0' y='0' width='64' height='64'/>",
       "<circle cx='50' cy='50' r='13' fill='white' opacity='0.95'/>",
       "<circle cx='50' cy='50' r='12' fill='#b00020'/>",
-      "<text x='50' y='55' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' ",
+      "<text x='50' y='55' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' ", # nolint: line_length_linter.
       "font-size='20' fill='white'>!</text>",
       "</svg>",
       sep = "\n",
@@ -1543,15 +1914,15 @@ util_index_error_lines <- function(title,
     )
     svg_enc <- utils::URLencode(svg, reserved = TRUE)
     icon_lines <- c(
-      paste0("<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,", svg_enc, "\">"),
-      paste0("<link rel=\"apple-touch-icon\" href=\"", htmltools::htmlEscape(logo_rel), "\">")
+      paste0("<link rel=\"icon\" type=\"image/svg+xml\" href=\"data:image/svg+xml,", svg_enc, "\">"), # nolint: line_length_linter.
+      paste0("<link rel=\"apple-touch-icon\" href=\"", htmltools::htmlEscape(logo_rel), "\">") # nolint: line_length_linter.
     )
   }
 
   reload_ms <- as.integer(reload_ms)
   if (!is.finite(reload_ms) || reload_ms < 0L) reload_ms <- 5000L
 
-  # --- JS: poll renderinfo.js; if it appears (or changes), soft-reload the page ---
+  # --- JS: poll renderinfo.js; if it appears/changes, soft-reload the page ---
   refresh_js <- paste(
     "(function(){",
     "  var delay=", reload_ms, ";",
@@ -1565,18 +1936,18 @@ util_index_error_lines <- function(title,
     "      return sep === '?' ? (tail ? '?' : '') : (tail ? sep : '');",
     "    });",
     "    u = u.replace(/[?&]$/, '');",
-    "    return u + (u.indexOf('?')>=0?'&':'?') + '__dq_refresh=' + Date.now();",
+    "    return u + (u.indexOf('?')>=0?'&':'?') + '__dq_refresh=' + Date.now();", # nolint: line_length_linter.
     "  }",
     "  function softReload(){",
     "    try { window.location.replace(addBuster(baseUrl)); } catch(e) {}",
     "  }",
     "",
-    "  // Compute sibling URL: same dir as current document, file name '.report/renderinfo.js'",
+    "  // Compute sibling URL: same dir as current document, file name '.report/renderinfo.js'", # nolint: line_length_linter.
     "  function renderinfoUrl(){",
     "    try {",
     "      var u = new URL(baseUrl);",
     "      // Replace last path segment with .report/renderinfo.js",
-    "      u.pathname = u.pathname.replace(/\\/[^\\/]*$/, '/.report/renderinfo.js');",
+    "      u.pathname = u.pathname.replace(/\\/[^\\/]*$/, '/.report/renderinfo.js');", # nolint: line_length_linter.
     "      return u.toString();",
     "    } catch(e) {",
     "      // Fallback for older URL handling: manual",
@@ -1590,8 +1961,8 @@ util_index_error_lines <- function(title,
     "    if (inFlight) return;",
     "    inFlight = true;",
     "",
-    "    // IMPORTANT: renderinfo.js should define window.renderingData = {...}",
-    "    // When it does not exist -> that indicates an error; do NOT reload blindly.",
+    "    // IMPORTANT: renderinfo.js should define window.renderingData = {...}", # nolint: line_length_linter.
+    "    // When it does not exist -> that indicates an error; do NOT reload blindly.", # nolint: line_length_linter.
     "    var s = document.createElement('script');",
     "    s.async = true;",
     "    s.src = addBuster(renderinfoUrl());",
@@ -1599,10 +1970,10 @@ util_index_error_lines <- function(title,
     "    s.onload = function(){",
     "      try {",
     "        var d = window.renderingData || null;",
-    "        // If renderinfo.js loaded but didn't set data, treat as 'not ready' and keep polling.",
+    "        // If renderinfo.js loaded but didn't set data, treat as 'not ready' and keep polling.", # nolint: line_length_linter.
     "        if (!d) return;",
     "        // Build a token that changes when the report changes.",
-    "        var token = String(d.reportId || '') + '|' + String(d.renderingTime || '');",
+    "        var token = String(d.reportId || '') + '|' + String(d.renderingTime || '');", # nolint: line_length_linter.
     "        if (lastToken === null) {",
     "          lastToken = token;",
     "          // renderinfo.js now exists => reload once to leave error page",
@@ -1621,7 +1992,7 @@ util_index_error_lines <- function(title,
     "    };",
     "",
     "    s.onerror = function(){",
-    "      // renderinfo.js missing -> error state; keep polling but do not reload",
+    "      // renderinfo.js missing -> error state; keep polling but do not reload", # nolint: line_length_linter.
     "      try { s.remove(); } catch(e) {}",
     "    };",
     "",
@@ -1631,7 +2002,7 @@ util_index_error_lines <- function(title,
     "  }",
     "",
     "  check();",
-    "  window.setInterval(check, Math.max(1000, delay));",
+    "  window.setInterval(check, Math.max(5000, delay));",
     "})();",
     sep = "\n",
     collapse = "\n"
@@ -1643,14 +2014,14 @@ util_index_error_lines <- function(title,
     "<head>",
     "<meta charset=\"UTF-8\">",
     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
-    "<meta http-equiv=\"Cache-Control\" content=\"no-store, no-cache, must-revalidate\">",
+    "<meta http-equiv=\"Cache-Control\" content=\"no-store, no-cache, must-revalidate\">", # nolint: line_length_linter.
     "<meta http-equiv=\"Pragma\" content=\"no-cache\">",
     "<meta http-equiv=\"Expires\" content=\"0\">",
     icon_lines,
     "<title>\u2716 ", title_escaped, "</title>",
     "<style>",
-    "body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;",
-    "align-items:center;height:100vh;margin:0;background:#fff5f6;color:#2a0006;}",
+    "body{font-family:system-ui,-apple-system,sans-serif;display:flex;justify-content:center;", # nolint: line_length_linter.
+    "align-items:center;height:100vh;margin:0;background:#fff5f6;color:#2a0006;}", # nolint: line_length_linter.
     ".box{text-align:center;max-width:48rem;padding:1.5rem;}",
     ".icon{font-size:3rem;color:#b00020;margin-bottom:.6rem;}",
     "h2{color:#b00020;margin:.3rem 0 .6rem 0;}",
@@ -1671,28 +2042,33 @@ util_index_error_lines <- function(title,
   )
 }
 
+#' Internal helper: gg stagger x axis labels
+#'
+#' @noRd
 util_gg_stagger_x_axis_labels <- function(
-    p,
-    inner_width = NULL,
-    inner_height = NULL,
-    angle = NULL,
-    auto_dodge = TRUE,
-    max_dodge = 3L,
-    min_labels_for_change = 28L,
-    min_size = 4.2,
-    title_scale = 0.90,
-    subtitle_scale = 0.82,
-    y_text_scale = 0.92,
-    patchwork_widths = NULL,
-    patchwork_heights = NULL,
-    theme_base_size = NULL,
-    verbose = FALSE) {
-
+  p,
+  inner_width = NULL,
+  inner_height = NULL,
+  angle = NULL,
+  auto_dodge = TRUE,
+  max_dodge = 3L,
+  min_labels_for_change = 28L,
+  min_size = 4.2,
+  title_scale = 0.90,
+  subtitle_scale = 0.82,
+  y_text_scale = 0.92,
+  patchwork_widths = NULL,
+  patchwork_heights = NULL,
+  theme_base_size = NULL,
+  verbose = FALSE
+) {
   ok <-
-    (is.null(inner_width) || (length(inner_width) == 1L && is.numeric(inner_width) &&
-                                is.finite(inner_width) && inner_width > 0)) &&
-    (is.null(inner_height) || (length(inner_height) == 1L && is.numeric(inner_height) &&
-                                 is.finite(inner_height) && inner_height > 0)) &&
+    (is.null(inner_width) || (length(inner_width) == 1L &&
+        is.numeric(inner_width) &&
+        is.finite(inner_width) && inner_width > 0)) &&
+    (is.null(inner_height) || (length(inner_height) == 1L &&
+        is.numeric(inner_height) &&
+        is.finite(inner_height) && inner_height > 0)) &&
     length(max_dodge) == 1L &&
     is.numeric(max_dodge) &&
     max_dodge >= 1 &&
@@ -1720,14 +2096,14 @@ util_gg_stagger_x_axis_labels <- function(
     y_text_scale > 0 &&
     (is.null(angle) || (length(angle) == 1L && is.numeric(angle))) &&
     (is.null(patchwork_widths) ||
-       (is.numeric(patchwork_widths) && length(patchwork_widths) >= 1L &&
-          all(is.finite(patchwork_widths)) && all(patchwork_widths > 0))) &&
+      (is.numeric(patchwork_widths) && length(patchwork_widths) >= 1L &&
+        all(is.finite(patchwork_widths)) && all(patchwork_widths > 0))) &&
     (is.null(patchwork_heights) ||
-       (is.numeric(patchwork_heights) && length(patchwork_heights) >= 1L &&
-          all(is.finite(patchwork_heights)) && all(patchwork_heights > 0))) &&
+      (is.numeric(patchwork_heights) && length(patchwork_heights) >= 1L &&
+        all(is.finite(patchwork_heights)) && all(patchwork_heights > 0))) &&
     (is.null(theme_base_size) ||
-       (length(theme_base_size) == 1L && is.numeric(theme_base_size) &&
-          is.finite(theme_base_size) && theme_base_size > 0))
+      (length(theme_base_size) == 1L && is.numeric(theme_base_size) &&
+        is.finite(theme_base_size) && theme_base_size > 0))
 
   if (!ok) {
     return(p)
@@ -1738,9 +2114,9 @@ util_gg_stagger_x_axis_labels <- function(
   is_patchwork_obj <- function(x) {
     inherits(x, "patchwork") ||
       (!is.null(x$patches) &&
-         is.list(x$patches) &&
-         !is.null(x$patches$plots) &&
-         is.list(x$patches$plots))
+          is.list(x$patches) &&
+          !is.null(x$patches$plots) &&
+          is.list(x$patches$plots))
   }
 
   normalize_weights <- function(w, n, default = 1) {
@@ -1810,7 +2186,8 @@ util_gg_stagger_x_axis_labels <- function(
     }
 
     ang <- th$axis.text.x$angle
-    if (is.null(ang) || !is.numeric(ang) || length(ang) != 1L || !is.finite(ang)) {
+    if (is.null(ang) || !is.numeric(ang) || length(ang) != 1L ||
+        !is.finite(ang)) {
       return(NULL)
     }
 
@@ -1888,27 +2265,40 @@ util_gg_stagger_x_axis_labels <- function(
       return(max(min_size, target))
     }
 
-    if (n_lab >= 28)  target <- min(target, 7.2)
-    if (n_lab >= 40)  target <- min(target, 6.6)
-    if (n_lab >= 60)  target <- min(target, 5.9)
-    if (n_lab >= 90)  target <- min(target, 5.2)
+    if (n_lab >= 28) target <- min(target, 7.2)
+    if (n_lab >= 40) target <- min(target, 6.6)
+    if (n_lab >= 60) target <- min(target, 5.9)
+    if (n_lab >= 90) target <- min(target, 5.2)
     if (n_lab >= 130) target <- min(target, 4.7)
     if (n_lab >= 180) target <- min(target, 4.2)
 
-    if (mean_nchar >= 8)  target <- target - 0.15
+    if (mean_nchar >= 8) target <- target - 0.15
     if (mean_nchar >= 12) target <- target - 0.25
-    if (max_nchar >= 20)  target <- target - 0.15
+    if (max_nchar >= 20) target <- target - 0.15
 
     if (!is.null(inner_width) && is.finite(inner_width) && inner_width > 0) {
       labels_per_in <- n_lab / inner_width
 
-      if (labels_per_in >= 8)  target <- min(target, 6.3)
+      if (labels_per_in >= 8) target <- min(target, 6.3)
       if (labels_per_in >= 11) target <- min(target, 5.6)
       if (labels_per_in >= 14) target <- min(target, 5.0)
       if (labels_per_in >= 18) target <- min(target, 4.5)
     }
 
     max(min_size, target)
+  }
+
+  is_nearly_horizontal_angle <- function(angle_eff, tolerance = 5) {
+    if (is.null(angle_eff)) {
+      return(TRUE)
+    }
+
+    if (!is.numeric(angle_eff) || length(angle_eff) != 1L ||
+        !is.finite(angle_eff)) {
+      return(FALSE)
+    }
+
+    abs(((angle_eff + 90) %% 180) - 90) <= tolerance
   }
 
   choose_n_dodge <- function(info, angle_eff, inner_width = NULL) {
@@ -1923,7 +2313,7 @@ util_gg_stagger_x_axis_labels <- function(
       return(1L)
     }
 
-    if (!is.null(angle_eff) && abs(angle_eff) >= 80) {
+    if (!is_nearly_horizontal_angle(angle_eff)) {
       return(1L)
     }
 
@@ -1975,7 +2365,9 @@ util_gg_stagger_x_axis_labels <- function(
     x
   }
 
-  apply_one <- function(g, inner_width_local = inner_width, inner_height_local = inner_height) {
+  apply_one <- function(g,
+    inner_width_local = inner_width,
+    inner_height_local = inner_height) {
     if (!inherits(g, "ggplot") || is_patchwork_obj(g)) {
       return(g)
     }
@@ -1985,30 +2377,13 @@ util_gg_stagger_x_axis_labels <- function(
       return(g)
     }
 
-    base_size <- theme_base_size %||% get_local_theme_size(g) %||% get_theme_text_size(g)
+    base_size <- theme_base_size %||%
+      get_local_theme_size(g) %||%
+      get_theme_text_size(g)
     angle_eff <- angle %||% get_theme_angle(g)
 
     if (info$n <= 12L) {
       return(g)
-    }
-
-    n_dodge <- choose_n_dodge(info, angle_eff, inner_width = inner_width_local)
-    target_size <- choose_target_size(base_size, info, inner_width = inner_width_local)
-
-    if (isTRUE(verbose)) {
-      msg <- sprintf(
-        paste0(
-          "util_gg_stagger_x_axis_labels(): n_labels=%d, mean_nchar=%.1f, ",
-          "inner_width=%s, size %.1f -> %.1f, n.dodge=%d"
-        ),
-        info$n,
-        info$mean_nchar,
-        if (is.null(inner_width_local)) "NULL" else format(inner_width_local),
-        base_size,
-        target_size,
-        n_dodge
-      )
-      message(msg)
     }
 
     th <- get_theme_obj(g)
@@ -2036,6 +2411,54 @@ util_gg_stagger_x_axis_labels <- function(
     plot_title_old <- inherit_el(plot_title_old)
     plot_subtitle_old <- inherit_el(plot_subtitle_old)
     text_old <- inherit_el(text_old)
+
+    valid_size <- function(x) {
+      is.numeric(x) && length(x) == 1L && is.finite(x) && x > 0
+    }
+
+    existing_x_size <- axis_text_x_old$size
+    existing_y_size <- axis_text_y_old$size
+
+    if (!valid_size(existing_x_size)) {
+      existing_x_size <- get_theme_text_size(g)
+    }
+
+    is_rotated_x <- !is_nearly_horizontal_angle(angle_eff)
+    n_dodge <- choose_n_dodge(info, angle_eff, inner_width = inner_width_local)
+    target_size <- choose_target_size(
+      base_size,
+      info,
+      inner_width = inner_width_local
+    )
+
+    if (is_rotated_x) {
+      target_size <- existing_x_size
+    }
+
+    target_y_size <- max(min_size, min(
+      base_size * y_text_scale,
+      max(min_size, target_size * y_text_scale)
+    ))
+
+    if (is_rotated_x && valid_size(existing_y_size)) {
+      target_y_size <- existing_y_size
+    }
+
+    if (isTRUE(verbose)) {
+      msg <- sprintf(
+        paste0(
+          "util_gg_stagger_x_axis_labels(): n_labels=%d, mean_nchar=%.1f, ",
+          "inner_width=%s, size %.1f -> %.1f, n.dodge=%d"
+        ),
+        info$n,
+        info$mean_nchar,
+        if (is.null(inner_width_local)) "NULL" else format(inner_width_local),
+        base_size,
+        target_size,
+        n_dodge
+      )
+      util_message("%s", msg)
+    }
 
     scaled_base_size <- base_size
 
@@ -2068,8 +2491,7 @@ util_gg_stagger_x_axis_labels <- function(
         family = axis_text_y_old$family,
         face = axis_text_y_old$face,
         colour = axis_text_y_old$colour,
-        size = max(min_size, min(scaled_base_size * y_text_scale,
-                                 max(min_size, target_size * y_text_scale))),
+        size = target_y_size,
         hjust = axis_text_y_old$hjust,
         vjust = axis_text_y_old$vjust,
         angle = axis_text_y_old$angle,
@@ -2118,11 +2540,10 @@ util_gg_stagger_x_axis_labels <- function(
   }
 
   recurse <- function(x,
-                      inner_width_local = inner_width,
-                      inner_height_local = inner_height,
-                      widths_local = patchwork_widths,
-                      heights_local = patchwork_heights) {
-
+    inner_width_local = inner_width,
+    inner_height_local = inner_height,
+    widths_local = patchwork_widths,
+    heights_local = patchwork_heights) {
     if (inherits(x, "ggplot") && !is_patchwork_obj(x)) {
       return(apply_one(
         x,
@@ -2192,7 +2613,3 @@ util_gg_stagger_x_axis_labels <- function(
 
   out
 }
-
-
-# IDEA: For PDF output, support https://cran.r-project.org/web/packages/xmpdf/index.html
-

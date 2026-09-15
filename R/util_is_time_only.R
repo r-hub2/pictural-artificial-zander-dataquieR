@@ -1,7 +1,14 @@
-util_is_time_only <- function(x, na_ok = TRUE) { # TODO: See also in redcap-rules-env
+#' Internal helper: is time only
+#'
+#' @noRd
+util_is_time_only <- function(x, na_ok = TRUE) {
   # Already "pure time" classes
-  if (inherits(x, "hms")) return(TRUE)
-  if (inherits(x, "times")) return(TRUE)                  # chron::times
+  if (inherits(x, "hms")) {
+    return(TRUE)
+  }
+  if (inherits(x, "times")) {
+    return(TRUE)
+  } # chron::times
 
   # Character strings that parse cleanly as time-of-day
   if (is.character(x)) {
@@ -15,14 +22,20 @@ util_is_time_only <- function(x, na_ok = TRUE) { # TODO: See also in redcap-rule
     # otherwise treat as seconds modulo 24h
     v <- x[!is.na(x)]
     looks_like_fraction <- length(v) && all(v >= 0 & v < 1)
-    if (looks_like_fraction) return(TRUE)
+    if (looks_like_fraction) {
+      return(TRUE)
+    }
     # Seconds in a reasonable range? accept as time of day too.
-    if (length(v) && all(v >= 0 & v < 86400*2)) return(TRUE)  # allow 0..<2 days
+    if (length(v) && all(v >= 0 & v < 86400 * 2)) {
+      return(TRUE)
+    } # allow 0..<2 days
   }
 
   if (is.list(x)) {
-    return(all(vapply(x, util_is_time_only, na_ok = na_ok,
-                      FUN.VALUE = logical(1))))
+    return(all(vapply(x, util_is_time_only,
+          na_ok = na_ok,
+          FUN.VALUE = logical(1)
+        )))
   }
 
   # POSIXt: has a date, but can be reduced to time-of-day
@@ -31,13 +44,18 @@ util_is_time_only <- function(x, na_ok = TRUE) { # TODO: See also in redcap-rule
 
 # ------------- Coercion to hms ----------------------------------------------
 
-util_as_time_only <- function(x, tz = "UTC") { # TODO: See util_parse_time
+#' Internal helper: as time only
+#'
+#' @noRd
+util_as_time_only <- function(x, tz = "UTC") {
   # Normalize any “time-ish” input to hms::hms (seconds since midnight).
   sec_per_day <- 86400
 
-  if (inherits(x, "hms")) return(x)
+  if (inherits(x, "hms")) {
+    return(x)
+  }
 
-  if (inherits(x, "times")) {              # chron::times -> hms
+  if (inherits(x, "times")) { # Convert chron times objects to hms.
     return(hms::as_hms(as.numeric(x) * sec_per_day))
   }
 

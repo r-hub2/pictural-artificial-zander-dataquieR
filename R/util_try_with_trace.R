@@ -1,3 +1,6 @@
+#' Internal helper: try with trace
+#'
+#' @noRd
 util_try_with_trace <- function(expr, silent = FALSE) {
   force(silent)
   tryCatch(
@@ -10,10 +13,11 @@ util_try_with_trace <- function(expr, silent = FALSE) {
 
       if (!silent) {
         # Print a compact message; keep the heavy trace in the attribute
-        message("Error: ", msg)
+        util_message("Error: %s", msg)
       }
 
-      # Return a classic try-error *character* vector with a "condition" attribute
+      # Return a classic try-error *character* vector with a "condition"
+      # attribute
       structure(
         msg,
         class = "try-error",

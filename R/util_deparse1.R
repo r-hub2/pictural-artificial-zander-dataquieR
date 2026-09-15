@@ -32,15 +32,16 @@ if (exists("deparse1", envir = baseenv())) {
   util_deparse1 <- base::deparse1
 } else {
   util_deparse1 <-
-    function (expr,
-              collapse = " ",
-              width.cutoff = 500L,
-              ...) {
+    function(expr,
+      collapse = " ",
+      width.cutoff = 500L,
+      ...) {
       paste(
         deparse(
           expr = expr,
           width.cutoff = width.cutoff,
-          ...),
+          ...
+        ),
         collapse = collapse
       )
     }

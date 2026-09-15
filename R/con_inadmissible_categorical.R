@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Detects variable levels not specified in metadata
 #'
 #' @description
@@ -24,7 +25,6 @@
 #'
 #' @inheritParams .template_function_indicator
 #'
-#' @param resp_vars [variable list] the name of the measurement variables
 #' @param threshold_value [numeric] from=0 to=100. a numerical value ranging
 #'                                           from 0-100.
 #'
@@ -49,14 +49,14 @@
 #' [Online Documentation](
 #' https://dataquality.qihs.uni-greifswald.de/VIN_con_impl_inadmissible_categorical.html
 #' )
+# nolint end
 con_inadmissible_categorical <- function(resp_vars = NULL,
-                                         study_data,
-                                         label_col,
-                                         item_level = "item_level",
-                                         threshold_value = 0,
-                                         meta_data = item_level,
-                                         meta_data_v2) {
-
+  study_data,
+  label_col,
+  item_level = "item_level",
+  threshold_value = 0,
+  meta_data = item_level,
+  meta_data_v2) {
   # preps ----------------------------------------------------------------------
   util_maybe_load_meta_data_v2()
 
@@ -73,8 +73,9 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
   prep_prepare_dataframes()
 
   util_stop_if_not(
-`Internal error, sorry, please report. VALUE_LABELS after prep_prepare_dataframes` =
-       is.null(meta_data[[VALUE_LABELS]]))
+    `Internal error, sorry, please report. VALUE_LABELS after prep_prepare_dataframes` = # nolint: line_length_linter.
+      is.null(meta_data[[VALUE_LABELS]])
+  )
 
   if (voc_mode) {
     meta_data[[VALUE_LABEL_TABLE]] <- NULL
@@ -84,116 +85,157 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
 
   if (!VALUE_LABEL_TABLE %in% colnames(meta_data)) {
     if (voc_mode) {
-      util_error(paste0("Function con_inadmissible_vocabulary requires",
-                        "the metadata column STANDARDIZED_VOCABULARY_TABLE."),
-                 applicability_problem = TRUE,
-                 intrinsic_applicability_problem = TRUE)
-
+      util_error(
+        paste0(
+          "Function con_inadmissible_vocabulary requires",
+          "the metadata column STANDARDIZED_VOCABULARY_TABLE."
+        ),
+        applicability_problem = TRUE,
+        intrinsic_applicability_problem = TRUE
+      )
     } else {
-      util_error(paste0("Function con_inadmissible_categorical requires",
-                        "the metadata column VALUE_LABELS or VALUE_LABEL_TABLE."),
-                 applicability_problem = TRUE,
-                 intrinsic_applicability_problem = TRUE)
-
+      util_error(
+        paste0(
+          "Function con_inadmissible_categorical requires",
+          "the metadata column VALUE_LABELS or VALUE_LABEL_TABLE."
+        ),
+        applicability_problem = TRUE,
+        intrinsic_applicability_problem = TRUE
+      )
     }
   }
 
   util_correct_variable_use("resp_vars",
-                            allow_more_than_one = TRUE,
-                            allow_null = TRUE,
-                            allow_any_obs_na = TRUE,
-                            need_type = "integer | string", # TODO: What about datetime as categorical variable, if there are, e.g., only three timepoints?
-                            need_scale = "nominal | ordinal"
+    allow_more_than_one = TRUE,
+    allow_null = TRUE,
+    allow_any_obs_na = TRUE,
+    need_type = "integer | string",
+    need_scale = "nominal | ordinal"
   )
 
   if (length(resp_vars) == 0) {
-    # Select all variables with VALUE_LABEL_TABLE (if any), if resp_vars were not specified.
+    # Select all variables with VALUE_LABEL_TABLE (if any), if resp_vars were
+    # not specified.
     if (all(util_empty(meta_data[[VALUE_LABEL_TABLE]]))) {
       if (voc_mode) {
-        util_error(c("No variables with defined",
-                     "STANDARDIZED_VOCABULARY_TABLE"),
-                   applicability_problem = TRUE,
-                   intrinsic_applicability_problem = TRUE)
+        util_error(
+          c(
+            "No variables with defined",
+            "STANDARDIZED_VOCABULARY_TABLE"
+          ),
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       } else {
-        util_error(c("No variables with defined",
-                     "VALUE_LABELS or VALUE_LABEL_TABLE."),
-                   applicability_problem = TRUE,
-                   intrinsic_applicability_problem = TRUE)
+        util_error(
+          c(
+            "No variables with defined",
+            "VALUE_LABELS or VALUE_LABEL_TABLE."
+          ),
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       }
     } else {
       if (voc_mode) {
-        util_message(c("All variables with STANDARDIZED_VOCABULARY_TABLE",
-                       "in the metadata are used,",
-                       "if SCALE_LEVEL is nominal or ordinal."),
-                     applicability_problem = TRUE,
-                     intrinsic_applicability_problem = TRUE)
+        util_message(
+          c(
+            "All variables with STANDARDIZED_VOCABULARY_TABLE",
+            "in the metadata are used,",
+            "if SCALE_LEVEL is nominal or ordinal."
+          ),
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       } else {
-        util_message(c("All variables with VALUE_LABELS or",
-                       "VALUE_LABEL_TABLE in the metadata are used,",
-                       "if SCALE_LEVEL is nominal or ordinal."),
-                     applicability_problem = TRUE,
-                     intrinsic_applicability_problem = TRUE)
+        util_message(
+          c(
+            "All variables with VALUE_LABELS or",
+            "VALUE_LABEL_TABLE in the metadata are used,",
+            "if SCALE_LEVEL is nominal or ordinal."
+          ),
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       }
       resp_vars <-
-        intersect(meta_data[[label_col]][!(
-          util_empty(meta_data[[VALUE_LABEL_TABLE]])) &
+        intersect(
+          meta_data[[label_col]][!(
+            util_empty(meta_data[[VALUE_LABEL_TABLE]])) &
             meta_data[[SCALE_LEVEL]] %in% c(
-              SCALE_LEVELS$NOMINAL, SCALE_LEVELS$ORDINAL)],
-                  colnames(ds1))
+              SCALE_LEVELS$NOMINAL, SCALE_LEVELS$ORDINAL
+            )],
+          colnames(ds1)
+        )
     }
   } else {
-    # Check for specified resp_vars whether VALUE_LABEL_TABLE have been defined at all.
+    # Check for specified resp_vars whether VALUE_LABEL_TABLE have been defined
+    # at all.
     if (all(util_empty(
-      meta_data[[VALUE_LABEL_TABLE]][meta_data[[label_col]] %in% resp_vars]))) {
+      meta_data[[VALUE_LABEL_TABLE]][meta_data[[label_col]] %in% resp_vars]
+    ))) {
       if (voc_mode) {
         util_error("No variables with defined STANDARDIZED_VOCABULARY_TABLE.",
-                   applicability_problem = TRUE,
-                   intrinsic_applicability_problem = TRUE)
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       } else {
-        util_error("No variables with defined VALUE_LABELS or VALUE_LABEL_TABLE.",
-                   applicability_problem = TRUE,
-                   intrinsic_applicability_problem = TRUE)
+        util_error("No variables with defined VALUE_LABELS or VALUE_LABEL_TABLE.", # nolint: line_length_linter.
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       }
     }
-    # check whether VALUE_LABEL_TABLE are missing for some of the specified resp_vars
+    # check whether VALUE_LABEL_TABLE are missing for some of the specified
+    # resp_vars
     rvs <- meta_data[[label_col]][!(
       util_empty(meta_data[[VALUE_LABEL_TABLE]])) &
-                                    meta_data[[label_col]] %in% resp_vars]
+      meta_data[[label_col]] %in% resp_vars]
     if (length(rvs) < length(resp_vars)) {
       if (voc_mode) {
-        util_message(paste0("The variables ", resp_vars[!(resp_vars %in% rvs)],
-                          " have no defined",
-                          "STANDARDIZED_VOCABULARY_TABLE."),
-                   applicability_problem = TRUE,
-                   intrinsic_applicability_problem = TRUE)
+        util_message(
+          paste0(
+            "The variables ", resp_vars[!(resp_vars %in% rvs)],
+            " have no defined",
+            "STANDARDIZED_VOCABULARY_TABLE."
+          ),
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       } else {
-        util_message(paste0("The variables ", resp_vars[!(resp_vars %in% rvs)],
-                            " have no defined",
-                            "VALUE_LABELS or VALUE_LABEL_TABLE."),
-                     applicability_problem = TRUE,
-                     intrinsic_applicability_problem = TRUE)
+        util_message(
+          paste0(
+            "The variables ", resp_vars[!(resp_vars %in% rvs)],
+            " have no defined",
+            "VALUE_LABELS or VALUE_LABEL_TABLE."
+          ),
+          applicability_problem = TRUE,
+          intrinsic_applicability_problem = TRUE
+        )
       }
     }
     resp_vars <- rvs
   }
 
   util_correct_variable_use("resp_vars",
-                            allow_more_than_one = TRUE,
-                            allow_null = TRUE,
-                            allow_any_obs_na = TRUE,
-                            need_type = "integer | string", # TODO: What about datetime as categorical variable, if there are, e.g., only three timepoints?
-                            need_scale = "nominal | ordinal"
+    allow_more_than_one = TRUE,
+    allow_null = TRUE,
+    allow_any_obs_na = TRUE,
+    need_type = "integer | string",
+    need_scale = "nominal | ordinal"
   )
 
   if (length(resp_vars) == 0) {
     util_error("No categorical variables with value lists / vocabulary found.",
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
 
   util_expect_scalar(threshold_value,
-                     check_type = util_is_numeric_in(min = 0, max = 100))
+    check_type = util_is_numeric_in(min = 0, max = 100)
+  )
 
-  #util_expect_scalar(use_value_labels, check_type = is.logical)
+  # Historical use_value_labels argument validation removed here.
 
   # Calculations ---------------------------------------------------------------
 
@@ -203,8 +245,10 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
   get_obs_cats <- function(x) {
     as.character(sort(unique(x[!is.na(x)])))
   }
-  sumdf1$OBSERVED_CATEGORIES <- lapply(ds1[, resp_vars, drop = FALSE],
-                                       get_obs_cats)
+  sumdf1$OBSERVED_CATEGORIES <- lapply(
+    ds1[, resp_vars, drop = FALSE],
+    get_obs_cats
+  )
 
   voc_names <- setNames(
     util_map_labels(
@@ -218,75 +262,119 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
   )
 
   # Which categories were defined in metadata?
-  def_cats <- lapply(voc_names, function(vlt) {
-        vl <- NA_character_
-        if (!is.na(vlt)) {
-          codes <- try(prep_get_data_frame(vlt), silent = TRUE)
-          if (util_is_try_error(codes)) {
-            util_warning(codes,
-                         title = "Could not fetch value_labels/vocabulary %s, ignoring:\n",
-                         dQuote(vlt))
-          } else {
-            # TODO: Handle | in [[1]] or [[2]]
-            if (voc_mode && ncol(codes) == 1) {
-              vl <- codes
-              colnames(vl) <- CODE_VALUE
-            } else if (voc_mode && ncol(codes) == 2) {
-              vl <- codes
-              colnames(vl) <- c(CODE_VALUE, CODE_LABEL)
-            } else if (voc_mode) {
-              url <-
-                subset(util_get_voc_tab(), paste0("<", get("voc"), ">") == vlt,
-                       "url", drop = TRUE)
-              util_warning(c("For the standardized vocabulary table %s,",
-                             "there are %d columns from the table %s defined.",
-                             "There should be 1 or 2 (2nd one would be the",
-                             "labels).",
-                             "Ignoring this table."),
-                           dQuote(vlt),
-                           ncol(codes),
-                           dQuote(url))
-            } else {
-              vl <- codes
-            }
-          }
+  invalid_value_label_table <- "dataquieR_invalid_value_label_table"
+  def_cats <- Map(function(vlt, rv) {
+    vl <- NA_character_
+    if (!is.na(vlt)) {
+      codes <- try(prep_get_data_frame(vlt), silent = TRUE)
+      if (util_is_try_error(codes)) {
+        util_warning(codes,
+          title = sprintf(
+            "Could not fetch value_labels/vocabulary %s, ignoring:\n",
+            dQuote(vlt)
+          )
+        )
+      } else {
+        if (voc_mode && ncol(codes) == 1) {
+          vl <- codes
+          colnames(vl) <- CODE_VALUE
+        } else if (voc_mode && ncol(codes) == 2) {
+          vl <- codes
+          colnames(vl) <- c(CODE_VALUE, CODE_LABEL)
+        } else if (voc_mode) {
+          url <-
+            subset(util_get_voc_tab(), paste0("<", get("voc"), ">") == vlt,
+              "url",
+              drop = TRUE
+            )
+          util_warning(
+            c(
+              "For the standardized vocabulary table %s,",
+              "there are %d columns from the table %s defined.",
+              "There should be 1 or 2 (2nd one would be the",
+              "labels).",
+              "Ignoring this table."
+            ),
+            dQuote(vlt),
+            ncol(codes),
+            dQuote(url)
+          )
+        } else {
+          vl <- codes
         }
+      }
+    }
 
     if (is.data.frame(vl)) {
       if (CODE_VALUE %in% colnames(vl)) {
         if (CODE_LABEL %in% colnames(vl)) {
-          return(setNames(as.character(vl[[CODE_VALUE]]), nm = vl[[CODE_LABEL]]))
+          return(setNames(as.character(vl[[CODE_VALUE]]), nm = vl[[CODE_LABEL]])) # nolint: line_length_linter.
         } else {
           return(as.character(vl[[CODE_VALUE]]))
         }
       } else {
-        return(NA_character_)
+        util_message(
+          c(
+            "The value label table %s for variable %s has no %s column.",
+            "The check is not applicable for this variable."
+          ),
+          dQuote(vlt),
+          dQuote(rv),
+          dQuote(CODE_VALUE),
+          applicability_problem = TRUE
+        )
+        invalid_table <- NA_character_
+        attr(invalid_table, invalid_value_label_table) <- TRUE
+        return(invalid_table)
       }
     } else {
       return(NA_character_)
     }
-  })
+  }, vlt = voc_names, rv = names(voc_names))
+
+  valid_value_label_table <- !vapply(def_cats, function(x) {
+    isTRUE(util_attr(x, invalid_value_label_table, exact = TRUE))
+  }, FUN.VALUE = logical(1))
+
+  if (any(!valid_value_label_table)) {
+    sumdf1 <- sumdf1[valid_value_label_table, , drop = FALSE]
+    def_cats <- def_cats[valid_value_label_table]
+    resp_vars <- resp_vars[valid_value_label_table]
+  }
+
+  if (length(resp_vars) == 0) {
+    util_error(
+      "No categorical variables with usable value lists / vocabulary found.",
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
+  }
 
   sumdf1$DEFINED_CATEGORIES <- def_cats
 
 
-  # Which categories were used in the study data but not defined in the metadata?
+  # Which categories were used in the study data but not defined in the
+  # metadata?
   which_not <- lapply(
     seq_along(sumdf1$OBSERVED_CATEGORIES),
-    function(x) !(sumdf1$OBSERVED_CATEGORIES[[x]] %in%
-                    sumdf1$DEFINED_CATEGORIES[[x]])
+    function(x) {
+      !(sumdf1$OBSERVED_CATEGORIES[[x]] %in%
+          sumdf1$DEFINED_CATEGORIES[[x]])
+    }
   )
   sumdf1$NON_MATCHING <- lapply(
     seq_along(sumdf1$OBSERVED_CATEGORIES),
     function(x) paste0(sumdf1$OBSERVED_CATEGORIES[[x]][which_not[[x]]])
   )
-  # If there are no unexpected categories, the entry should be NA (instead of "character(0)").
+  # If there are no unexpected categories, the entry should be NA (instead of
+  # "character(0)").
   sumdf1$NON_MATCHING <- lapply(
     sumdf1$NON_MATCHING,
     function(x) if (identical(x, character(0))) NA_character_ else x
   )
 
-  # Count the number of non-matching observations in total and per unexpected category.
+  # Count the number of non-matching observations in total and per unexpected
+  # category.
   sumdf1$NON_MATCHING_N <- NA
   sumdf1$NON_MATCHING_N_PER_CATEGORY <- NA
   # msdf = modified study data
@@ -295,95 +383,110 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
   for (i in seq_len(nrow(sumdf1))) {
     if (!is.na(sumdf1$NON_MATCHING[i])) {
       if (all(!is.na(as_numeric_no_warn(unlist(sumdf1$NON_MATCHING[i]))))) {
-        sumdf1$NON_MATCHING_N[i] <- sum(ds1[[paste(sumdf1$Variables[i])]] %in%
-                                          as_numeric_no_warn(unlist(
-                                            sumdf1$NON_MATCHING[i])),
+        sumdf1$NON_MATCHING_N[i] <- sum(
+          ds1[[paste(sumdf1$Variables[i])]] %in%
+            as_numeric_no_warn(unlist(
+              sumdf1$NON_MATCHING[i]
+            )),
           na.rm = TRUE
         )
         n_per_cat <- table(ds1[[sumdf1$Variables[i]]][which(
           ds1[[sumdf1$Variables[i]]] %in%
-            as_numeric_no_warn(unlist(sumdf1$NON_MATCHING[i])))])
+            as_numeric_no_warn(unlist(sumdf1$NON_MATCHING[i]))
+        )])
         n_per_cat <- n_per_cat[order(n_per_cat, decreasing = TRUE)]
         sumdf1$NON_MATCHING_N_PER_CATEGORY[i] <- paste(
           paste0(n_per_cat, " (", dQuote(names(n_per_cat)), ")"),
-          collapse = ", ")
+          collapse = ", "
+        )
         msdf[[paste(sumdf1$Variables[i])]][
           msdf[[paste(sumdf1$Variables[i])]] %in%
-            as_numeric_no_warn(unlist(sumdf1$NON_MATCHING[i]))] <- NA
+            as_numeric_no_warn(unlist(sumdf1$NON_MATCHING[i]))
+        ] <- NA
         ds1[[paste0(sumdf1$Variables[i], "_IAV")]] <-
           ifelse(ds1[[paste(sumdf1$Variables[i])]] %in%
-                   as_numeric_no_warn(unlist(sumdf1$NON_MATCHING[i])), 1, 0)
+              as_numeric_no_warn(unlist(sumdf1$NON_MATCHING[i])), 1, 0)
       } else {
-        sumdf1$NON_MATCHING_N[i] <- sum(ds1[[paste(sumdf1$Variables[i])]] %in%
-                                          unlist(sumdf1$NON_MATCHING[i]),
+        sumdf1$NON_MATCHING_N[i] <- sum(
+          ds1[[paste(sumdf1$Variables[i])]] %in%
+            unlist(sumdf1$NON_MATCHING[i]),
           na.rm = TRUE
         )
         n_per_cat <- table(ds1[[sumdf1$Variables[i]]][which(
-          ds1[[sumdf1$Variables[i]]] %in% unlist(sumdf1$NON_MATCHING[i]))])
+          ds1[[sumdf1$Variables[i]]] %in% unlist(sumdf1$NON_MATCHING[i])
+        )])
         sumdf1$NON_MATCHING_N_PER_CATEGORY[i] <- paste(
           paste0(n_per_cat, " (", dQuote(names(n_per_cat)), ")"),
-          collapse = ", ")
+          collapse = ", "
+        )
         msdf[[paste(sumdf1$Variables[i])]][
           msdf[[paste(sumdf1$Variables[i])]] %in%
-            as_numeric_no_warn(unlist(sumdf1$NON_MATCHING[i]))] <- NA
+            unlist(sumdf1$NON_MATCHING[i])
+        ] <- NA
         ds1[[paste0(sumdf1$Variables[i], "_IAV")]] <-
           ifelse(ds1[[paste(sumdf1$Variables[i])]] %in%
-                   as_numeric_no_warn(unlist(sumdf1$NON_MATCHING[i])), 1, 0)
+              unlist(sumdf1$NON_MATCHING[i]), 1, 0)
       }
     }
   }
 
   # any IAVs?
-  checkIAV <- names(ds1)[grep("_IAV", names(ds1))]
-  if (length(checkIAV) > 0) {
-    if (!.called_in_pipeline) util_message(paste0("The following variable(s): ",
-                        paste0(checkIAV, collapse = ", "),
-                        " flag(s) inadmissible values."),
-                 applicability_problem = FALSE)
+  check_iav <- names(ds1)[grep("_IAV", names(ds1))]
+  if (length(check_iav) > 0) {
+    if (!.called_in_pipeline) {
+      util_message(
+        paste0(
+          "The following variable(s): ",
+          paste0(check_iav, collapse = ", "),
+          " flag(s) inadmissible values."
+        ),
+        applicability_problem = FALSE
+      )
+    }
   }
 
   # attribute
   attr(msdf, "rmIAVcat") <- TRUE
 
-  # if (use_value_labels) {
-  #   sumdf1$DEFINED_CATEGORIES <- lapply(sumdf1[["DEFINED_CATEGORIES"]], function(x) {
-  #     if (all(!is.na(as_numeric_no_warn(x)))) {
-  #       x <- paste0(x, " (", dQuote(names(x)), ")")
-  #     }
-  #     x
-  #   })
-  # }
+  # Historical use_value_labels formatting branch removed here.
 
   # handle lists
   sumdf1[["OBSERVED_CATEGORIES"]] <-
     as.vector(unlist(lapply(sumdf1[["OBSERVED_CATEGORIES"]],
-                            paste, collapse = ", ")))
+          paste,
+          collapse = ", "
+        )))
 
   if (voc_mode) {
     sumdf1[["DEFINED_CATEGORIES"]] <- voc_names[sumdf1[["Variables"]]]
   } else {
     sumdf1[["DEFINED_CATEGORIES"]] <-
       as.vector(unlist(lapply(sumdf1[["DEFINED_CATEGORIES"]],
-                              paste, collapse = ", ")))
+            paste,
+            collapse = ", "
+          )))
   }
 
   sumdf1[["NON_MATCHING"]] <-
     as.vector(unlist(lapply(sumdf1[["NON_MATCHING"]],
-                            paste, collapse = ", ")))
+          paste,
+          collapse = ", "
+        )))
   sumdf1$NON_MATCHING <-
     ifelse(sumdf1$NON_MATCHING == "NA", "", sumdf1$NON_MATCHING)
   sumdf1$NON_MATCHING_N <-
     ifelse(is.na(sumdf1$NON_MATCHING_N), 0, sumdf1$NON_MATCHING_N)
   sumdf1$NON_MATCHING_N_PER_CATEGORY <-
     ifelse(is.na(sumdf1$NON_MATCHING_N_PER_CATEGORY), 0,
-           sumdf1$NON_MATCHING_N_PER_CATEGORY)
+      sumdf1$NON_MATCHING_N_PER_CATEGORY
+    )
   sumdf1[["GRADING"]] <-
     ifelse(sumdf1$NON_MATCHING_N > threshold_value / 100 * nrow(ds1), 1, 0)
 
-  sumdf2 <- sumdf1[, c("Variables", "NON_MATCHING_N")]
+  sumdf2 <- sumdf1[, c("Variables", "NON_MATCHING_N"), drop = FALSE]
 
   if (voc_mode) {
-    colnames(sumdf2)[2] <- "NUM_con_rvv_icat" # FIXME: use correct indicator metrics
+    colnames(sumdf2)[2] <- "NUM_con_rvv_icat"
   } else {
     colnames(sumdf2)[2] <- "NUM_con_rvv_icat"
   }
@@ -392,7 +495,7 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
   sumdf2$FLG_con_rvv_icat <- ifelse(sumdf2$GRADING == 1, TRUE, FALSE)
 
 
-  #remove GRADING from sumdf1 that is going to be the SummaryData
+  # remove GRADING from sumdf1 that is going to be the SummaryData
   sumdf1$GRADING <- NULL
 
   # to add descriptions in the hover text of the headers of the table
@@ -400,7 +503,8 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
 
   attr(sumdf1, "description") <- text_to_display
 
-  #Add new attribute to the columns of SummaryData to define the datatype of each column
+  # Add new attribute to the columns of SummaryData to define the datatype of
+  # each column
   attr(sumdf1$Variables, DATA_TYPE) <- DATA_TYPES$STRING
   attr(sumdf1$OBSERVED_CATEGORIES, DATA_TYPE) <- DATA_TYPES$STRING
   attr(sumdf1$DEFINED_CATEGORIES, DATA_TYPE) <- DATA_TYPES$STRING
@@ -409,17 +513,16 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
   attr(sumdf1$NON_MATCHING_N_PER_CATEGORY, DATA_TYPE) <- DATA_TYPES$STRING
 
 
-   # TODO EK: Use util_pretty_vector_string for SummaryData to avoid very long strings
-  # Examples:
-  # util_pretty_vector_string(letters, n_max = 30)
-  # util_pretty_vector_string(letters, n_max = 3)
 
-  return(list(SummaryData = sumdf1,
-              SummaryTable = sumdf2,
-              ModifiedStudyData = msdf,
-              FlaggedStudyData = ds1))
+  return(list(
+    SummaryData = sumdf1,
+    SummaryTable = sumdf2,
+    ModifiedStudyData = msdf,
+    FlaggedStudyData = ds1
+  ))
 }
 
+# nolint start: line_length_linter.
 #' Detects variable levels not specified in standardized vocabulary
 #'
 #' @description
@@ -446,7 +549,6 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
 #'
 #' @inheritParams .template_function_indicator
 #'
-#' @param resp_vars [variable list] the name of the measurement variables
 #' @param threshold_value [numeric] from=0 to=100. a numerical value ranging
 #'                                           from 0-100.
 #'
@@ -475,30 +577,28 @@ con_inadmissible_categorical <- function(resp_vars = NULL,
 #' )
 #' @examples
 #' \dontrun{
-#' sdt <- data.frame(DIAG = c("B050", "B051", "B052", "B999"),
-#'                   MED0 = c("S01XA28", "N07XX18", "ABC", NA), stringsAsFactors = FALSE)
+#' sdt <- data.frame(
+#'   DIAG = c("B050", "B051", "B052", "B999"),
+#'   MED0 = c("S01XA28", "N07XX18", "ABC", NA), stringsAsFactors = FALSE
+#' )
 #' mdt <- tibble::tribble(
-#' ~ VAR_NAMES, ~ DATA_TYPE, ~ STANDARDIZED_VOCABULARY_TABLE, ~ SCALE_LEVEL, ~ LABEL,
-#' "DIAG", "string", "<ICD10>", "nominal", "Diagnosis",
-#' "MED0", "string", "<ATC>", "nominal", "Medication"
+#'   ~VAR_NAMES, ~DATA_TYPE, ~STANDARDIZED_VOCABULARY_TABLE, ~SCALE_LEVEL, ~LABEL,
+#'   "DIAG", "string", "<ICD10>", "nominal", "Diagnosis",
+#'   "MED0", "string", "<ATC>", "nominal", "Medication"
 #' )
 #' con_inadmissible_vocabulary(NULL, sdt, mdt, label_col = LABEL)
 #' prep_load_workbook_like_file("meta_data_v2")
 #' il <- prep_get_data_frame("item_level")
-#' il$STANDARDIZED_VOCABULARY_TABLE[[11]] <- "<ICD10GM>"
-#' il$DATA_TYPE[[11]] <- DATA_TYPES$INTEGER
-#' il$SCALE_LEVEL[[11]] <- SCALE_LEVELS$NOMINAL
+#' il[[STANDARDIZED_VOCABULARY_TABLE]][[11]] <- "<ICD10GM>"
+#' il[[DATA_TYPE]][[11]] <- DATA_TYPES$INTEGER
+#' il[[SCALE_LEVEL]][[11]] <- SCALE_LEVELS$NOMINAL
 #' prep_add_data_frames(item_level = il)
 #' r <- dq_report2("study_data", dimensions = "con")
-#' r <- dq_report2("study_data", dimensions = "con",
-#'      advanced_options = list(dataquieR.non_disclosure = TRUE))
+#' r <- dq_report2("study_data",
+#'   dimensions = "con",
+#'   advanced_options = list(dataquieR.non_disclosure = TRUE)
+#' )
 #' r
 #' }
+# nolint end
 con_inadmissible_vocabulary <- con_inadmissible_categorical
-
-# TODO: allow gsub before checking, because of this:
-# > head(prep_get_data_frame("<ICD10>")[[1]])
-# [1] "A00"  "A00"  "A00"  "A000" "A001" "A009"
-# > head(prep_get_data_frame("<ICD10GM>")[[1]])
-# [1] "A00.0" "A00.1" "A00.9" "A01.-" "A01.0" "A01.1"
-

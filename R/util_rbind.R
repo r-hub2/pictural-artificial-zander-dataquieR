@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Bind data frames row-based
 #'
 #' if not all data frames share  all columns, missing columns will be filled with
@@ -18,10 +19,12 @@
 #' @family data_management
 #' @concept process
 #' @noRd
+# nolint end
 util_rbind <- function(..., data_frames_list = list()) {
   data_frames_list <- c(list(...), data_frames_list)
   data_frames_list <- data_frames_list[!vapply(data_frames_list, is.null,
-                                              FUN.VALUE = logical(1))]
+      FUN.VALUE = logical(1)
+    )]
   data_frames_list <-
     lapply(data_frames_list, util_expect_data_frame, dont_assign = TRUE)
 
@@ -35,21 +38,24 @@ util_rbind <- function(..., data_frames_list = list()) {
 
   if (tnsltd) {
     util_stop_if_not(
-      "Internal error, sorry. Please report. Combining incompatibly translated column names (1)" =
-        all(vapply(all_cn, inherits, "dataquieR_translated", FUN.VALUE = logical(1))))
+      "Internal error, sorry. Please report. Combining incompatibly translated column names (1)" = # nolint: line_length_linter.
+        all(vapply(all_cn, inherits, "dataquieR_translated", FUN.VALUE = logical(1))) # nolint: line_length_linter.
+    )
 
-    ns <- unique(vapply(all_cn, attr, "ns", FUN.VALUE = character(1)))
-    lang <- unique(vapply(all_cn, attr, "lang", FUN.VALUE = character(1)))
+    ns <- unique(vapply(all_cn, util_attr, "ns", FUN.VALUE = character(1)))
+    lang <- unique(vapply(all_cn, util_attr, "lang", FUN.VALUE = character(1)))
 
     util_stop_if_not(
-      "Internal error, sorry. Please report. Combining incompatibly translated column names (2)" =
+      "Internal error, sorry. Please report. Combining incompatibly translated column names (2)" = # nolint: line_length_linter.
         length(ns) == 1 &&
-        length(lang) == 1)
+        length(lang) == 1
+    )
   }
 
 
   all_cols <- unique(unlist(lapply(data_frames_list, colnames),
-                            recursive = TRUE))
+      recursive = TRUE
+    ))
 
   data_frames_list <- lapply(data_frames_list, function(dfr) {
     if (nrow(dfr) > 0) {
@@ -64,20 +70,23 @@ util_rbind <- function(..., data_frames_list = list()) {
 
   all_data_types <-
     vapply(setNames(nm = all_cols), function(cl) {
-      dt <- unique(lapply(lapply(data_frames_list, `[[`, cl),
-             attr,
-             WELL_KNOWN_META_VARIABLE_NAMES$DATA_TYPE))
+      dt <- unique(lapply(
+        lapply(data_frames_list, `[[`, cl),
+        util_attr,
+        WELL_KNOWN_META_VARIABLE_NAMES$DATA_TYPE
+      ))
       if (length(dt) == 1) {
         r <- dt[[1]]
       } else {
-        # util_warning("Internal error, sorry, please report: data types of a combined output table incompatible")
+        # util_warning("Internal error, sorry, please report: data types of a
+        # combined output table incompatible")
         r <- NA_character_
       }
       if (is.null(r)) {
         r <- NA_character_
       }
       r
-    }, FUN.VALUE = character(1)) # This is used also from onLoad, so maybe, DATA_TYPE has not been defined, yet
+    }, FUN.VALUE = character(1)) # This is used also from onLoad, so maybe, DATA_TYPE has not been defined, yet # nolint: line_length_linter.
 
   r <- do.call(rbind.data.frame, data_frames_list)
 
@@ -93,7 +102,7 @@ util_rbind <- function(..., data_frames_list = list()) {
       util_attach_attr(
         colnames(r),
         class = "dataquieR_translated",
-        names = unname(unlist(unique(lapply(all_cn, function(x) setNames(nm = as.character(x), ifelse(names(x) == "", as.character(x), names(x)))[colnames(r)])))),
+        names = unname(unlist(unique(lapply(all_cn, function(x) setNames(nm = as.character(x), ifelse(names(x) == "", as.character(x), names(x)))[colnames(r)])))), # nolint: line_length_linter.
         ns = ns,
         lang = lang
       )

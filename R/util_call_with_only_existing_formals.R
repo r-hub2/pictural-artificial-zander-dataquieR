@@ -15,7 +15,7 @@ util_call_with_only_existing_formals <- function(f, ...) {
   f <- rlang::as_function(f)
 
   dots <- rlang::dots_list(...)
-  fm   <- rlang::fn_fmls(f)
+  fm <- rlang::fn_fmls(f)
 
   if (!("..." %in% names(fm))) {
     dots <- dots[intersect(names(dots), names(fm))]

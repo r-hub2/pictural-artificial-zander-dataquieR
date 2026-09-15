@@ -20,7 +20,8 @@ prep_get_labels(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} the variable names to fetch for}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{item_level}{\link{data.frame} the data frame that contains metadata
 attributes of study data}

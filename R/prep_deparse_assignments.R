@@ -13,9 +13,11 @@
 #'         `cbind(codes, labels)`
 #' @export
 prep_deparse_assignments <- function(codes, labels = codes,
-                                     split_char = SPLIT_CHAR,
-                                     mode = c("numeric_codes",
-                                              "string_codes")) {
+  split_char = SPLIT_CHAR,
+  mode = c(
+    "numeric_codes",
+    "string_codes"
+  )) {
   mode <- util_match_arg(mode)
   no_labs <- missing(labels) || length(labels) == 0
   if (length(labels) == 0) {
@@ -23,34 +25,41 @@ prep_deparse_assignments <- function(codes, labels = codes,
   }
   if (length(codes) != length(labels)) {
     util_error("%s and %s must have the same length",
-               dQuote("values"),
-               dQuote("labels"), applicability_problem = TRUE)
+      dQuote("values"),
+      dQuote("labels"),
+      applicability_problem = TRUE
+    )
   }
   if (is.list(codes)) codes <- unlist(codes)
   if (is.list(labels)) labels <- unlist(labels)
   if (mode == "numeric_codes" && (
     suppressWarnings(!all(
       is.na(as.numeric(codes)) == is.na(codes) |
-      is.na(util_parse_date(codes)) == is.na(codes) |
-      is.na(util_parse_time(codes)) == is.na(codes)
+        is.na(util_parse_date(codes)) == is.na(codes) |
+        is.na(util_parse_time(codes)) == is.na(codes)
     )))) {
     util_error("All codes must be finite numeric or date/time values",
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   } else {
     codes <- as.character(codes)
   }
   if (any(grepl(split_char, labels, fixed = TRUE))) {
     util_message("Removed seperator characters (%s) from the labels",
-                 dQuote(split_char), applicability_problem = TRUE)
+      dQuote(split_char),
+      applicability_problem = TRUE
+    )
     labels <- gsub(split_char, "", labels, fixed = TRUE)
   }
   if (!!length(codes) && length(codes) == length(labels)) {
     if (no_labs) {
       paste(codes,
-            collapse = sprintf(" %s ", split_char))
+        collapse = sprintf(" %s ", split_char)
+      )
     } else {
       paste(codes, "=", labels,
-            collapse = sprintf(" %s ", split_char))
+        collapse = sprintf(" %s ", split_char)
+      )
     }
   } else {
     split_char

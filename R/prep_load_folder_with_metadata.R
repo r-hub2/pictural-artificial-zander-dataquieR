@@ -36,78 +36,89 @@
 #' @seealso [prep_get_data_frame]
 #' @family data-frame-cache
 prep_load_folder_with_metadata <- function(folder,
-                                         keep_types = FALSE,
-                                         append = FALSE,
-                                         ...) {
+  keep_types = FALSE,
+  append = FALSE,
+  ...) {
   util_expect_scalar(append, check_type = is.logical)
   util_expect_scalar(folder, check_type = is.character)
   util_stop_if_not(
     "full.names not supported by prep_load_folder_with_metadata" =
-                     (!"full.names" %in% rlang::call_args_names(
-                       rlang::current_call())))
-# IDEA: If folder is actually a zip file with zip extensions, uncompress first
-# IDEA: If an html file is loaded, extract tables from it
-# IDEA: Parse data:-URLs
-# IDEA: Support iframes
+      (!"full.names" %in% rlang::call_args_names(
+        rlang::current_call()
+      ))
+  )
   if (startsWith(folder, "https://") ||
       startsWith(folder, "http://")) {
     util_ensure_suggested(
       "rvest",
       goal =
-        "read data from the internet using prep_load_folder_with_metadata()")
+        "read data from the internet using prep_load_folder_with_metadata()"
+    )
     fp <- tempfile()
     util_stop_if_not(!file.exists(fp))
     dir.create(fp)
-    on.exit(try(unlink(fp, force = TRUE, recursive = TRUE, expand = FALSE),
-                silent = TRUE))
+    withr::defer(try(unlink(fp, force = TRUE, recursive = TRUE, expand = FALSE),
+        silent = TRUE
+      ))
 
     file_new <- file.path(fp, "index.html")
-    try(utils::download.file(folder, destfile = file_new,
-                             quiet = TRUE, mode = "wb"), silent = TRUE)
+    try(utils::download.file(folder,
+        destfile = file_new,
+        quiet = TRUE, mode = "wb"
+      ), silent = TRUE)
     if (file.exists(file_new)) {
       fl <- try(rvest::read_html(file_new), silent = TRUE)
       if (inherits(fl, "try-error")) {
-        util_error("Could not read index from %s (%s): %s",
-                   dQuote(folder),
-                   dQuote(file_new),
-                   conditionMessage(attr(fl, "condition")))
+        util_error(
+          "Could not read index from %s (%s): %s",
+          dQuote(folder),
+          dQuote(file_new),
+          conditionMessage(util_attr(fl, "condition", exact = TRUE))
+        )
       }
       links <- rvest::html_nodes(fl, "a")
-      all_refs <- rvest::html_attr(links, 'href')
+      all_refs <- rvest::html_attr(links, "href")
       all_refs[!startsWith(tolower(all_refs), "http://") &
-                 !startsWith(tolower(all_refs), "https://")] <-
-        paste0(folder,
-               "/", all_refs[!startsWith(tolower(all_refs), "http://") &
-                           !startsWith(tolower(all_refs), "https://")])
+          !startsWith(tolower(all_refs), "https://")] <-
+        paste0(
+          folder,
+          "/", all_refs[!startsWith(tolower(all_refs), "http://") &
+              !startsWith(tolower(all_refs), "https://")]
+        )
       all_refs <- trimws(all_refs)
       lapply(
         all_refs,
         function(ref) {
-          #ref_dec <- utils::URLdecode(ref)
+          # Historical URLdecode helper variable removed here.
           rf <- gsub("^.*\\/", "", ref, perl = TRUE)
           rf <- gsub("\\?.*$", "", rf)
           rf <- gsub("#.*$", "", rf)
-          #rf_path <- gsub(print(rf), "", ref)
+          # Historical rf_path extraction removed here.
           ext <- ""
           ext <- try(util_fetch_ext(ref), silent = TRUE)
-          # do not ignore content-disposition headers sent by the server (if they propose a file name)
+          # do not ignore content-disposition headers sent by the server (if
+          # they propose a file name)
           if (length(ext) != 1 ||
               !is.character(ext)) {
             msg <- "unknown reason"
             if (inherits(ext, "try-error")) {
-              msg <- conditionMessage(attr(ext, "condition"))
+              msg <- conditionMessage(util_attr(ext, "condition", exact = TRUE))
             } else if (inherits(ext, "condition")) {
               msg <- conditionMessage(ext)
             }
-            util_warning("Could not determine the file type of %s: %s",
-                         dQuote(ref),
-                         sQuote(msg))
+            util_warning(
+              "Could not determine the file type of %s: %s",
+              dQuote(ref),
+              sQuote(msg)
+            )
             ext <- ""
           } else {
-            if (!is.null(attr(ext, "file-name"))) {
-              if (length(attr(ext, "file-name")) == 1 &&
-                  !is.na(attr(ext, "file-name")))
-                rf <- attr(ext, "file-name")
+            ext_file_name <- util_attr(ext, "file-name", exact = TRUE)
+            if (!is.null(ext_file_name)) {
+              if (length(ext_file_name) == 1 &&
+                  !is.na(ext_file_name)) {
+                rf <- ext_file_name
+              }
             }
             ext <- paste0(".", ext)
           }
@@ -116,10 +127,13 @@ prep_load_folder_with_metadata <- function(folder,
             rf <- paste0(rf, ext)
           }
 
-          try(utils::download.file(ref,
-                                   destfile = file.path(fp, rf),
-                                   quiet = TRUE, mode = "wb"),
-              silent = TRUE)
+          try(
+            utils::download.file(ref,
+              destfile = file.path(fp, rf),
+              quiet = TRUE, mode = "wb"
+            ),
+            silent = TRUE
+          )
         }
       )
       unlink(file_new, force = TRUE)
@@ -131,49 +145,65 @@ prep_load_folder_with_metadata <- function(folder,
   util_stop_if_not(`Access denied` = file.access(folder) == 0)
 
   fls <- list.files(folder,
-                    full.names = TRUE,
-                    all.files = TRUE,
-                    no.. = TRUE,
-                    include.dirs = FALSE,
-                    ...)
+    full.names = TRUE,
+    all.files = TRUE,
+    no.. = TRUE,
+    include.dirs = FALSE,
+    ...
+  )
   if (any(startsWith(basename(fls), "~$") &
-          (endsWith(basename(fls), ".xlsx") |
-           endsWith(basename(fls), ".xls")
-          ))) {
+        (endsWith(basename(fls), ".xlsx") |
+            endsWith(basename(fls), ".xls")
+        ))) {
     util_warning(
-      c("Found files that look like Excel",
+      c(
+        "Found files that look like Excel",
         "working copies https://superuser.com/a/901749",
         "Do you have Excel open? This may cause warnings about",
         "files that cannot be opened/are locked. If not open, maybe, Excel",
         "had crashed before. You should close Excel, if it is not running,",
         "open it, it may address this. If nothing helps, consider moving",
-        "all files whose names start with ~$ and end with .xls or xlsx away.")
+        "all files whose names start with ~$ and end with .xls or xlsx away."
+      )
     )
   }
-  if (any(startsWith(basename(fls), ".~lock.") &
-          endsWith(basename(fls), "#") # libreoffice
-          )) {
+  if (any(
+    startsWith(basename(fls), ".~lock.") &
+      endsWith(basename(fls), "#") # libreoffice
+  )) {
     util_warning(
-      c("Found files that look like LibreOffice/OpenOffice/StarOffice",
+      c(
+        "Found files that look like LibreOffice/OpenOffice/StarOffice",
         "working copies https://superuser.com/a/901749",
         "Do you have one of these apps open? This may cause warnings about",
         "files that cannot be opened/are locked. If not open, maybe, one of",
         "these apps had crashed before. You should close all such apps.",
         "If they don't run, open them, they may address this. ",
         "If nothing helps, consider moving",
-        "all files whose names start with .~lock. and end with # away.")
+        "all files whose names start with .~lock. and end with # away."
+      )
     )
   }
   lapply(fls, function(fn) {
-    if (inherits(suppressWarnings(try(prep_load_workbook_like_file(fn,
-                                                                   keep_types = keep_types,
-                                                                   append = append),
-                                      silent = TRUE)),
-        "try-error")) {
-      if (inherits(suppressWarnings(try(prep_get_data_frame(fn,
-                                                            keep_types = keep_types),
-                                        silent = TRUE)),
-          "try-error")) {
+    if (inherits(
+      suppressWarnings(try(
+        prep_load_workbook_like_file(fn,
+          keep_types = keep_types,
+          append = append
+        ),
+        silent = TRUE
+      )),
+      "try-error"
+    )) {
+      if (inherits(
+        suppressWarnings(try(
+          prep_get_data_frame(fn,
+            keep_types = keep_types
+          ),
+          silent = TRUE
+        )),
+        "try-error"
+      )) {
         util_warning("Could not load %s, ignoring...", dQuote(fn))
       }
     }

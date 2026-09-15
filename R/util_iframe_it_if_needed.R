@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Make `it` scalable, if it is a figure (parallel-safe version)
 #'
 #' This version avoids writing to disk in parallel execution.
@@ -12,22 +13,22 @@
 #'
 #' @return [htmltools::tagList()] tagged object with metadata for later rendering
 #' @noRd
+# nolint end
 util_iframe_it_if_needed <- function(it, dir, nm, fkt, sizing_hints, ggthumb) {
   functionName <- fkt
 
-  if (!isTRUE(getOption('knitr.in.progress')) &&
+  if (!isTRUE(getOption("knitr.in.progress")) &&
       (inherits(it, "plotly") ||
-       (inherits(it, "shiny.tag") && it$name == "img"))) {
-
+          (inherits(it, "shiny.tag") && it$name == "img"))) {
     util_expect_scalar(dir, check_type = is.character)
     util_expect_scalar(nm, check_type = is.character)
     util_stop_if_not(dir.exists(dir))
 
     if (!nzchar(paste0("", nm))) {
-      fig_framed_file <- tempfile(pattern = "FIG_", fileext = ".html", tmpdir = dir)
+      fig_framed_file <- tempfile(pattern = "FIG_", fileext = ".html", tmpdir = dir) # nolint: line_length_linter.
       fig_framed_file <- basename(fig_framed_file)
     } else {
-      fig_framed_file <- paste0("FIG_", prep_link_escape(nm, html = TRUE), ".html")
+      fig_framed_file <- paste0("FIG_", prep_link_escape(nm, html = TRUE), ".html") # nolint: line_length_linter.
     }
 
     full_fig_file <- file.path(dir, fig_framed_file)
@@ -48,8 +49,8 @@ util_iframe_it_if_needed <- function(it, dir, nm, fkt, sizing_hints, ggthumb) {
     } else {
       min.height <- min.height.from.width
     }
-    min.width <- paste0(min.width, "px");
-    min.height <- paste0(min.height, "px");
+    min.width <- paste0(min.width, "px")
+    min.height <- paste0(min.height, "px")
 
 
     if (util_is_gg(ggthumb)) {
@@ -66,17 +67,18 @@ util_iframe_it_if_needed <- function(it, dir, nm, fkt, sizing_hints, ggthumb) {
       optimized_args <- NULL
     }
 
-    if (suppressWarnings(util_ensure_suggested("jsonlite", goal = "generate figures in reports", err = FALSE))) {
+    if (suppressWarnings(util_ensure_suggested("jsonlite", goal = "generate figures in reports", err = FALSE))) { # nolint: line_length_linter.
       sizing_hint_script <- paste0(
-        'window.sizing_hints = ',
+        "window.sizing_hints = ",
         jsonlite::toJSON(sizing_hints, auto_unbox = FALSE)
       )
     } else {
-      sizing_hint_script <- 'window.sizing_hints = "No figure size hints, need R package jsonlite for this."'
+      sizing_hint_script <- 'window.sizing_hints = "No figure size hints, need R package jsonlite for this."' # nolint: line_length_linter.
     }
 
     util_ensure_suggested("rmarkdown",
-                          goal = "Creating the Print Dialog for Plotly")
+      goal = "Creating the Print Dialog for Plotly"
+    )
 
     jqui <- rmarkdown::html_dependency_jqueryui()
     jqui$stylesheet <- "jquery-ui.min.css"
@@ -86,7 +88,7 @@ util_iframe_it_if_needed <- function(it, dir, nm, fkt, sizing_hints, ggthumb) {
       jqui,
       htmltools::tags$script(type = "text/javascript", sizing_hint_script),
       htmltools::tags$span(`data-nm` = nm, id = "nm"),
-      htmltools::tags$span(`data-functionName` = functionName, id = "functionName"),
+      htmltools::tags$span(`data-functionName` = functionName, id = "functionName"), # nolint: line_length_linter.
       html_dependency_dataquieR(iframe = TRUE),
       html_dependency_jspdf(),
       it
@@ -94,11 +96,11 @@ util_iframe_it_if_needed <- function(it, dir, nm, fkt, sizing_hints, ggthumb) {
 
     frameTag <- htmltools::tags$iframe(
       src = fig_framed_file,
-      style = htmltools::css(border = "0", width = "100%", height = "calc(100% - 5px)")
+      style = htmltools::css(border = "0", width = "100%", height = "calc(100% - 5px)") # nolint: line_length_linter.
     )
 
     if (util_is_gg(ggthumb)) {
-      my_style <- "margin:0px;width:100%;height:100%;object-fit:scale-down;object-position: left top;cursor:zoom-in;display:block;"
+      my_style <- "margin:0px;width:100%;height:100%;object-fit:scale-down;object-position: left top;cursor:zoom-in;display:block;" # nolint: line_length_linter.
       imgTag <- htmltools::tagList(htmltools::img(
         src = basename(thumb_file),
         style = my_style,
@@ -127,7 +129,7 @@ util_iframe_it_if_needed <- function(it, dir, nm, fkt, sizing_hints, ggthumb) {
 
     attr(final_div, "html_file") <- full_fig_file
     attr(final_div, "html_inner") <- html_inner
-    # attr(final_div, "dependencies") <- htmltools::htmlDependencies(html_inner))
+    # Historical explicit dependency attribute removed here.
     if (util_is_gg(ggthumb)) {
       attr(final_div, "thumbnail_path") <- thumb_file
       attr(final_div, "ggthumb") <- util_compress(ggthumb)
@@ -146,7 +148,10 @@ util_iframe_it_if_needed <- function(it, dir, nm, fkt, sizing_hints, ggthumb) {
   return(htmltools::div(it))
 }
 
-util_get_restricted_size_args_for_figure <- function(MAX_SIZE, max_w_in_cm, max_h_in_cm, sizing_hints) {
+#' Internal helper: get restricted size args for figure
+#'
+#' @noRd
+util_get_restricted_size_args_for_figure <- function(MAX_SIZE, max_w_in_cm, max_h_in_cm, sizing_hints) { # nolint: line_length_linter.
   # 32 bit color-space (4 bytes per pixel)
   BYTES_PER_PIXEL <- 4
 
@@ -178,22 +183,25 @@ util_get_restricted_size_args_for_figure <- function(MAX_SIZE, max_w_in_cm, max_
   max_pixels <- floor(MAX_SIZE / BYTES_PER_PIXEL)
 
   # compute max. dpi based on physical dimensions and max_pixels
-  # we know: max_pixels = (width_in_inches * dpi) * (height_in_inches * dpi)
-  # max_pixels = width_in_inches * height_in_inches * dpi^2
-  # dpi^2 = max_pixels / (width_in_inches * height_in_inches)
-  # dpi = sqrt(max_pixels / (width_in_inches * height_in_inches))
+  # Formula: derive dpi from max pixels and physical image area.
 
   # reboustness
   if (width_in_inches <= 0 || height_in_inches <= 0) {
-    util_warning(c("Internal error, sorry. Please report: Invalid physical",
-                   "dimensions (width or height is zero or negative).",
-                   "Cannot calculate DPI."))
-    return(list(sizing_hints_updated =
-                  list(w_in_cm = sizing_hints_updated_w_cm,
-                       h_in_cm = sizing_hints_updated_h_cm),
-                dpi = 72,
-                width = width_in_inches,
-                height = height_in_inches))
+    util_warning(c(
+      "Internal error, sorry. Please report: Invalid physical",
+      "dimensions (width or height is zero or negative).",
+      "Cannot calculate DPI."
+    ))
+    return(list(
+      sizing_hints_updated =
+        list(
+          w_in_cm = sizing_hints_updated_w_cm,
+          h_in_cm = sizing_hints_updated_h_cm
+        ),
+      dpi = 72,
+      width = width_in_inches,
+      height = height_in_inches
+    ))
   }
 
   max_dpi_from_size <- sqrt(max_pixels / (width_in_inches * height_in_inches))
@@ -203,13 +211,17 @@ util_get_restricted_size_args_for_figure <- function(MAX_SIZE, max_w_in_cm, max_
   dpi <- max(72, floor(max_dpi_from_size))
 
   # Aktualisiere die sizing_hints_updated für die Rückgabe
-  sizing_hints_updated <- list(w_in_cm = sizing_hints_updated_w_cm,
-                               h_in_cm = sizing_hints_updated_h_cm)
+  sizing_hints_updated <- list(
+    w_in_cm = sizing_hints_updated_w_cm,
+    h_in_cm = sizing_hints_updated_h_cm
+  )
 
-  return(list(sizing_hints_updated = sizing_hints_updated,
-              dpi = dpi,
-              width = width_in_inches,
-              height = height_in_inches))
+  return(list(
+    sizing_hints_updated = sizing_hints_updated,
+    dpi = dpi,
+    width = width_in_inches,
+    height = height_in_inches
+  ))
 }
 
 #' Get the size of the currently set cluster
@@ -226,4 +238,3 @@ util_get_cores_safe <- function() {
     return(length(cl))
   }
 }
-

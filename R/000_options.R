@@ -2,6 +2,7 @@
 
 dataquieR.ELEMENT_MISSMATCH_CHECKTYPE_default <- "subset_u"
 
+# nolint start: line_length_linter.
 #' @name dataquieR.ELEMENT_MISSMATCH_CHECKTYPE
 #' @title Metadata describes more than the current study data
 #' @description
@@ -21,6 +22,7 @@ dataquieR.ELEMENT_MISSMATCH_CHECKTYPE_default <- "subset_u"
 #'               present in the metadata.
 #' @family options
 #' @docType data
+# nolint end
 NULL
 
 dataquieR.scale_level_heuristics_control_metriclevels_default <- 25
@@ -49,7 +51,6 @@ NULL
 #' @docType data
 NULL
 
-# TODO: Deprecate this block? until including dataquieR.CONDITIONS_WITH_STACKTRACE
 dataquieR.ERRORS_WITH_CALLER_default <- TRUE
 #' @name dataquieR.ERRORS_WITH_CALLER
 #' @title Set caller for error conditions (to be deprecated)
@@ -90,7 +91,7 @@ dataquieR.CONDITIONS_LEVEL_TRHESHOLD_default <- 0
 #' @name dataquieR.CONDITIONS_LEVEL_TRHESHOLD
 #' @title Log Level
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -105,19 +106,21 @@ dataquieR.traceback_default <- FALSE
 NULL
 
 dataquieR.acc_shape_or_scale_ci_default <- "multinomial"
+# nolint start: line_length_linter.
 #' @name dataquieR.acc_shape_or_scale_ci
 #' @title Method for confidence intervals in `acc_shape_or_scale()` and `acc_end_digits()`
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
+# nolint end
 NULL
 
 dataquieR.debug_default <- FALSE
 #' @name dataquieR.debug
 #' @title Call [browser()] on errors
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -126,16 +129,29 @@ dataquieR.flip_mode_default <- "default" # flip, noflip, auto
 #' @name dataquieR.flip_mode
 #' @title Flip-Mode to Use for figures
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
 
 dataquieR.force_item_specific_missing_codes_default <- FALSE
+# nolint start: line_length_linter.
 #' @name dataquieR.force_item_specific_missing_codes
 #' @title Converting [MISSING_LIST]/[JUMP_LIST] to a [MISSING_LIST_TABLE] create on list per item
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
+#' @family options
+#' @docType data
+# nolint end
+NULL
+
+dataquieR.force_rstudio_user_cluster_default <- FALSE
+#' @name dataquieR.force_rstudio_user_cluster
+#' @title Force caller-owned clusters for report rendering in RStudio
+#' @description
+#' Caller-owned parallel clusters may make RStudio hang during HTML report
+#' finalization. This option allows advanced users to force this unsupported
+#' configuration.
 #' @family options
 #' @docType data
 NULL
@@ -146,7 +162,6 @@ dataquieR.progress_init_fkt_default <- NULL
 #' @description
 #' has one argument, `n`, reporting the number of steps in the current
 #' job. needed, e.g., by packages, such as `progressr`.
-#' TODO
 #' @family options
 #' @docType data
 NULL
@@ -155,7 +170,7 @@ dataquieR.progress_fkt_default <- NULL
 #' @name dataquieR.progress_fkt_default
 #' @title [function] to call on progress increase
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -164,7 +179,7 @@ dataquieR.progress_msg_fkt_default <- NULL
 #' @name dataquieR.progress_msg_fkt_default
 #' @title [function] to call on progress message update
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -173,7 +188,7 @@ dataquieR.grading_rulesets_default <- "grading_rulesets"
 #' @name dataquieR.grading_rulesets
 #' @title Name of the [data.frame] featuring [GRADING_RULESET]
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -182,18 +197,20 @@ dataquieR.grading_formats_default <- "grading_formats"
 #' @name dataquieR.grading_formats
 #' @title Name of the [data.frame] featuring a format for grading-values
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
 
 dataquieR.VALUE_LABELS_htmlescaped_default <- FALSE
+# nolint start: line_length_linter.
 #' @name dataquieR.VALUE_LABELS_htmlescaped
 #' @title Assume, all [VALUE_LABELS] are [HTML escaped](https://www.w3.org/International/questions/qa-escapes)
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
+# nolint end
 NULL
 
 dataquieR.acc_loess.min_obs_in_subgroup_default <- 30
@@ -212,7 +229,7 @@ dataquieR.acc_loess.mark_time_points_default <- FALSE
 #' @name dataquieR.acc_loess.mark_time_points
 #' @title Display time-points in LOESS plots
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -221,7 +238,7 @@ dataquieR.acc_loess.plot_observations_default <- FALSE
 #' @name dataquieR.acc_loess.plot_observations
 #' @title Display observations in LOESS plots
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -230,25 +247,27 @@ dataquieR.acc_loess.plot_format_default <- "COMBINED"
 #' @name dataquieR.acc_loess.plot_format
 #' @title default for Plot-Format in [acc_loess()]
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
 
 dataquieR.acc_multivariate_outlier.scale_default <- TRUE
+# nolint start: line_length_linter.
 #' @name dataquieR.acc_multivariate_outlier.scale
 #' @title Apply min-max scaling in parallel coordinates figure to inspect multivariate outliers
 #' @description
 #' boolean, TRUE or FALSE
 #' @family options
 #' @docType data
+# nolint end
 NULL
 
 dataquieR.non_disclosure_default <- FALSE
 #' @name dataquieR.non_disclosure
 #' @title Remove all observation-level-real-data from reports
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -257,7 +276,7 @@ dataquieR.lang_default <- ""
 #' @name dataquieR.lang
 #' @title Language-Suffix for metadata Label-Columns
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -266,43 +285,56 @@ dataquieR.force_label_col_default <- "auto"
 #' @name dataquieR.force_label_col
 #' @title Control, how the `label_col` argument is used.
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
+#' @family options
+#' @docType data
+NULL
+
+dataquieR.fix_var_name_prefixes_label_default <- TRUE
+#' @name dataquieR.fix_var_name_prefixes_label
+#' @title Remove repeated variable-name prefixes from display labels.
+#' @description
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
 
 dataquieR.testdebug_default <- FALSE
+# nolint start: line_length_linter.
 #' @name dataquieR.testdebug
 #' @title Disable all interactively used metadata-based function argument provision
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
+# nolint end
 NULL
 
 dataquieR.dontwrapresults_default <- FALSE
 #' @name dataquieR.dontwrapresults
 #' @title Disable automatic post-processing of `dataquieR` function results
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
 
 dataquieR.guess_missing_codes_default <- FALSE
+# nolint start: line_length_linter.
 #' @name dataquieR.guess_missing_codes
 #' @title Control, if `dataquieR` tries to guess missing-codes from the study data in absence of metadata
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
+# nolint end
 NULL
 
 dataquieR.col_con_con_logical_default <- "#B35451"
 #' @name dataquieR.col_con_con_logical
 #' @title Color for logical contradictions
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -311,7 +343,7 @@ dataquieR.col_con_con_empirical_default <- "#B39651"
 #' @name dataquieR.col_con_con_empirical
 #' @title Color for empirical contradictions
 #' @description
-#' TODO
+#' This package option controls the behavior described in its title.
 #' @family options
 #' @docType data
 NULL
@@ -343,13 +375,14 @@ NULL
 # file names https://stackoverflow.com/a/265782/4242747
 # and label handling in plot.ly
 .MAX_LABEL_LEN <- 200L
+.MIN_LABEL_LEN <- 5L
 
 dataquieR.MAX_LABEL_LEN_default <- 60
 #' @name dataquieR.MAX_LABEL_LEN
 #' @title Maximum length for variable labels [LABEL]
 #' @description
 #' All variable labels will be shortened to fit this maximum length.
-#' Cannot be larger than 200 for technical reasons.
+#' Cannot be smaller than 5 or larger than 200 for technical reasons.
 #' @family options
 #' @docType data
 NULL
@@ -359,7 +392,18 @@ dataquieR.MAX_LONG_LABEL_LEN_default <- 200
 #' @title Maximum length for long variable labels [LONG_LABEL]
 #' @description
 #' All long variable labels will be shortened to fit this maximum length.
-#' Cannot be larger than 200 for technical reasons.
+#' Cannot be smaller than 5 or larger than 200 for technical reasons.
+#' @family options
+#' @docType data
+NULL
+
+dataquieR.min_group_var_levels_default <- 2
+#' @name dataquieR.min_group_var_levels
+#' @title Minimum number of levels in grouping variables
+#' @description
+#' Grouping-variable analyses require at least this many observed levels in a
+#' grouping variable. The default is 2, because at least two levels are needed
+#' to compare groups.
 #' @family options
 #' @docType data
 NULL
@@ -452,12 +496,14 @@ dataquieR.MULTIVARIATE_OUTLIER_CHECK_default <- "auto"
 NULL
 
 dataquieR.MAHALANOBIS_THRESHOLD_default <- 0.975
+# nolint start: line_length_linter.
 #' @name dataquieR.MAHALANOBIS_THRESHOLD
 #' @title Default availability of Mahalanobis based multivariate outlier checks in reports
 #' @description
 #' a number, see corresponding argument in [acc_mahalanobis()]
 #' @family options
 #' @docType data
+# nolint end
 NULL
 
 dataquieR.acc_margins_sort_default <- TRUE
@@ -527,6 +573,18 @@ dataquieR.acc_loess.min_bw_default <- 0.2
 #' @description
 #' The value should be greater than 0 and less than or equal to 1. In general,
 #' increasing the bandwidth leads to a smoother trend line.
+#' @family options
+#' @docType data
+NULL
+
+dataquieR.psychometric_cor_pairs_default <- 0.6
+#' @name dataquieR.psychometric_cor_pairs
+#' @title Absolute value of the Pearson correlation. It is used to identify
+#' the pair of variables for the psychometric synonyms or antonyms
+#' @description
+#' The absolute value identifies item pairs with a stronger study-wide Pearson
+#' correlation: positive pairs for psychometric synonyms and negative pairs for
+#' psychometric antonyms. The default is `0.6`.
 #' @family options
 #' @docType data
 NULL
@@ -673,7 +731,7 @@ dataquieR.ignore_empty_vars_default <- "auto"
 #' @family options
 #' @family study_data_cache
 #' @docType data
-NULL # 20% are implemented at dq_report2, currently, search for ignore_empty_vars20 in this file.
+NULL # 20% are implemented at dq_report2, currently, search for ignore_empty_vars20 in this file. # nolint: line_length_linter.
 
 
 if (rlang::is_installed("stringi")) {
@@ -681,9 +739,12 @@ if (rlang::is_installed("stringi")) {
 } else {
   if (is.null(getOption("dataquieR.locale"))) {
     packageStartupMessage(
-      paste("stringi is not installed to detect system default locale.",
-            "Falling back to en_US. You can set the option dataquieR.locale to",
-            "your desired ISO Code for the locale to avoid this check."))
+      paste(
+        "stringi is not installed to detect system default locale.",
+        "Falling back to en_US. You can set the option dataquieR.locale to",
+        "your desired ISO Code for the locale to avoid this check."
+      )
+    )
   }
   locale_string <- "en_US"
 }
@@ -697,12 +758,22 @@ dataquieR.locale_default <- language_code
 #' only used by `util_adjust_data_type2()`, currently
 #' @family options
 #' @docType data
-NULL # TODO: Overlaps in parts with dataquieR.lang
+NULL
 
 dataquieR.type_adjust_parallel_default <- "TRUE"
 #' @name dataquieR.type_adjust_parallel
 #' @title [character] try to do type adjustments in parallel
 #' only, if [dq_report2()] was called with `cores = 2` or higher.
+#' @family options
+#' @docType data
+NULL
+
+dataquieR.html_table_backend_default <- "auto"
+#' @name dataquieR.html_table_backend
+#' @title [character] HTML table backend for rendered reports
+#' @description
+#' Select the HTML table backend for rendered reports. Supported values are
+#' `"auto"`, `"DT2"`, and `"DT"`.
 #' @family options
 #' @docType data
 NULL
@@ -714,10 +785,7 @@ dataquieR.old_type_adjust_default <- "FALSE"
 #' @docType data
 NULL
 # For a benchmark, set the option to "TRUE", then run
-# microbenchmark::microbenchmark(
-#   util_adjust_data_type(s, meta_data = m),
-#   util_adjust_data_type2(s, meta_data = m)
-# )
+# Use microbenchmark::microbenchmark() to compare old and new type adjustment.
 
 dataquieR.old_factor_handling_default <- "FALSE"
 #' @name dataquieR.old_factor_handling
@@ -734,19 +802,21 @@ dataquieR.old_factor_handling_default <- "FALSE"
 #' @docType data
 NULL
 
-dataquieR.print_block_load_factor_default <-
-  Sys.getenv("DATAQUIER_PRINT_BLOCK_LOAD_FACTOR", unset = "1")
+dataquieR.print_block_load_factor_default <- {
+  block_load_factor <- Sys.getenv(
+    "DATAQUIER_PRINT_BLOCK_LOAD_FACTOR",
+    unset = ""
+  )
+  if (nzchar(block_load_factor)) block_load_factor else NULL
+}
 #' @name dataquieR.print_block_load_factor
 #' @title [numeric]
 #' @description
-#' multiply size of parallel compute blocks
-#' by this factor. the higher it is set,
-#' the less smooth progress bar grows, but
-#' setting it to a huge number can really
-#' speed up the rendering process by
-#' approx. 10%. Either set to 1 for full
-#' progress control or large (e.g., 1000000)
-#' for maximum speed.
+#' By default, rendering splits work into about ten progress blocks.
+#' Set this option to a positive number to multiply the size of parallel
+#' compute blocks explicitly. Higher values reduce progress updates but can
+#' speed up rendering. Set it to `1` for the most frequent updates or to a
+#' large value (for example `1000000`) for maximum speed.
 #' @family options
 #' @family study_data_cache
 #' @docType data
@@ -821,6 +891,73 @@ dataquieR.lazy_plots_gg_compatibility_default <- "TRUE"
 #' [prep_realize_ggplot()] on them. However, this comes with a small memory
 #' overhead, so, you can disable this.
 #'
+#' @family options
+#' @docType data
+NULL
+
+# --- parallel backend ---------------------------------------------------------
+# These options configure the in-package parallel backend
+# (R/util_parallel_backend.R), which replaced the historical dependency on
+# `parallelMap`. For backwards compatibility, the backend also reads the
+# corresponding `parallelMap.*` options when the `dataquieR.parallel.*`
+# counterpart is unset.
+
+dataquieR.parallel.mode_default <- NULL
+#' @name dataquieR.parallel.mode
+#' @title Default execution mode for the parallel backend
+#' @description
+#' One of `"local"` (sequential, no cluster), `"socket"` (`PSOCK` cluster),
+#' `"multicore"` (`FORK` cluster on Unix; falls back to `PSOCK` on Windows),
+#' `"BatchJobs"` or `"batchtools"`. The last two are accepted for source-level
+#' compatibility with old code paths but are treated as `"local"` at execution
+#' time -- use `dq_report2(..., mode = "futures")` together with a
+#' `future.batchtools` plan for `HPC` schedulers instead.
+#'
+#' The option is unset by default; the backend falls back to the legacy
+#' `parallelMap.mode` option, then to `"local"`.
+#' @family options
+#' @docType data
+NULL
+
+dataquieR.parallel.cpus_default <- NULL
+#' @name dataquieR.parallel.cpus
+#' @title Default number of worker processes for the parallel backend
+#' @description
+#' Integer scalar or `NULL`. When `NULL` (the default), the number of
+#' workers is auto-detected via `util_detect_cores()` each time the backend
+#' is started.
+#'
+#' Mirrors the legacy `parallelMap.cpus` option, which is still read as a
+#' fallback for users coming from older `dataquieR` versions.
+#' @family options
+#' @docType data
+NULL
+
+dataquieR.parallel.load.balancing_default <- TRUE
+#' @name dataquieR.parallel.load.balancing
+#' @title Use load-balanced dispatch on the parallel backend
+#' @description
+#' Logical. When `TRUE` (the default), the backend uses
+#' [parallel::parLapplyLB()] for distributing work across the cluster;
+#' otherwise [parallel::parLapply()].
+#'
+#' Mirrors the legacy `parallelMap.load.balancing` option, which is still
+#' read as a fallback for users coming from older `dataquieR` versions.
+#' @family options
+#' @docType data
+NULL
+
+dataquieR.parallel.show.info_default <- FALSE
+#' @name dataquieR.parallel.show.info
+#' @title Print info messages from the parallel backend
+#' @description
+#' Logical. Currently informational only -- the in-package backend keeps
+#' the verbosity low regardless of this setting -- but the option is read
+#' and stored so that calling code can query it via
+#' `util_parallel_get_options()$settings$show.info`.
+#'
+#' Mirrors the legacy `parallelMap.show.info` option, which is still read
+#' as a fallback for users coming from older `dataquieR` versions.
 #' @family options
 #' @docType data
 NULL

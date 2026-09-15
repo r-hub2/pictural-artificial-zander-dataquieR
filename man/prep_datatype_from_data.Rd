@@ -13,12 +13,13 @@ prep_datatype_from_data(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable} names of the variables to fetch the data type
-from the data}
+\item{resp_vars}{\link{variable list} the names of variables to inspect in
+\code{study_data}. If missing, all variables in
+\code{study_data} will be used.}
 
-\item{study_data}{\link{data.frame} the data frame that contains the measurements
-Hint: Only data frames supported, no URL
-or file names.}
+\item{study_data}{\link{data.frame} study data inspected to derive metadata.
+Only data frames are supported, not URLs or
+file names.}
 
 \item{.dont_cast_off_cols}{\link{logical} internal use, only}
 

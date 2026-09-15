@@ -5,4 +5,4 @@
 #' @return the number of used result slots
 #'
 #' @export
-nres <- function (x) dim(x)[3L]
+nres <- function(x) dim(x)[3L]

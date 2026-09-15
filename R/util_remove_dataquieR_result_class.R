@@ -1,8 +1,8 @@
 #' @family reporting_functions
 #' @concept process
 #' @noRd
-util_remove_dataquieR_result_class <- function(x) { # TODO: The [[ for dataquieR_result should not work this way, a wrapper class would be needed, instead. Then, this funcion can be abandondd
-  remove_class <- function(x) { # FIXME: After the modification from this commit, is this function needed at all, any more?
+util_remove_dataquieR_result_class <- function(x) {
+  remove_class <- function(x) {
     if (!is.null(x)) {
       if (is.list(x) && !inherits(x, "patchwork") && !inherits(x, "ggmatrix") &&
           !inherits(x, "svg_plot_proxy") &&

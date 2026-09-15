@@ -17,24 +17,25 @@
 #' @family robustness_functions
 #' @concept robustness
 #' @noRd
-util_ensure_in <- function(x, set, err_msg, error = FALSE, applicability_problem = NA) {
+util_ensure_in <- function(x, set, err_msg, error = FALSE, applicability_problem = NA) { # nolint: line_length_linter.
   util_expect_scalar(error, check_type = is.logical)
   if (missing(err_msg)) {
     err_msg <- sprintf("Missing %%s from %s, did you mean %%s?", sQuote(
-      util_deparse1(substitute(set))))
+      util_deparse1(substitute(set))
+    ))
   }
   mis <- !(x %in% set)
   if (sum(mis) > 0) {
-
     prop <-
       vapply(x[mis],
-           FUN.VALUE = character(1),
-           function(v) {
-              set[which.min(adist(trimws(v),
-                                  trimws(set),
-                                  ignore.case = TRUE,
-                                  fixed = TRUE))]
-           }
+        FUN.VALUE = character(1),
+        function(v) {
+          set[which.min(adist(trimws(v),
+                trimws(set),
+                ignore.case = TRUE,
+                fixed = TRUE
+              ))]
+        }
       )
 
     ifelse(error, util_error, util_warning)(

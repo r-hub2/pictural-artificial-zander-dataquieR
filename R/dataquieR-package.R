@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' @title The `dataquieR` package about Data Quality in
 #'        Epidemiological Research
 #' @name dataquieR
@@ -20,6 +21,7 @@
 #' - [DQ_OBS data quality framework](https://www.researchsquare.com/article/rs-119457/v1)
 #'
 #' @keywords internal
+# nolint end
 "_PACKAGE"
 
 ## usethis namespace: start

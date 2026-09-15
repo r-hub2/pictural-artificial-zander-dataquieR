@@ -13,14 +13,17 @@
 #' @noRd
 `[.dataquieR_result` <- function(x, ...) {
   r <- NextMethod()
-  attr(r, "error") <- attr(x, "error")
-  attr(r, "message") <- attr(x, "message")
-  attr(r, "warning") <- attr(x, "warning")
-  attr(r, "as_plotly") <- attr(x, "as_plotly")
-  attr(r, "dont_util_adjust_geom_text_for_plotly") <- attr(x, "dont_util_adjust_geom_text_for_plotly")
-  attr(r, "function_name") <- attr(x, "function_name")
-  attr(r, "cn") <- attr(x, "cn")
-  attr(r, "call") <- attr(x, "call")
+  attr(r, "error") <- util_attr(x, "error", exact = TRUE)
+  attr(r, "message") <- util_attr(x, "message", exact = TRUE)
+  attr(r, "warning") <- util_attr(x, "warning", exact = TRUE)
+  attr(r, "as_plotly") <- util_attr(x, "as_plotly", exact = TRUE)
+  attr(r, "dont_util_adjust_geom_text_for_plotly") <-
+    util_attr(x, "dont_util_adjust_geom_text_for_plotly", exact = TRUE)
+  attr(r, "function_name") <- util_attr(x, "function_name", exact = TRUE)
+  attr(r, "cn") <- util_attr(x, "cn", exact = TRUE)
+  attr(r, "call") <- util_attr(x, "call", exact = TRUE)
+  attr(r, CHECK_ID) <- util_attr(x, CHECK_ID, exact = TRUE)
+  attr(r, CHECK_LABEL) <- util_attr(x, CHECK_LABEL, exact = TRUE)
   class(r) <- unique(c("dataquieR_result", class(r)))
   r
 }
@@ -45,11 +48,10 @@
     class(r) <- union("dataquieR_NULL", class(r))
   }
   if (!util_is_gg(x)) {
-    attr(r, "error") <- attr(x, "error")
-    attr(r, "message") <- attr(x, "message")
-    attr(r, "warning") <- attr(x, "warning")
-    # do not assign this class, here:
-    # class(r) <- unique(c("dataquieR_result", class(r)))
+    attr(r, "error") <- util_attr(x, "error", exact = TRUE)
+    attr(r, "message") <- util_attr(x, "message", exact = TRUE)
+    attr(r, "warning") <- util_attr(x, "warning", exact = TRUE)
+    # Do not assign the dataquieR_result class here.
     class(r) <- unique(c("Slot", class(r)))
   }
   r

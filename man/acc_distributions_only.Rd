@@ -15,7 +15,8 @@ acc_distributions_only(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} the names of the measurement variables}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -63,6 +64,9 @@ for a report
 \itemize{
 \item If no response variable is defined, select all variables of type float or
 integer in the study data.
+\item Selected response variables may include multiple variables, but each
+variable must have a defined scale level, at least two distinct non-missing
+values, and must not contain only missing values.
 \item Remove missing codes from the study data (if defined in the metadata).
 \item Remove measurements deviating from (hard) limits defined in the metadata
 (if defined).

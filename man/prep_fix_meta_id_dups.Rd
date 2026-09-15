@@ -51,10 +51,10 @@ level metadata allowed.
 \dontrun{
 il <- prep_get_data_frame("item_level")
 il <- rbind(il, il)
-il$STUDY_SEGMENT[2] <- "X"
+il[[STUDY_SEGMENT]][2] <- "X"
 il2 <- prep_fix_meta_id_dups(meta_data_v2 = "meta_data_v2", item_level = il)
 il2$STUDY_SEGMENT
-il$STUDY_SEGMENT[3] <- "X"
+il[[STUDY_SEGMENT]][3] <- "X"
 il3 <- prep_fix_meta_id_dups(meta_data_v2 = "meta_data_v2", item_level = il)
 il3$STUDY_SEGMENT
 }

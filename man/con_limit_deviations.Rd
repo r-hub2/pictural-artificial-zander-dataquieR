@@ -22,7 +22,8 @@ con_limit_deviations(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} the name of the measurement variables}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -32,7 +33,8 @@ with labels of variables}
 \item{item_level}{\link{data.frame} the data frame that contains metadata
 attributes of study data}
 
-\item{meta_data_cross_item}{\link{meta_data_cross}}
+\item{meta_data_cross_item}{\link{data.frame} -- optional: Cross-item level
+metadata}
 
 \item{limits}{\link{enum} HARD_LIMITS | SOFT_LIMITS | DETECTION_LIMITS. what
 limits from metadata to check for}

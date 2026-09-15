@@ -7,11 +7,12 @@
 #' @method dimnames dataquieR_resultset2
 #' @export
 dimnames.dataquieR_resultset2 <- function(x) {
-  matrix_list <- attr(x, "matrix_list")
-  row_indices <- attr(matrix_list, "row_indices")
-  col_indices <- attr(matrix_list, "col_indices")
-  list(names(sort(row_indices)), # TODO: sort also in Square2's access function
-       names(sort(col_indices)), # TODO: sort also in Square2's access function
-       resnames(x)
-       )
+  matrix_list <- util_attr(x, "matrix_list", exact = TRUE)
+  row_indices <- util_attr(matrix_list, "row_indices", exact = TRUE)
+  col_indices <- util_attr(matrix_list, "col_indices", exact = TRUE)
+  list(
+    names(sort(row_indices)),
+    names(sort(col_indices)),
+    resnames(x)
+  )
 }

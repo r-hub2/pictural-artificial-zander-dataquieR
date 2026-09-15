@@ -11,13 +11,18 @@
 #' @return `TRUE` if all packages in `pkg` are available, `FALSE` if at least
 #'         one of the packages is missing.
 #' @examples
-#' \dontrun{ # internal use, only
+#' \dontrun{
+#' # internal use, only
 #' f <- function() {
-#'   util_ensure_suggested <- get("util_ensure_suggested",
-#'     asNamespace("dataquieR"))
+#'   util_ensure_suggested <- get(
+#'     "util_ensure_suggested",
+#'     asNamespace("dataquieR")
+#'   )
 #'   util_ensure_suggested("ggplot2", "Test",
-#'       and_import = "(ggplot|geom_.*|aes)")
-#'   print(ggplot(cars, aes(x = speed)) + geom_histogram())
+#'     and_import = "(ggplot|geom_.*|aes)"
+#'   )
+#'   print(ggplot(cars, aes(x = speed)) +
+#'     geom_histogram())
 #' }
 #' f()
 #' }
@@ -26,18 +31,22 @@
 #' @concept process
 #' @noRd
 util_ensure_suggested <- function(pkg, goal =
-                                    ifelse(
-                                      is.null(
-                                        rlang::caller_call()),
-                                      "work",
-                                      paste("call", sQuote(rlang::call_name(
-                                                      rlang::caller_call())))),
-                                  err = TRUE, and_import = c()) {
+    ifelse(
+      is.null(
+        rlang::caller_call()
+      ),
+      "work",
+      paste("call", sQuote(rlang::call_name(
+        rlang::caller_call()
+      )))
+    ),
+  err = TRUE, and_import = c()) {
   util_expect_scalar(err, check_type = is.logical)
   missingp <- !vapply(pkg,
-                      FUN.VALUE = logical(1),
-                      requireNamespace,
-                      quietly = TRUE)
+    FUN.VALUE = logical(1),
+    requireNamespace,
+    quietly = TRUE
+  )
   if (err && any(missingp)) {
     rlang::check_installed(
       call = rlang::caller_env(),
@@ -45,9 +54,10 @@ util_ensure_suggested <- function(pkg, goal =
       reason = paste("to", goal)
     )
     missingp <- !vapply(pkg,
-                        FUN.VALUE = logical(1),
-                        requireNamespace,
-                        quietly = TRUE)
+      FUN.VALUE = logical(1),
+      requireNamespace,
+      quietly = TRUE
+    )
   }
   if (any(missingp)) {
     if (err) {
@@ -58,27 +68,36 @@ util_ensure_suggested <- function(pkg, goal =
     if (rlang::is_installed("cli")) {
       install_all <-
         cli::format_inline(
-          sprintf("Call {.run [%s](%s)} to install all suggested packages",
-                  "prep_check_for_dataquieR_updates()",
-                  "dataquieR::prep_check_for_dataquieR_updates()")
+          sprintf(
+            "Call {.run [%s](%s)} to install all suggested packages",
+            "prep_check_for_dataquieR_updates()",
+            "dataquieR::prep_check_for_dataquieR_updates()"
+          )
         )
     } else {
       install_all <-
-        sprintf("Call %s to install all suggested packages",
-                dQuote("prep_check_for_dataquieR_updates()"))
+        sprintf(
+          "Call %s to install all suggested packages",
+          dQuote("prep_check_for_dataquieR_updates()")
+        )
     }
-    lambda(c("Missing the package(s) %s to %s.",
-             "Install with install.packages(%s).",
-             install_all),
-           paste0(dQuote(pkg[missingp]), collapse = ", "),
-           goal,
-           deparse(pkg[missingp]))
+    lambda(
+      c(
+        "Missing the package(s) %s to %s.",
+        "Install with install.packages(%s).",
+        install_all
+      ),
+      paste0(dQuote(pkg[missingp]), collapse = ", "),
+      goal,
+      deparse(pkg[missingp])
+    )
     return(FALSE)
   } else {
     if (length(and_import) > 0) {
       caller_env <- parent.frame()
       for (nm in ls(
-        pattern = and_import, name = asNamespace(pkg))) {
+        pattern = and_import, name = asNamespace(pkg)
+      )) {
         if (nm %in% getNamespaceExports(pkg)) {
           assign(nm, get(nm, asNamespace(pkg)), caller_env)
         }
@@ -90,19 +109,26 @@ util_ensure_suggested <- function(pkg, goal =
 
 .util_optional_packages <- new.env(parent = emptyenv())
 
+#' Internal helper: have suggested
+#'
+#' @noRd
 util_have_suggested <- function(pkg, goal =
-                                  ifelse(
-                                    is.null(
-                                      rlang::caller_call()),
-                                    "work",
-                                    paste("call", sQuote(rlang::call_name(
-                                      rlang::caller_call()))))) {
+    ifelse(
+      is.null(
+        rlang::caller_call()
+      ),
+      "work",
+      paste("call", sQuote(rlang::call_name(
+        rlang::caller_call()
+      )))
+    )) {
   if (!exists(pkg, envir = .util_optional_packages, inherits = FALSE)) {
     assign(pkg,
-           suppressWarnings(suppressMessages(
-             util_ensure_suggested(pkg, goal = goal, err = FALSE)
-           )),
-           envir = .util_optional_packages)
+      suppressWarnings(suppressMessages(
+        util_ensure_suggested(pkg, goal = goal, err = FALSE)
+      )),
+      envir = .util_optional_packages
+    )
   }
 
   get(pkg, envir = .util_optional_packages, inherits = FALSE)

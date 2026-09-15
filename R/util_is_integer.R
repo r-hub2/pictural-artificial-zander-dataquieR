@@ -21,12 +21,12 @@
 #' @noRd
 util_is_integer <- function(x, tol = .Machine$double.eps^0.5) {
   if (is.numeric(x)) {
-    r <- abs(x - round(x)) < tol & !is.nan(x)
-    # & x <= .Machine$integer.max & this would return, whether x can be stored as an integer.
-    #   x >= - .Machine$integer.max
+    r <- (!is.nan(x) & is.na(x)) |
+      (is.finite(x) & abs(x - round(x)) < tol)
+    # & x <= .Machine$integer.max & this would return, whether x can be stored
+    # as an integer, together with the matching lower bound.
   } else {
     r <- rep(FALSE, length(x))
   }
-  r[is.na(r)] <- TRUE # NA is not not an integer
   r
 }

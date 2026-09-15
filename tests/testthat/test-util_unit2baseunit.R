@@ -1,5 +1,7 @@
 test_that("util_unit2baseunit works", {
   skip_on_cran() # OS dependent
+  skip_if_not_installed("units") # 'units' is Suggests
+  skip_if_not_installed("xml2") # required by units
 
   suppressMessages(util_unit2baseunit("%"))
 
@@ -54,7 +56,7 @@ test_that("util_unit2baseunit works", {
   expect_equal(util_unit2baseunit("ppt"), "ppt")
   expect_equal(util_unit2baseunit("ppt", unique = FALSE), c("ppt", "pt"))
 
-  expect_equal(  util_unit2baseunit("ft"), "t")
+  expect_equal(util_unit2baseunit("ft"), "t")
   expect_equal(util_unit2baseunit("yd"), "d")
   expect_equal(util_unit2baseunit("pt"), "t")
 

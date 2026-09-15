@@ -15,7 +15,7 @@ util_cast_off <- function(df, symb, .dont_cast_off_cols = FALSE) {
     symb <- as.character(substitute(df))
   }
   orig <- df
-  if (requireNamespace("tibble", quietly = TRUE)) { # TODO: data.table, what else, is missing
+  if (requireNamespace("tibble", quietly = TRUE)) {
     if (tibble::is_tibble(df)) {
       df <- as.data.frame(df)
     }
@@ -40,28 +40,16 @@ util_cast_off <- function(df, symb, .dont_cast_off_cols = FALSE) {
     }
   } # nocov end
   # drop all stuff like haven labels, labelled labels
-  # df[] <- lapply(df, function(cl) {
-  #   mostattributes(cl) <- NULL
-  #   cl
-  #   # if (is.factor(cl)) {
-  #   #   mostattributes(cl) <- NULL
-  #   #   cl
-  #   # } else if (lubridate::is.timepoint(cl)) {
-  #   #   # util_parse_date(cl)
-  #   #   mostattributes(cl) <- NULL
-  #   #   cl
-  #   # } else {
-  #   #   mostattributes(cl) <- NULL
-  #   #   cl
-  #   # }
-  # })
+  # Historical blanket attribute-stripping approach removed here. Inspect
+  # commit 3f7c2d4951 before restoring the older labelled-data handling.
 
 
   if (!.dont_cast_off_cols && !!ncol(df)) {
     li <- as.list(df)
 
     dtypes <- prep_datatype_from_data(colnames(df), df,
-                                      .dont_cast_off_cols = TRUE)
+      .dont_cast_off_cols = TRUE
+    )
 
     li <- mapply(cl = li, dt = dtypes, FUN = function(cl, dt) {
       if (is.factor(cl)) {
@@ -82,18 +70,18 @@ util_cast_off <- function(df, symb, .dont_cast_off_cols = FALSE) {
         }
       })
 
-    df <- do.call(data.frame,
-                  c(list(
-                        check.names = FALSE,
-                        stringsAsFactors = FALSE
-                      ), li)
+    df <- do.call(
+      data.frame,
+      c(list(
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      ), li)
     )
-
   }
 
   known_atts <- .ds1_attribute_names
 
-  for (att in known_atts) attr(df, att) <- attr(orig, att)
+  for (att in known_atts) attr(df, att) <- util_attr(orig, att, exact = TRUE)
 
   df
 }

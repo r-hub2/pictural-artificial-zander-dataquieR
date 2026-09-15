@@ -1,11 +1,13 @@
+# nolint start: line_length_linter.
 #' Tail for R
 #'
 #' @param file_name [character] a file name
 #' @param bytes [integer] number of bytes to return, careful with multi-character
-#'.             encodings like `utf-8`
+#' .             encodings like `utf-8`
 #'
 #' @returns last `bytes` bytes from `file_name`
 #' @noRd
+# nolint end
 util_tail_file <- function(file_name, bytes) {
   s <- file.size(file_name)
   offs <- max(0, s - bytes)
@@ -25,8 +27,9 @@ util_tail_file <- function(file_name, bytes) {
 util_is_html_file_complete <- function(file_name) {
   r <- suppressWarnings(try(
     file.exists(file_name) &&
-    file.access(file_name, 2) == 0 &&
-    endsWith(tolower(trimws(util_tail_file(file_name, 20))),  "</html>"),
-    silent = TRUE))
+      file.access(file_name, 2) == 0 &&
+      endsWith(tolower(trimws(util_tail_file(file_name, 20))), "</html>"),
+    silent = TRUE
+  ))
   r <- !util_is_try_error(r) && r
 }

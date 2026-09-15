@@ -17,8 +17,8 @@ prep_add_missing_codes(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable list} the name of the measurement variables to be
-modified, all from \code{rules}, if omitted}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -61,8 +61,7 @@ and no \code{DATA_PREPARATION} exists for the
 \item{overwrite}{\link{logical} Also insert missing codes, if the values are not
 \code{NA}}
 
-\item{meta_data}{\link{data.frame} old name for \code{item_level}
-attributes of study data}
+\item{meta_data}{\link{data.frame} old name for \code{item_level}}
 }
 \value{
 a \code{list} with the entries:
@@ -74,4 +73,8 @@ a \code{list} with the entries:
 }
 \description{
 Insert missing codes for \code{NA}s based on rules
+}
+\author{
+Thomas J. Musholt contributed the performance improvement for simple
+rule evaluation.
 }

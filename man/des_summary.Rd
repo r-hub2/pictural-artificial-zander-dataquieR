@@ -17,7 +17,8 @@ des_summary(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable} the name of the measurement variables}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 
@@ -56,7 +57,9 @@ generates a descriptive overview of the variables in \code{resp_vars}.
 \link{Descriptor}
 }
 \details{
-TODO
+If \code{resp_vars} is missing or empty, all variables in the prepared study data
+are selected. Selected variables may include multiple variables, but each
+selected variable must have a defined scale level in the metadata.
 }
 \examples{
 \dontrun{

@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Smoothes and plots adjusted longitudinal measurements and longitudinal trends
 #' from logistic regression models
 #'
@@ -18,14 +19,6 @@
 #'
 #' @inheritParams .template_function_indicator
 #'
-#' @param resp_vars [variable] the name of the continuous measurement variable
-#' @param group_vars [variable] the name of the observer, device or reader
-#'                             variable
-#' @param time_vars [variable] the name of the variable giving the time
-#'                             of measurement
-#' @param co_vars [variable list] a vector of covariables for adjustment, for
-#'                             example age and sex. Can be NULL (default) for no
-#'                             adjustment.
 #' @param min_obs_in_subgroup [integer] (optional argument) If `group_vars` is
 #'                             specified, this argument can be used to specify
 #'                             the minimum number of observations required for
@@ -111,79 +104,110 @@
 #' [Online Documentation](
 #' https://dataquality.qihs.uni-greifswald.de/VIN_acc_impl_loess.html
 #' )
+# nolint end
 acc_loess <- function(resp_vars,
-                      group_vars = NULL,
-                      time_vars,
-                      co_vars = NULL,
-                      study_data,
-                      label_col = VAR_NAMES,
-                      item_level = "item_level",
-                      min_obs_in_subgroup =
-                        getOption("dataquieR.acc_loess.min_obs_in_subgroup",
-                               dataquieR.acc_loess.min_obs_in_subgroup_default),
-                      resolution = 80,
-                      comparison_lines = list(type = c("mean/sd", "quartiles"),
-                                              color = "grey30",
-                                              linetype = 2,
-                                              sd_factor = 0.5),
-                      mark_time_points =
-                        getOption("dataquieR.acc_loess.mark_time_points",
-                                  dataquieR.acc_loess.mark_time_points_default),
-                      plot_observations =
-                        getOption("dataquieR.acc_loess.plot_observations",
-                                  dataquieR.acc_loess.plot_observations_default),
-                      plot_format =
-                        getOption("dataquieR.acc_loess.plot_format",
-                                  dataquieR.acc_loess.plot_format_default),
-                      meta_data = item_level,
-                      meta_data_v2,
-                      n_group_max =
-                        getOption("dataquieR.max_group_var_levels_in_plot",
-                                  dataquieR.max_group_var_levels_in_plot_default),
-                      enable_GAM = getOption("dataquieR.GAM_for_LOESS",
-                                             dataquieR.GAM_for_LOESS_default),
-                      exclude_constant_subgroups =
-                        getOption("dataquieR.acc_loess.exclude_constant_subgroups",
-                                  dataquieR.acc_loess.exclude_constant_subgroups_default),
-                      min_bandwidth =
-                        getOption("dataquieR.acc_loess.min_bw",
-                                  dataquieR.acc_loess.min_bw_default),
-                      min_proportion =
-                        getOption("dataquieR.acc_loess.min_proportion",
-                                  dataquieR.acc_loess.min_proportion_default)) {
+  group_vars = NULL,
+  time_vars,
+  co_vars = NULL,
+  study_data,
+  label_col = VAR_NAMES,
+  item_level = "item_level",
+  min_obs_in_subgroup =
+    getOption(
+      "dataquieR.acc_loess.min_obs_in_subgroup",
+      dataquieR.acc_loess.min_obs_in_subgroup_default
+    ),
+  resolution = 80,
+  comparison_lines = list(
+    type = c("mean/sd", "quartiles"),
+    color = "grey30",
+    linetype = 2,
+    sd_factor = 0.5
+  ),
+  mark_time_points =
+    getOption(
+      "dataquieR.acc_loess.mark_time_points",
+      dataquieR.acc_loess.mark_time_points_default
+    ),
+  plot_observations =
+    getOption(
+      "dataquieR.acc_loess.plot_observations",
+      dataquieR.acc_loess.plot_observations_default
+    ),
+  plot_format =
+    getOption(
+      "dataquieR.acc_loess.plot_format",
+      dataquieR.acc_loess.plot_format_default
+    ),
+  meta_data = item_level,
+  meta_data_v2,
+  n_group_max =
+    getOption(
+      "dataquieR.max_group_var_levels_in_plot",
+      dataquieR.max_group_var_levels_in_plot_default
+    ),
+  enable_GAM = getOption(
+    "dataquieR.GAM_for_LOESS",
+    dataquieR.GAM_for_LOESS_default
+  ),
+  exclude_constant_subgroups =
+    getOption(
+      "dataquieR.acc_loess.exclude_constant_subgroups",
+      dataquieR.acc_loess.exclude_constant_subgroups_default
+    ),
+  min_bandwidth =
+    getOption(
+      "dataquieR.acc_loess.min_bw",
+      dataquieR.acc_loess.min_bw_default
+    ),
+  min_proportion =
+    getOption(
+      "dataquieR.acc_loess.min_proportion",
+      dataquieR.acc_loess.min_proportion_default
+    )) {
   # preps ----------------------------------------------------------------------
   util_maybe_load_meta_data_v2()
 
-  label_col <- attr(prep_get_labels("",
-                                    item_level = meta_data,
-                                    label_class = "LONG",
-                                    label_col = label_col),
-                    "label_col")
+  label_col <- util_attr(
+    prep_get_labels("",
+      item_level = meta_data,
+      label_class = "LONG",
+      label_col = label_col
+    ),
+    "label_col",
+    exact = TRUE
+  )
 
   # map metadata to study data
-  prep_prepare_dataframes(.replace_hard_limits = TRUE,
-                          .apply_factor_metadata = TRUE)
+  prep_prepare_dataframes(
+    .replace_hard_limits = TRUE,
+    .apply_factor_metadata = TRUE
+  )
 
   util_correct_variable_use("resp_vars",
-                            need_scale = "!na",
-                            allow_all_obs_na = FALSE)
+    need_scale = "!na",
+    allow_all_obs_na = FALSE
+  )
   util_correct_variable_use("group_vars",
-                            need_scale = "nominal | ordinal",
-                            allow_all_obs_na = TRUE,
-                            allow_na = TRUE,
-                            allow_null = TRUE)
+    need_scale = "nominal | ordinal",
+    allow_all_obs_na = TRUE,
+    allow_na = TRUE,
+    allow_null = TRUE
+  )
   util_correct_variable_use("time_vars",
-                            need_type = DATA_TYPES$DATETIME,
-                            need_scale = "interval | ratio",
-                            allow_all_obs_na = FALSE,
-                            min_distinct_values = 3)
+    need_type = DATA_TYPES$DATETIME,
+    need_scale = "interval | ratio",
+    allow_all_obs_na = FALSE,
+    min_distinct_values = 3
+  )
   util_correct_variable_use("co_vars",
-                            overwrite = TRUE,
-                            remove_not_found = TRUE,
-                            allow_more_than_one = TRUE,
-                            allow_all_obs_na = FALSE,
-                            allow_na = TRUE,
-                            allow_null = TRUE)
+    overwrite = TRUE,
+    remove_not_found = TRUE,
+    allow_more_than_one = TRUE,
+    allow_all_obs_na = FALSE,
+    allow_na = TRUE,
+    allow_null = TRUE
+  )
 
   # check that other arguments are specified correctly
   util_expect_scalar(
@@ -192,58 +216,83 @@ acc_loess <- function(resp_vars,
     convert_if_possible = function(x) {
       x1 <- suppressWarnings(as.integer(x))
       if (is.na(x1) ||
-          !util_is_numeric_in(min = 1, whole_num = TRUE,
-                              finite = TRUE)(x1)) {
+        !util_is_numeric_in(
+          min = 1, whole_num = TRUE,
+          finite = TRUE
+        )(x1)) {
         x1 <- 30L
-        util_message(paste(
-          "Argument min_obs_in_subgroup is not specified",
-          "correctly and is set to 30 instead."),
-          applicability_problem = TRUE)
+        util_message(
+          paste(
+            "Argument min_obs_in_subgroup is not specified",
+            "correctly and is set to 30 instead."
+          ),
+          applicability_problem = TRUE
+        )
       }
       x1
     },
-    conversion_may_replace_NA = TRUE)
+    conversion_may_replace_NA = TRUE
+  )
   util_expect_scalar(
     resolution,
     check_type = util_is_numeric_in(min = 3, whole_num = TRUE, finite = TRUE),
     convert_if_possible = function(x) {
       x1 <- suppressWarnings(as.integer(x))
       if (is.na(x1) ||
-          !util_is_numeric_in(min = 3, whole_num = TRUE,
-                              finite = TRUE)(x1)) {
+        !util_is_numeric_in(
+          min = 3, whole_num = TRUE,
+          finite = TRUE
+        )(x1)) {
         x1 <- 80L
         util_message(
-          paste("Argument resolution is not specified",
-                "correctly and is set to 80 instead."),
-          applicability_problem = TRUE)
+          paste(
+            "Argument resolution is not specified",
+            "correctly and is set to 80 instead."
+          ),
+          applicability_problem = TRUE
+        )
       }
       x1
     },
-    conversion_may_replace_NA = TRUE)
+    conversion_may_replace_NA = TRUE
+  )
   util_expect_scalar(n_group_max,
-                     check_type = util_is_numeric_in(min = 1, whole_num = TRUE))
+    check_type = util_is_numeric_in(min = 1, whole_num = TRUE)
+  )
   util_expect_scalar(enable_GAM, check_type = is.logical)
   util_expect_scalar(exclude_constant_subgroups, check_type = is.logical)
   util_expect_scalar(plot_format,
-                     check_type = function(x) {
-                       is.character(x) &&
-                         any(grepl(x,
-                                   c("AUTO", "COMBINED", "FACETS", "BOTH",
-                                     "auto", "combined", "facets", "both" ),
-                                   fixed = TRUE)) })
+    check_type = function(x) {
+      is.character(x) &&
+        any(grepl(x,
+          c(
+            "AUTO", "COMBINED", "FACETS", "BOTH",
+            "auto", "combined", "facets", "both"
+          ),
+          fixed = TRUE
+        ))
+    }
+  )
   util_expect_scalar(
     min_bandwidth,
     check_type = function(x) {
-      util_is_numeric_in(min = 0, max = 1)(x) && x != 0 })
+      util_is_numeric_in(min = 0, max = 1)(x) && x != 0
+    }
+  )
   util_expect_scalar(min_proportion,
-                     check_type = util_is_numeric_in(min = 0, max = 0.4))
+    check_type = util_is_numeric_in(min = 0, max = 0.4)
+  )
 
   # check data properties to choose a suitable method
-  ds1 <- ds1[, c(resp_vars, time_vars, group_vars, co_vars)]
-  ds1 <- ds1[complete.cases(ds1), ]
+  ds1 <- ds1[, intersect(
+    colnames(ds1),
+    c(resp_vars, time_vars, group_vars, co_vars)
+  ), drop = TRUE]
+  ds1 <- ds1[complete.cases(ds1), , drop = FALSE]
   if (nrow(ds1) == 0) {
     util_error("No data left after data preparation.",
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
   var_prop <- util_dist_selection(ds1[, resp_vars, drop = FALSE])
   scl <- meta_data[[SCALE_LEVEL]][meta_data[[label_col]] == resp_vars]
@@ -251,54 +300,60 @@ acc_loess <- function(resp_vars,
   # generate a LOESS plot using a suitable method ------------------------------
   if (var_prop$NDistinct > 9 &&
       scl %in% c(SCALE_LEVELS$RATIO, SCALE_LEVELS$INTERVAL)) {
-    SummaryPlotList_from_util <-
-      util_acc_loess_continuous(resp_vars = resp_vars,
-                                group_vars = group_vars,
-                                time_vars = time_vars,
-                                co_vars = co_vars,
-                                study_data = study_data,
-                                meta_data = meta_data,
-                                label_col = label_col,
-                                min_obs_in_subgroup = min_obs_in_subgroup,
-                                resolution = resolution,
-                                comparison_lines = comparison_lines,
-                                mark_time_points = mark_time_points,
-                                plot_observations = plot_observations,
-                                plot_format = plot_format,
-                                n_group_max = n_group_max,
-                                enable_GAM = enable_GAM,
-                                exclude_constant_subgroups =
-                                  exclude_constant_subgroups,
-                                min_bandwidth = min_bandwidth)
+    summary_plot_list_from_util <-
+      util_acc_loess_continuous(
+        resp_vars = resp_vars,
+        group_vars = group_vars,
+        time_vars = time_vars,
+        co_vars = co_vars,
+        study_data = study_data,
+        meta_data = meta_data,
+        label_col = label_col,
+        min_obs_in_subgroup = min_obs_in_subgroup,
+        resolution = resolution,
+        comparison_lines = comparison_lines,
+        mark_time_points = mark_time_points,
+        plot_observations = plot_observations,
+        plot_format = plot_format,
+        n_group_max = n_group_max,
+        enable_GAM = enable_GAM,
+        exclude_constant_subgroups =
+        exclude_constant_subgroups,
+        min_bandwidth = min_bandwidth
+      )
   } else if ((var_prop$NDistinct < 10 &&
-              scl %in% c(SCALE_LEVELS$RATIO, SCALE_LEVELS$INTERVAL)) ||
-             scl %in% c(SCALE_LEVELS$NOMINAL, SCALE_LEVELS$ORDINAL)) {
-    SummaryPlotList_from_util <-
-      util_acc_loess_bin(resp_vars = resp_vars,
-                         group_vars = group_vars,
-                         time_vars = time_vars,
-                         co_vars = co_vars,
-                         study_data = study_data,
-                         meta_data = meta_data,
-                         label_col = label_col,
-                         min_obs_in_subgroup = min_obs_in_subgroup,
-                         resolution = resolution,
-                         plot_format = plot_format,
-                         n_group_max = n_group_max,
-                         enable_GAM = enable_GAM,
-                         exclude_constant_subgroups =
-                           exclude_constant_subgroups,
-                         min_bandwidth = min_bandwidth,
-                         min_proportion = min_proportion)
+        scl %in% c(SCALE_LEVELS$RATIO, SCALE_LEVELS$INTERVAL)) ||
+      scl %in% c(SCALE_LEVELS$NOMINAL, SCALE_LEVELS$ORDINAL)) {
+    summary_plot_list_from_util <-
+      util_acc_loess_bin(
+        resp_vars = resp_vars,
+        group_vars = group_vars,
+        time_vars = time_vars,
+        co_vars = co_vars,
+        study_data = study_data,
+        meta_data = meta_data,
+        label_col = label_col,
+        min_obs_in_subgroup = min_obs_in_subgroup,
+        resolution = resolution,
+        plot_format = plot_format,
+        n_group_max = n_group_max,
+        enable_GAM = enable_GAM,
+        exclude_constant_subgroups =
+        exclude_constant_subgroups,
+        min_bandwidth = min_bandwidth,
+        min_proportion = min_proportion
+      )
   } else {
     util_error("Variable '%s' has a disallowed scale level (%s)",
-               dQuote(resp_vars),
-               dQuote(tolower(trimws(scl))),
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      dQuote(resp_vars),
+      dQuote(tolower(trimws(scl))),
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
-  return(util_attach_attr(SummaryPlotList_from_util,
-                          as_plotly = "util_as_plotly_acc_loess"))
+  return(util_attach_attr(summary_plot_list_from_util,
+      as_plotly = "util_as_plotly_acc_loess"
+    ))
 }
 
 #' @family plotly_shims
@@ -313,17 +368,18 @@ util_as_plotly_acc_loess <- function(res, ...) {
   }
   build_obj <- ggplot2::ggplot_build(SummaryPlot)
   plot_obj <- util_gg_get(build_obj, "plot")
-  labels_obj <- if (!is.null(plot_obj)) util_gg_get(plot_obj, "labels") else NULL
+  labels_obj <- if (!is.null(plot_obj)) util_gg_get(plot_obj, "labels") else NULL # nolint: line_length_linter.
   title <- if (!is.null(labels_obj)) util_gg_get(labels_obj, "title") else NULL
-  subtitle <- if (!is.null(labels_obj)) util_gg_get(labels_obj, "subtitle") else NULL
+  subtitle <- if (!is.null(labels_obj)) util_gg_get(labels_obj, "subtitle") else NULL # nolint: line_length_linter.
   sc <- plot_obj$scales$get_scales("colour")
   breaks <- sc$get_breaks()
   labels <- setNames(sc$get_labels(breaks), nm = breaks)
   py <- util_ggplotly(SummaryPlot, ...)
   for (i in seq_along(labels)) {
-    if (py$x$data[[i]]$name %in% names(labels))
-    py$x$data[[i]]$name <-
-      labels[py$x$data[[i]]$name]
+    if (py$x$data[[i]]$name %in% names(labels)) {
+      py$x$data[[i]]$name <-
+        labels[py$x$data[[i]]$name]
+    }
   }
   if (!is.null(title) && is.null(subtitle)) {
     py <- plotly::layout(py, title = title)

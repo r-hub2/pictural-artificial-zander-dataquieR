@@ -28,3 +28,30 @@ test_that("util_dist_selection works", {
     c(4, 3, 3, 4, NA, NA)
   )
 })
+
+test_that("util_dist_selection reports distinct values and zero proportions", {
+  skip_on_cran()
+
+  study_data <- data.frame(
+    signed = c(-1, 0, 0, 2, NA),
+    category = c("a", "b", "b", "", NA),
+    stringsAsFactors = FALSE
+  )
+
+  dist_info <- util_dist_selection(study_data)
+
+  expect_true(dist_info$AnyNegative[[1]])
+  expect_equal(dist_info$NDistinct, c(3, 2))
+  expect_equal(dist_info$PropZeroes, c(2 / 4, 0))
+  expect_equal(dist_info$NCategory, c(3, 2))
+  expect_equal(dist_info$IsMultCat, c(TRUE, FALSE))
+})
+
+test_that("util_dist_selection warns for deprecated value-label argument", {
+  skip_on_cran()
+
+  expect_warning(
+    util_dist_selection(data.frame(x = 1), val_lab = data.frame()),
+    "deprecated"
+  )
+})

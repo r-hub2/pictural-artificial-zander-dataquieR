@@ -5,12 +5,14 @@ test_that("int_encoding_errors works", {
 
   sd <-
     prep_get_data_frame(
-  "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData"
-  )
+      "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData" # nolint: line_length_linter.
+    )
 
   sd$v00001[[1]] <- "ä"
-  skip_if(gsub("[^a-z0-9]", "", tolower(Encoding(sd$v00001[[1]]))) != "utf8",
-          "Platform seems not to use UTF-8")
+  skip_if(
+    gsub("[^a-z0-9]", "", tolower(Encoding(sd$v00001[[1]]))) != "utf8",
+    "Platform seems not to use UTF-8"
+  )
 
   # Introduce an encoding error
   Encoding(sd$v00001[[1]]) <- "latin1"
@@ -18,7 +20,6 @@ test_that("int_encoding_errors works", {
   expect_warning(
     x <- int_encoding_errors(study_data = sd),
     regexp = "neither"
-
   )
 
   expect_equal(sum(x$SummaryTable$NUM_int_uenc), 1)
@@ -26,7 +27,8 @@ test_that("int_encoding_errors works", {
 
   prep_purge_data_frame_cache()
   prep_load_workbook_like_file(
-"https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx")
+    "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx" # nolint: line_length_linter.
+  )
   dl <- prep_get_data_frame("dataframe_level")
 
   dl[[ENCODING]] <- c("utf-8")
@@ -45,7 +47,8 @@ test_that("int_encoding_errors works", {
 
   prep_purge_data_frame_cache()
   prep_load_workbook_like_file(
-"https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx")
+    "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx" # nolint: line_length_linter.
+  )
   dl <- prep_get_data_frame("dataframe_level")
 
   dl[[ENCODING]] <- c("utf-8")
@@ -63,7 +66,8 @@ test_that("int_encoding_errors works", {
 
   prep_purge_data_frame_cache()
   prep_load_workbook_like_file(
-"https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx")
+    "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx" # nolint: line_length_linter.
+  )
 
   il <- prep_get_data_frame("item_level")
 
@@ -73,7 +77,6 @@ test_that("int_encoding_errors works", {
   x <- int_encoding_errors(study_data = sd)
   expect_equal(sum(x$SummaryTable$NUM_int_uenc), 1)
   expect_equal(which(x$SummaryTable$NUM_int_uenc > 0), 1)
-
 })
 
 test_that("reports with encoding errors work", {
@@ -87,32 +90,36 @@ test_that("reports with encoding errors work", {
 
   sd <-
     prep_get_data_frame(
-  "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData"
+      "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/study_data.RData" # nolint: line_length_linter.
     )
 
   sd <- head(sd, 10)
 
   sd$v00012[[1]] <- "ä"
-  skip_if(gsub("[^a-z0-9]", "", tolower(Encoding(sd$v00012[[1]]))) != "utf8",
-          "Platform seems not to use UTF-8")
+  skip_if(
+    gsub("[^a-z0-9]", "", tolower(Encoding(sd$v00012[[1]]))) != "utf8",
+    "Platform seems not to use UTF-8"
+  )
 
   # Introduce an encoding error
   Encoding(sd$v00012[[1]]) <- "latin1"
 
   r <- dq_report2(sd,
-                  resp_vars = c("SBP_0", "ITEM_1_0"),
-                  dimensions = NULL,
-                  cores = NULL,
-                  meta_data_v2 =
-"https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx")
+    resp_vars = "v00012",
+    dimensions = NULL,
+    filter_indicator_functions = "int_encoding_errors",
+    cores = NULL,
+    meta_data_v2 =
+      "https://dataquality.qihs.uni-greifswald.de/extdata/fortests/meta_data_v2.xlsx" # nolint: line_length_linter.
+  )
 
   td <- withr::local_tempdir("testdqareportby")
   print(r, view = FALSE, dir = td)
 
   sz <- sum(file.size(list.files(td,
-                                 recursive = TRUE,
-                                 full.names = TRUE,
-                                 all.files = TRUE)))
+        recursive = TRUE,
+        full.names = TRUE,
+        all.files = TRUE
+      )))
   expect_gt(sz, 13000000)
-
 })

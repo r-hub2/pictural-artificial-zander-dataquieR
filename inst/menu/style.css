@@ -7,14 +7,20 @@
 
 .table_result .dataTables_scroll,
 .table_result .dataTables_scrollHead,
-.table_result .dataTables_scrollBody {
+.table_result .dataTables_scrollBody,
+.table_result .dt-scroll,
+.table_result .dt-scroll-head,
+.table_result .dt-scroll-body {
   margin-left: 0;
   margin-right: 0;
 }
 
 .dq-plot-table-grid .dq-table-cell .dataTables_scroll,
 .dq-plot-table-grid .dq-table-cell .dataTables_scrollHead,
-.dq-plot-table-grid .dq-table-cell .dataTables_scrollBody {
+.dq-plot-table-grid .dq-table-cell .dataTables_scrollBody,
+.dq-plot-table-grid .dq-table-cell .dt-scroll,
+.dq-plot-table-grid .dq-table-cell .dt-scroll-head,
+.dq-plot-table-grid .dq-table-cell .dt-scroll-body {
   margin-left: 0;
   margin-right: 0;
 }
@@ -30,35 +36,116 @@ table.matrixTable td {
 .table_result table.dataTable th.dt-wrap {
   white-space: normal;
 }
+
+a.dq-online-ref.dq-online-ref-unavailable {
+  color: inherit;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
 /* Small tables: don’t visually stretch across the whole page */
 .dt-cols-1 .dataTables_scroll,
+.dt-cols-1 .dt-scroll,
 .dt-cols-2 .dataTables_scroll,
+.dt-cols-2 .dt-scroll,
 .dt-cols-3 .dataTables_scroll,
+.dt-cols-3 .dt-scroll,
 .dt-cols-4 .dataTables_scroll,
-.dt-cols-5 .dataTables_scroll {
-  max-width: calc(min(var(--screen-width) * 0.5 * 1px, 45em)); /* use fixed sizes, otherwise strange on narrow windows */
+.dt-cols-4 .dt-scroll,
+.dt-cols-5 .dataTables_scroll,
+.dt-cols-5 .dt-scroll {
+  max-width: calc(min(var(--screen-width) * 0.5 * 1px, 45em)) !important; /* use fixed sizes, otherwise strange on narrow windows */
+}
+
+.dt-cols-1 .dataTables_scroll,
+.dt-cols-1 .dt-scroll,
+.dt-cols-2 .dataTables_scroll,
+.dt-cols-2 .dt-scroll,
+.dt-cols-3 .dataTables_scroll,
+.dt-cols-3 .dt-scroll,
+.dt-cols-4 .dataTables_scroll,
+.dt-cols-4 .dt-scroll,
+.dt-cols-5 .dataTables_scroll,
+.dt-cols-5 .dt-scroll,
+.dt-cols-6 .dataTables_scroll,
+.dt-cols-6 .dt-scroll,
+.dt-cols-7 .dataTables_scroll,
+.dt-cols-7 .dt-scroll,
+.dt-cols-8 .dataTables_scroll,
+.dt-cols-8 .dt-scroll,
+.dt-cols-9 .dataTables_scroll,
+.dt-cols-9 .dt-scroll,
+.dt-cols-1 .dataTables_scrollHeadInner,
+.dt-cols-1 .dt-scroll-headInner,
+.dt-cols-2 .dataTables_scrollHeadInner,
+.dt-cols-2 .dt-scroll-headInner,
+.dt-cols-3 .dataTables_scrollHeadInner,
+.dt-cols-3 .dt-scroll-headInner,
+.dt-cols-4 .dataTables_scrollHeadInner,
+.dt-cols-4 .dt-scroll-headInner,
+.dt-cols-5 .dataTables_scrollHeadInner,
+.dt-cols-5 .dt-scroll-headInner,
+.dt-cols-6 .dataTables_scrollHeadInner,
+.dt-cols-6 .dt-scroll-headInner,
+.dt-cols-7 .dataTables_scrollHeadInner,
+.dt-cols-7 .dt-scroll-headInner,
+.dt-cols-8 .dataTables_scrollHeadInner,
+.dt-cols-8 .dt-scroll-headInner,
+.dt-cols-9 .dataTables_scrollHeadInner,
+.dt-cols-9 .dt-scroll-headInner,
+.dt-cols-1 .dataTables_scroll table.dataTable,
+.dt-cols-1 .dt-scroll table.dataTable,
+.dt-cols-2 .dataTables_scroll table.dataTable,
+.dt-cols-2 .dt-scroll table.dataTable,
+.dt-cols-3 .dataTables_scroll table.dataTable,
+.dt-cols-3 .dt-scroll table.dataTable,
+.dt-cols-4 .dataTables_scroll table.dataTable,
+.dt-cols-4 .dt-scroll table.dataTable,
+.dt-cols-5 .dataTables_scroll table.dataTable,
+.dt-cols-5 .dt-scroll table.dataTable,
+.dt-cols-6 .dataTables_scroll table.dataTable,
+.dt-cols-6 .dt-scroll table.dataTable,
+.dt-cols-7 .dataTables_scroll table.dataTable,
+.dt-cols-7 .dt-scroll table.dataTable,
+.dt-cols-8 .dataTables_scroll table.dataTable,
+.dt-cols-8 .dt-scroll table.dataTable,
+.dt-cols-9 .dataTables_scroll table.dataTable,
+.dt-cols-9 .dt-scroll table.dataTable {
+  margin-left: 0 !important;
+  margin-right: auto !important;
 }
 
 .dt-cols-6 .dataTables_scroll,
-.dt-cols-7 .dataTables_scroll {
-  max-width: calc(min(var(--screen-width) * 0.6 * 1px, 54em)); /* use fixed sizes, otherwise strange on narrow windows */
+.dt-cols-6 .dt-scroll,
+.dt-cols-7 .dataTables_scroll,
+.dt-cols-7 .dt-scroll {
+  max-width: calc(min(var(--screen-width) * 0.6 * 1px, 54em)) !important; /* use fixed sizes, otherwise strange on narrow windows */
 }
 
 .dt-cols-8 .dataTables_scroll,
-.dt-cols-9 .dataTables_scroll {
-  max-width: calc(min(var(--screen-width) * 0.9 * 1px, 81em)); /* use fixed sizes, otherwise strange on narrow windows */
+.dt-cols-8 .dt-scroll,
+.dt-cols-9 .dataTables_scroll,
+.dt-cols-9 .dt-scroll {
+  max-width: calc(min(var(--screen-width) * 0.9 * 1px, 81em)) !important; /* use fixed sizes, otherwise strange on narrow windows */
 }
 
 
 /* Many columns: allow full width */
 .dt-cols-10 .dataTables_scroll,
+.dt-cols-10 .dt-scroll,
 .dt-cols-11 .dataTables_scroll,
+.dt-cols-11 .dt-scroll,
 .dt-cols-12 .dataTables_scroll,
+.dt-cols-12 .dt-scroll,
 .dt-cols-13 .dataTables_scroll,
+.dt-cols-13 .dt-scroll,
 .dt-cols-14 .dataTables_scroll,
+.dt-cols-14 .dt-scroll,
 .dt-cols-15 .dataTables_scroll,
-.dt-cols-99 .dataTables_scroll {
-  max-width: 100%;
+.dt-cols-15 .dt-scroll,
+.dt-cols-99 .dataTables_scroll,
+.dt-cols-99 .dt-scroll {
+  max-width: 100% !important;
 }
 
 /* --- DT: fixed-column shadow (stays put while horizontal scrolling) --- */

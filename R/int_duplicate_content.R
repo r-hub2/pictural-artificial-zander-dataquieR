@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Check for duplicated content
 #'
 #' @description
@@ -19,39 +20,30 @@
 #'   `util_int_duplicate_content_dataframe` for a description of the outputs.
 #'
 #' @export
+# nolint end
 int_duplicate_content <- function(level = c("dataframe", "segment"),
-                                  study_data,
-                                  item_level = "item_level",
-                                  label_col,
-                                  meta_data = item_level,
-                                  meta_data_v2,
-                                  ...) {
+  study_data,
+  item_level = "item_level",
+  label_col,
+  meta_data = item_level,
+  meta_data_v2,
+  ...) {
   util_maybe_load_meta_data_v2()
   level <- util_match_arg(level)
-  fname <- rlang::call_name(rlang::frame_call())
-  fname <- paste("util", fname, level, sep = "_")
-  miss_label_col <- missing(label_col)
-  if (miss_label_col) {
-    label_col <- NULL
-  }
-  if (missing(study_data)) {
-    cl_l <- list(fname, level = level, #item_level = item_level,
-                 meta_data = meta_data,
-                 label_col = label_col, ...)
-  } else {
-    cl_l <- list(fname, level = level, #item_level = item_level,
-                 meta_data = meta_data,
-                 study_data = study_data,
-                 label_col = label_col, ...)
-  }
-  if (missing(item_level) && !missing(meta_data)) {
-    cl_l$item_level <- NULL
-  }
-  if (miss_label_col) {
-    cl_l$label_col <- NULL
-  }
-  cl_l <- cl_l[names(cl_l) %in% c("", names(formals(fname)))]
-  cl2 <- do.call("call",
-                 cl_l)
-  eval(cl2)
+  util_int_level_dispatch(
+    fname = paste("util", rlang::call_name(rlang::frame_call()), level,
+      sep = "_"
+    ),
+    level = level,
+    study_data = if (missing(study_data)) NULL else study_data,
+    has_study_data = !missing(study_data),
+    item_level = item_level,
+    has_item_level = !missing(item_level),
+    label_col = if (missing(label_col)) NULL else label_col,
+    has_label_col = !missing(label_col),
+    meta_data = meta_data,
+    has_meta_data = !missing(meta_data),
+    include_item_level = FALSE,
+    ...
+  )
 }

@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Create an HTML file for the [dq_report2]
 #'
 #' @param page_nr the number of the page being created
@@ -23,32 +24,32 @@
 #' @family reporting_functions
 #' @concept process
 #' @noRd
+# nolint end
 util_create_page_file <- function(page_nr,
-                                  pages,
-                                  rendered_pages,
-                                  dir,
-                                  template_file,
-                                  report,
-                                  logo,
-                                  loading,
-                                  packageName,
-                                  deps,
-                                  progress_msg,
-                                  progress,
-                                  title,
-                                  by_report) {
-
+  pages,
+  rendered_pages,
+  dir,
+  template_file,
+  report,
+  logo,
+  loading,
+  packageName,
+  deps,
+  progress_msg,
+  progress,
+  title,
+  by_report) {
   page <- names(pages)[page_nr] # the name of the page-file being created
 
   file_name <- file.path(dir, page)
 
   if (getOption("dataquieR.resume_print", dataquieR.resume_print_default) &&
-       util_is_html_file_complete(file_name)) {
+      util_is_html_file_complete(file_name)) {
     progress(page_nr / length(pages) * 100)
     return(invisible(file_name))
   }
 
-  # util_message("Writing %s...", dQuote(page))
+  # Historical explicit writing message removed here.
   progress_msg("", sprintf("Writing %s...", dQuote(page)))
 
   util_stop_if_not(endsWith(page, ".html"))
@@ -58,42 +59,50 @@ util_create_page_file <- function(page_nr,
 
   pg[["dependencies"]] <- NULL
 
-  if (by_report) {
-    backlink <- htmltools::div(
-      style = htmltools::css(
-        font.size = "18px",
-        font.weight = "bold",
-        position = "fixed",
-        right = "0",
-        top = "125px"#,
-        #border =  paste("6px", "solid", "#6495ED")
-      ),
-      htmltools::a(
-        href = "#",
-        onclick =
-          'if (window.__dqPersistPopupHistory) window.__dqPersistPopupHistory();window.location.href = "../../index.html"',
-        "Back to reports' overview"
-      )
-    )
-  } else {
-    backlink <- NULL
-  }
+  backlink <- NULL
 
-  if (!is.null(attr(report, "title")) &&
-      !isTRUE(attr(attr(report, "title"), "default"))) {
-    header_text <- attr(report, "title")
-    if (!is.null(attr(report, "subtitle")) &&
-        !isTRUE(attr(attr(report, "subtitle"), "default"))) {
-      header_text <- paste0(header_text, ": ", attr(report, "subtitle"))
+  report_title <- util_attr(report, "title", exact = TRUE)
+  report_subtitle <- util_attr(report, "subtitle", exact = TRUE)
+
+  if (!is.null(report_title) &&
+      !isTRUE(util_attr(report_title, "default", exact = TRUE))) {
+    header_text <- report_title
+    if (!is.null(report_subtitle) &&
+        !isTRUE(util_attr(report_subtitle, "default", exact = TRUE))) {
+      header_text <- paste0(header_text, ": ", report_subtitle)
     }
   } else {
     header_text <- NULL
   }
 
-  if (!is.null(header_text)) {
+  backlink_header <- NULL
+  if (by_report) {
+    backlink_header <- htmltools::a(
+      class = "dq-report-overview-back",
+      href = "#",
+      title = "Back to reports' overview",
+      `aria-label` = "Back to reports' overview",
+      onclick =
+        'if (window.__dqPersistPopupHistory) window.__dqPersistPopupHistory();window.location.href = "../../index.html"', # nolint: line_length_linter.
+      htmltools::HTML("&larr;")
+    )
+  }
+
+  if (!is.null(header_text) || by_report) {
+    title_header <- NULL
+    if (!is.null(header_text)) {
+      title_header <- htmltools::tags$a(
+        class = "dq-report-title-link",
+        href = "report.html",
+        header_text
+      )
+    }
     header <- htmltools::tagList(
-      htmltools::p(class = "dq-title",
-                   htmltools::tags$a(href = "report.html", header_text))
+      htmltools::p(
+        class = "dq-title",
+        backlink_header,
+        title_header
+      )
     )
   } else {
     header <- NULL
@@ -106,51 +115,57 @@ util_create_page_file <- function(page_nr,
   }
 
   html_report <- htmltools::htmlTemplate(template_file,
-                                  by_report = by_report,
-                                  document_ = TRUE,
-                                  spage = pg,
-                                  logo = logo,
-                                  menu = .menu_env$menu(pages),
-                                  loading = loading,
-                                  deps = deps,
-                                  title = title,
-                                  backlink = backlink,
-                                  header = header)
+    by_report = by_report,
+    document_ = TRUE,
+    spage = pg,
+    logo = logo,
+    menu = .menu_env$menu(pages),
+    loading = loading,
+    deps = deps,
+    title = title,
+    backlink = backlink,
+    header = header
+  )
 
-  #fix: sort reportsummarytable by first (sysmiss) and varaible column
+  # fix: sort reportsummarytable by first (sysmiss) and varaible column
 
   # https://atomiks.github.io/tippyjs/v6/all-props/
 
-  # htmltools::save_html(html_report,
-  #                      libdir = file.path(dir, "lib"),
-  #                      file = file_name)
+  # Historical htmltools::save_html() branch removed here.
 
-  f <- file(description = file_name , open = "w", encoding = "utf-8")
-  on.exit(close(f))
+  f <- file(description = file_name, open = "w", encoding = "utf-8")
+  withr::defer(close(f))
 
-  withCallingHandlers({
-    cat(as.character(html_report), file = f)
-    # TODO: [html_files_should_also_work_alone] ack and remove RDS -- then check, if html exists, really in util_html_for_*
-
-  },
-  warning = function(cond) { # suppress a waning caused by ggplotly for barplots
-    if (startsWith(conditionMessage(cond),
-                   "'bar' objects don't have these attributes: 'mode'") ||
-        startsWith(conditionMessage(cond),
-                   "'box' objects don't have these attributes: 'mode'")) {
-      invokeRestart("muffleWarning")
+  withCallingHandlers(
+    {
+      cat(as.character(html_report), file = f)
+    },
+    warning = function(cond) { # suppress a waning caused by ggplotly for barplots # nolint: line_length_linter.
+      if (startsWith(
+        conditionMessage(cond),
+        "'bar' objects don't have these attributes: 'mode'"
+      ) ||
+        startsWith(
+          conditionMessage(cond),
+          "'box' objects don't have these attributes: 'mode'"
+        )) {
+        invokeRestart("muffleWarning")
+      }
     }
-  })
+  )
 
   progress(page_nr / length(pages) * 100)
 
   invisible(file_name)
 }
 
+#' Internal helper: make report id
+#'
+#' @noRd
 util_make_report_id <- function() {
   # Stable enough uniqueness: time + pid + random
   ts <- format(Sys.time(), "%Y%m%dT%H%M%OS6", tz = "UTC")
   pid <- Sys.getpid()
-  rnd <- paste(sample(c(letters, LETTERS, 0:9), 16, replace = TRUE), collapse = "")
+  rnd <- paste(sample(c(letters, LETTERS, 0:9), 16, replace = TRUE), collapse = "") # nolint: line_length_linter.
   paste0("dq-", ts, "-p", pid, "-", rnd)
 }

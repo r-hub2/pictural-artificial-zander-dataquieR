@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Simultaneous confidence intervals for multinomial proportions
 #'
 #' Sison & Glaz style implementation with the same user-facing API as
@@ -20,6 +21,7 @@
 #'
 #' @return Numeric matrix with two columns: lower and upper.
 #' @noRd
+# nolint end
 util_multinomial_ci <- function(x, alpha, verbose = FALSE) {
   .util_multinomial_ci_validate_input(x = x, alpha = alpha, verbose = verbose)
 
@@ -69,7 +71,7 @@ util_multinomial_ci <- function(x, alpha, verbose = FALSE) {
     lambda^r * (
       1 - (
         (.poisson_interval(c(upper - r + 1, upper), lambda) -
-           .poisson_interval(c(lower - r, lower - 1), lambda)) / denom
+            .poisson_interval(c(lower - r, lower - 1), lambda)) / denom
       )
     )
   }
@@ -80,7 +82,7 @@ util_multinomial_ci <- function(x, alpha, verbose = FALSE) {
       function(r) {
         vapply(
           seq_along(counts),
-          function(i) .truncated_poisson_factorial_moment(intervals[[i]], r, counts[i]),
+          function(i) .truncated_poisson_factorial_moment(intervals[[i]], r, counts[i]), # nolint: line_length_linter.
           numeric(1)
         )
       }
@@ -91,7 +93,7 @@ util_multinomial_ci <- function(x, alpha, verbose = FALSE) {
     mu_r3 <- mu_r[[3]]
     mu_r4 <- mu_r[[4]]
 
-    mu  <- mu_r1
+    mu <- mu_r1
     mu2 <- mu_r2 + mu - mu^2
     mu3 <- mu_r3 + mu_r2 * (3 - 3 * mu) + mu - 3 * mu^2 + 2 * mu^3
     mu4 <- mu_r4 +
@@ -142,7 +144,7 @@ util_multinomial_ci <- function(x, alpha, verbose = FALSE) {
       counts,
       function(count_i) c(max(count_i - c_val, 0), min(count_i + c_val, n))
     )
-    .approximated_multinomial_interval(intervals = intervals, counts = counts, n = n)
+    .approximated_multinomial_interval(intervals = intervals, counts = counts, n = n) # nolint: line_length_linter.
   }
 
   c_val <- 1
@@ -159,8 +161,9 @@ util_multinomial_ci <- function(x, alpha, verbose = FALSE) {
     }
 
     if (c_val > n) {
-      util_error("Could not find a value c satisfying nu(c) <= 1 - alpha < nu(c + 1).",
-           call. = FALSE)
+      util_error("Could not find a value c satisfying nu(c) <= 1 - alpha < nu(c + 1).", # nolint: line_length_linter.
+        call. = FALSE
+      )
     }
 
     c_val <- c_val + 1
@@ -186,6 +189,9 @@ util_multinomial_ci <- function(x, alpha, verbose = FALSE) {
   unname(out)
 }
 
+#' Internal helper: util multinomial ci validate input
+#'
+#' @noRd
 .util_multinomial_ci_validate_input <- function(x, alpha, verbose) {
   if (missing(x)) {
     util_error("Argument 'x' is missing.", call. = FALSE)
@@ -226,7 +232,6 @@ util_multinomial_ci <- function(x, alpha, verbose = FALSE) {
 #' @return Numeric matrix with columns: lower and upper.
 #' @noRd
 util_binomial_ci <- function(x, alpha, verbose = FALSE) {
-
   .util_multinomial_ci_validate_input(
     x = x,
     alpha = alpha,
@@ -237,10 +242,13 @@ util_binomial_ci <- function(x, alpha, verbose = FALSE) {
 
   n <- sum(x)
 
+  if (n <= 0) {
+    util_error("sum(x) must be positive.", call. = FALSE)
+  }
+
   out <- t(vapply(
     x,
     function(xi) {
-
       ci <- stats::prop.test(
         x = xi,
         n = n,

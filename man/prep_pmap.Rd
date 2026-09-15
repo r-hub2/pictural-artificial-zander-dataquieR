@@ -15,9 +15,12 @@ per column}
 \item{...}{additional, static arguments for calling \code{.f}}
 
 \item{cores}{number of cpu cores to use or a (named) list with arguments for
-\link[parallelMap:parallelStart]{parallelMap::parallelStart} or NULL, if parallel has already
-been started by the caller. Set to 0 to run without
-parallelization.}
+the internal parallel backend (\code{util_parallel_start}) or NULL,
+if parallel has already been started by the caller. Set to 0
+to run without parallelization. In RStudio report rendering,
+caller-owned clusters can make HTML finalization hang; prefer
+letting \code{dataquieR} create the cluster from a number or backend
+list.}
 }
 \value{
 \link{list} of results of the function calls

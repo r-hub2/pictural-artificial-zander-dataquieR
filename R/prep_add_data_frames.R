@@ -23,21 +23,19 @@
 #' @seealso [prep_get_data_frame]
 #' @family data-frame-cache
 prep_add_data_frames <- function(...,
-                                 data_frame_list = list(),
-                                 append = FALSE) {
+  data_frame_list = list(),
+  append = FALSE) {
   util_expect_scalar(append, check_type = is.logical)
   ellipse <- list(...)
   if (is.null(names(ellipse))) {
     names(ellipse) <- rep("", length(ellipse))
   }
   unnamed <- !nzchar(names(ellipse))
-  symbols <- sys.call()[-1]
-  if ("data_frame_list" %in% names(symbols)) {
-    symbols <- as.character(
-      symbols[-which(names(symbols) == "data_frame_list")])
-  } else {
-    symbols <- as.character(symbols)
-  }
+  symbols <- vapply(
+    as.list(match.call(expand.dots = FALSE)$...),
+    deparse1,
+    FUN.VALUE = character(1)
+  )
   names(ellipse)[unnamed] <- symbols[unnamed]
   if (!is.list(data_frame_list)) {
     util_error("%s needs to be a list, if given", dQuote(data_frame_list))
@@ -49,21 +47,28 @@ prep_add_data_frames <- function(...,
   named <- nzchar(names(data_frame_list))
   if (!all(named)) {
     util_error(
-      c("Some unnamed data frames could not even automatically be named",
-        "Have you passed an empty string?")
+      c(
+        "Some unnamed data frames could not even automatically be named",
+        "Have you passed an empty string?"
+      )
     )
   }
   characters <- vapply(data_frame_list, is.character, FUN.VALUE = logical(1)) &
     (1 == vapply(data_frame_list, length, FUN.VALUE = integer(1)))
-  data_frame_list[characters] <- lapply(data_frame_list[characters],
-                                        prep_get_data_frame)
+  data_frame_list[characters] <- lapply(
+    data_frame_list[characters],
+    prep_get_data_frame
+  )
   nulls <- vapply(data_frame_list, is.null, FUN.VALUE = logical(1))
   data_frame_list <- data_frame_list[!nulls]
   errors <- !vapply(data_frame_list, is.data.frame, FUN.VALUE = logical(1))
 
   data_frame_list[errors] <- lapply(data_frame_list[errors], function(x) {
     if (is.null(dim(x))) {
-      try(stop("Dimension-less object is not a data frame"), silent = TRUE)
+      try(
+        util_error("Dimension-less object is not a data frame"),
+        silent = TRUE
+      )
     } else {
       try(as.data.frame(x), silent = TRUE)
     }
@@ -74,7 +79,8 @@ prep_add_data_frames <- function(...,
   if (any(errors)) {
     util_error(
       "Not all entries are data frames or loadable file names/URLs: %s",
-      paste0(dQuote(names(data_frame_list)[errors]), collapse = ", "))
+      paste0(dQuote(names(data_frame_list)[errors]), collapse = ", ")
+    )
   }
   for (n in names(data_frame_list)) {
     if (append && exists(n, envir = .dataframe_environment())) {
@@ -89,7 +95,8 @@ prep_add_data_frames <- function(...,
     assign(
       n,
       data_frame_list[[n]],
-      envir = .dataframe_environment())
+      envir = .dataframe_environment()
+    )
   }
   invisible(.dataframe_environment())
 }

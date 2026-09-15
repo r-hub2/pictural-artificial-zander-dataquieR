@@ -6,10 +6,14 @@
 #'
 #' @noRd
 util_hide_file_windows <- function(fn) {
-  if (.Platform$OS.type != "windows") return();
+  if (.Platform$OS.type != "windows") {
+    return()
+  }
+  # nocov start
   fn <- normalizePath(fn)
   if (file.exists(fn)) {
     system(sprintf("attrib +h %s", shQuote(fn, type = "cmd")))
   }
   invisible(NULL)
+  # nocov end
 }

@@ -1,3 +1,4 @@
+# nolint start: line_length_linter.
 #' Pairwise numeric variable visualization using ggplot2
 #'
 #' This function creates a grid of plots showing pairwise relationships between
@@ -16,31 +17,36 @@
 #' @return An object of class `util_pairs_ggplot_panels`, which can be printed.
 #'
 #' @noRd
+# nolint end
 util_pairs_ggplot <- function(data, columns = NULL, bins = 30, title = NULL,
-                              columnLabels = NULL, diag = c("density", "histogram"),
-                              correlation_method = c("pearson", "spearman")) {
-
+  columnLabels = NULL, diag = c("density", "histogram"),
+  correlation_method = c("pearson", "spearman")) {
   util_expect_scalar(correlation_method,
-                     check_type = is.character,
-                     allow_more_than_one = TRUE)
+    check_type = is.character,
+    allow_more_than_one = TRUE
+  )
   correlation_method <- util_match_arg(correlation_method)
 
   util_expect_scalar(diag,
-                     check_type = is.character,
-                     allow_more_than_one = TRUE)
+    check_type = is.character,
+    allow_more_than_one = TRUE
+  )
   diag <- util_match_arg(diag)
 
   cols <- if (is.null(columns)) names(data) else intersect(columns, names(data))
   df <- data[, cols, drop = FALSE]
   df <- df[, sapply(df, is.numeric), drop = FALSE]
   n <- ncol(df)
-  if (n < 2) util_error("At least two numeric columns required.",
-                        applicability_problem = TRUE)
+  if (n < 2) {
+    util_error("At least two numeric columns required.",
+      applicability_problem = TRUE
+    )
+  }
   if (correlation_method == "spearman") {
     df <- as.data.frame(lapply(df, function(x) rank(x, na.last = "keep")))
   }
 
-  palette <- c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#CC79A7", "#56B4E9", "#E69F00", "#999999")
+  palette <- c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#CC79A7", "#56B4E9", "#E69F00", "#999999") # nolint: line_length_linter.
   palette <- rep(palette, length.out = n)
 
   var_colors <- setNames(palette[seq_len(n)], names(df))
@@ -55,14 +61,16 @@ util_pairs_ggplot <- function(data, columns = NULL, bins = 30, title = NULL,
       p <- ggplot(df, aes(x = !!rlang::sym(x))) +
         xlab(label_x)
       if (diag == "histogram") {
-        p <- p + geom_histogram(bins = bins, fill = var_colors[[x]], color = "white")
+        p <- p + geom_histogram(bins = bins, fill = var_colors[[x]], color = "white") # nolint: line_length_linter.
       } else {
-        p <- p + geom_density(color = var_colors[[x]], fill = var_colors[[x]], alpha = 0.7)
+        p <- p + geom_density(color = var_colors[[x]], fill = var_colors[[x]], alpha = 0.7) # nolint: line_length_linter.
       }
       p + theme_minimal() +
-        theme(axis.title.y = element_blank(),
-              axis.text.y  = element_blank(),
-              axis.ticks.y = element_blank())
+        theme(
+          axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank()
+        )
     } else if (i < j) {
       corr_val <- round(cor(df[[x]], df[[y]], use = "complete.obs"), 2)
       ggplot() +
@@ -70,7 +78,8 @@ util_pairs_ggplot <- function(data, columns = NULL, bins = 30, title = NULL,
         ggplot2::theme_void()
     } else {
       ggplot(df, aes(x = !!rlang::sym(x), y = !!rlang::sym(y))) +
-        xlab(label_x) + ylab(label_y) +
+        xlab(label_x) +
+        ylab(label_y) +
         geom_point(alpha = 0.6, size = 1.5, color = var_colors[[x]]) +
         theme_minimal()
     }
@@ -84,7 +93,8 @@ util_pairs_ggplot <- function(data, columns = NULL, bins = 30, title = NULL,
   }
 
   structure(list(panels = panels, layout_dim = n, title = title),
-            class = "util_pairs_ggplot_panels")
+    class = "util_pairs_ggplot_panels"
+  )
 }
 
 #' Pairwise numeric variable visualization using plotly
@@ -100,36 +110,41 @@ util_pairs_ggplot <- function(data, columns = NULL, bins = 30, title = NULL,
 #'
 #' @noRd
 util_pairs_plotly <- function(data, columns = NULL, bins = 30, title = NULL,
-                              columnLabels = NULL, diag = c("density", "histogram"),
-                              correlation_method = c("pearson", "spearman")) {
-  # data <- cbind(data, setNames(data, nm = paste("V", seq_len(ncol(data))))); columns <- names(data)
+  columnLabels = NULL, diag = c("density", "histogram"),
+  correlation_method = c("pearson", "spearman")) {
+  # Historical V-prefixed column fallback removed here.
 
   util_ensure_suggested("plotly", "plot interactive figures")
 
   used_subsampling_for_plotly <- FALSE
 
   util_expect_scalar(correlation_method,
-                     check_type = is.character,
-                     allow_more_than_one = TRUE)
+    check_type = is.character,
+    allow_more_than_one = TRUE
+  )
   correlation_method <- util_match_arg(correlation_method)
 
   util_expect_scalar(diag,
-                     check_type = is.character,
-                     allow_more_than_one = TRUE)
+    check_type = is.character,
+    allow_more_than_one = TRUE
+  )
   diag <- util_match_arg(diag)
 
   cols <- if (is.null(columns)) names(data) else intersect(columns, names(data))
   df <- data[, cols, drop = FALSE]
   df <- df[, sapply(df, is.numeric), drop = FALSE]
   n <- ncol(df)
-  if (n < 2) util_error("At least two numeric columns required.",
-                        applicability_problem = TRUE)
+  if (n < 2) {
+    util_error("At least two numeric columns required.",
+      applicability_problem = TRUE
+    )
+  }
 
   if (correlation_method == "spearman") {
     df <- as.data.frame(lapply(df, function(x) rank(x, na.last = "keep")))
   }
 
-  palette <- c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#CC79A7", "#56B4E9", "#E69F00", "#999999")
+  palette <- c("#0072B2", "#D55E00", "#F0E442", "#009E73", "#CC79A7", "#56B4E9", "#E69F00", "#999999") # nolint: line_length_linter.
   palette <- rep(palette, length.out = n)
 
   var_colors <- setNames(palette[seq_len(n)], names(df))
@@ -145,39 +160,54 @@ util_pairs_plotly <- function(data, columns = NULL, bins = 30, title = NULL,
 
       if (i == j) {
         if (diag == "histogram") {
-          p <- plotly::plot_ly(x = df[[xname]], type = "histogram",
-                               nbinsx = bins,
-                               marker = list(color = var_colors[[xname]],
-                                             line = list(color = "white")))
+          p <- plotly::plot_ly(
+            x = df[[xname]], type = "histogram",
+            nbinsx = bins,
+            marker = list(
+              color = var_colors[[xname]],
+              line = list(color = "white")
+            )
+          )
         } else {
           dens <- stats::density(df[[xname]], na.rm = TRUE)
-          p <- plotly::plot_ly(x = dens$x, y = dens$y, type = "scatter", mode = "lines",
-                               fillcolor = paste0(palette[j], "B3"), # B3 = 0.7 for alpha
-                               fill = 'tozeroy', line = list(color = var_colors[[xname]]))
+          p <- plotly::plot_ly(
+            x = dens$x, y = dens$y, type = "scatter", mode = "lines",
+            fillcolor = paste0(palette[j], "B3"), # B3 = 0.7 for alpha
+            fill = "tozeroy", line = list(color = var_colors[[xname]])
+          )
         }
         p <- plotly::layout(p,
-                            xaxis = list(visible = TRUE,
-                                         showgrid = TRUE,
-                                         zeroline = TRUE,
-                                         showticklabels = TRUE),
-                            yaxis = list(visible = TRUE,
-                                         showgrid = TRUE,
-                                         zeroline = TRUE,
-                                         showticklabels = TRUE))
+          xaxis = list(
+            visible = TRUE,
+            showgrid = TRUE,
+            zeroline = TRUE,
+            showticklabels = TRUE
+          ),
+          yaxis = list(
+            visible = TRUE,
+            showgrid = TRUE,
+            zeroline = TRUE,
+            showticklabels = TRUE
+          )
+        )
       } else if (i < j) {
-        corr_val <- round(cor(df[[xname]], df[[yname]], use = "complete.obs"), 2)
+        corr_val <- round(cor(df[[xname]], df[[yname]], use = "complete.obs"), 2) # nolint: line_length_linter.
         axis_id <- paste0("corr_", i, "_", j)
-        p <- plotly::plot_ly(showlegend = FALSE, type = "scatter", mode = "text",
-                             xaxis = paste0("x", axis_id), yaxis = paste0("y", axis_id)) %>%
+        p <- plotly::plot_ly(
+          showlegend = FALSE, type = "scatter", mode = "text",
+          xaxis = paste0("x", axis_id), yaxis = paste0("y", axis_id)
+        ) %>%
           plotly::add_annotations(
             text = corr_val,
             xref = "paper", yref = "paper",
             x = 0.5, y = 0.5, showarrow = FALSE,
             font = list(size = 20)
           ) %>%
-          plotly::layout(xaxis = list(visible = FALSE),
-                         yaxis = list(visible = FALSE),
-                         margin = list(l = 20, b = 20))
+          plotly::layout(
+            xaxis = list(visible = FALSE),
+            yaxis = list(visible = FALSE),
+            margin = list(l = 20, b = 20)
+          )
 
         p <- p %>% plotly::layout(
           xaxis = list(
@@ -194,35 +224,43 @@ util_pairs_plotly <- function(data, columns = NULL, bins = 30, title = NULL,
           ),
           margin = list(l = 20, b = 20)
         )
-
       } else {
         if (nrow(df) <= 3000) {
           .df <- df
         } else {
           .df <-
             df[util_subsample_cases(df,
-                                    x = xname,
-                                    y = yname,
-                                    nmax = 3000, # TODO: Make these parameters option()able
-                                    seed = 1), , drop = FALSE]
+                x = xname,
+                y = yname,
+                nmax = 3000,
+                seed = 1
+              ), , drop = FALSE]
           if (nrow(.df) < nrow(df)) {
             used_subsampling_for_plotly <- TRUE
             sampling_hint <-
               "For interactive rendering performance, sampling was used"
           }
         }
-        p <- plotly::plot_ly(x = .df[[xname]], y = .df[[yname]],
-                             type = "scatter", mode = "markers",
-                             marker = list(opacity = 0.6, size = 6, color = var_colors[[xname]]),
-                             showlegend = FALSE)
-        p <- plotly::layout(p, xaxis = list(visible = TRUE,
-                                            showgrid = TRUE,
-                                            zeroline = TRUE,
-                                            showticklabels = TRUE),
-                            yaxis = list(visible = TRUE,
-                                         showgrid = TRUE,
-                                         zeroline = TRUE,
-                                         showticklabels = TRUE))
+        p <- plotly::plot_ly(
+          x = .df[[xname]], y = .df[[yname]],
+          type = "scatter", mode = "markers",
+          marker = list(opacity = 0.6, size = 6, color = var_colors[[xname]]),
+          showlegend = FALSE
+        )
+        p <- plotly::layout(p,
+          xaxis = list(
+            visible = TRUE,
+            showgrid = TRUE,
+            zeroline = TRUE,
+            showticklabels = TRUE
+          ),
+          yaxis = list(
+            visible = TRUE,
+            showgrid = TRUE,
+            zeroline = TRUE,
+            showticklabels = TRUE
+          )
+        )
       }
 
       panels[[cnt]] <- p
@@ -231,9 +269,10 @@ util_pairs_plotly <- function(data, columns = NULL, bins = 30, title = NULL,
   }
 
   fig <- plotly::subplot(panels,
-                         nrows = n,
-                         shareX = TRUE,
-                         shareY = !TRUE)
+    nrows = n,
+    shareX = TRUE,
+    shareY = !TRUE
+  )
 
   if (!is.null(title)) {
     fig <- fig %>% plotly::layout(title = list(text = title, x = 0.5))
@@ -301,7 +340,7 @@ util_pairs_plotly <- function(data, columns = NULL, bins = 30, title = NULL,
   }
 
   fig <- plotly::layout(fig,
-                        margin = list(l = 60, b = 80, t = 80, r = 40)
+    margin = list(l = 60, b = 80, t = 80, r = 40)
   )
 
   fig
@@ -320,7 +359,7 @@ print.util_pairs_ggplot_panels <- function(x, ...) {
 
   grid::grid.newpage()
   grid::pushViewport(grid::viewport(layout = grid::grid.layout(n, n)))
-  vplayout <- function(row, col) grid::viewport(layout.pos.row = row, layout.pos.col = col)
+  vplayout <- function(row, col) grid::viewport(layout.pos.row = row, layout.pos.col = col) # nolint: line_length_linter.
 
   for (i in seq_len(n)) {
     for (j in seq_len(n)) {
@@ -331,8 +370,9 @@ print.util_pairs_ggplot_panels <- function(x, ...) {
 
   if (!is.null(title)) {
     grid::grid.text(title,
-                    y = grid::unit(1, "npc") - grid::unit(2, "mm"),
-                    gp = grid::gpar(fontsize = 15, fontface = "bold"))
+      y = grid::unit(1, "npc") - grid::unit(2, "mm"),
+      gp = grid::gpar(fontsize = 15, fontface = "bold")
+    )
   }
   invisible(x)
 }

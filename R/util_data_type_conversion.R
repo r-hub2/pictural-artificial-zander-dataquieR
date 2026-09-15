@@ -11,8 +11,10 @@
 #' @noRd
 util_data_type_conversion <- function(x, type) {
   if (is.factor(x)) {
-    if (isTRUE(as.logical(getOption("dataquieR.old_factor_handling",
-                                    dataquieR.old_factor_handling_default)))) {
+    if (isTRUE(as.logical(getOption(
+      "dataquieR.old_factor_handling",
+      dataquieR.old_factor_handling_default
+    )))) {
       # This is for backwards compatibility, but it may be more user friendly to
       # omit this in both adjust_data_type functions
       # noop
@@ -24,7 +26,7 @@ util_data_type_conversion <- function(x, type) {
   converts <- setNames(
     list(
       function(x) {
-        if (identical(attr(type, "orig_type"), "logical")) {
+        if (identical(util_attr(type, "orig_type", exact = TRUE), "logical")) {
           as.integer(as.logical(x))
         } else {
           floor(as.numeric(x))
@@ -49,7 +51,8 @@ util_data_type_conversion <- function(x, type) {
   .as <- try(converts[[type]], silent = TRUE)
   if (length(.as) != 1 || inherits(.as, "try-error")) {
     util_error("%s is not a known data type.", dQuote(type),
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
   # perform data type conversion
   x2 <- suppressWarnings(do.call(.as, list(x)))

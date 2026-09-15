@@ -12,7 +12,8 @@ acc_varcomp(
   label_col,
   item_level = "item_level",
   min_obs_in_subgroup = 10,
-  min_subgroups = 5,
+  min_subgroups = getOption("dataquieR.min_group_var_levels",
+    dataquieR.min_group_var_levels_default),
   cut_off_linear_model_for_ord = 10,
   threshold_value = lifecycle::deprecated(),
   meta_data = item_level,
@@ -20,13 +21,12 @@ acc_varcomp(
 )
 }
 \arguments{
-\item{resp_vars}{\link{variable} the name of the measurement variable}
+\item{resp_vars}{\link{variable} the names of the measurement variables, if
+missing or \code{NULL}, all variables will be checked}
 
-\item{group_vars}{\link{variable} the name of the examiner, device or
-reader variable}
+\item{group_vars}{\link{variable list} the names of the grouping variables}
 
-\item{co_vars}{\link{variable list} a vector of covariables, e.g. age and sex,
-for adjustment}
+\item{co_vars}{\link{variable list} the names of covariables for adjustment}
 
 \item{study_data}{\link{data.frame} the data frame that contains the measurements}
 

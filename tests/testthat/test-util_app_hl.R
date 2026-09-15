@@ -33,7 +33,7 @@ test_that("util_app_hl works", {
     MISSING_LIST = ""
   )
 
-  result1 <- util_app_hl(meta_data, dta = c(1,1))
+  result1 <- util_app_hl(meta_data, dta = c(1, 1))
 
   # Check that the result is a factor
   expect_s3_class(result1, "factor")
@@ -53,7 +53,7 @@ test_that("util_app_hl works", {
     HARD_LIMITS = c("[5;25]", "[1;100]")
   )
 
-  result2 <- util_app_hl(meta_data, dta = c(1,1))
+  result2 <- util_app_hl(meta_data, dta = c(1, 1))
 
   # Check that the result is as expected
   expect_equal(result2, as.factor(c(3, 3)))
@@ -71,9 +71,8 @@ test_that("util_app_hl works", {
     HARD_LIMITS = c("[5;25]", "[1;100]")
   )
 
-  result3 <- util_app_hl(meta_data, dta = c(1,1))
+  result3 <- util_app_hl(meta_data, dta = c(1, 1))
 
   # Check that the result is as expected
   expect_equal(result3, as.factor(c(3, 4)))
-
 })

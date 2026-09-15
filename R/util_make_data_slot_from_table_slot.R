@@ -8,13 +8,14 @@
 #' @concept summary
 #' @noRd
 util_make_data_slot_from_table_slot <- function(Table) {
-
   # 1) Select indicator metric columns via helper
   indicator_cols <- util_extract_indicator_metrics(Table)
 
   # 2) Choose base/technical columns (if present) and build final column order
-  base_candidates <- c("Variables", "Segment", "DF_NAME", "CHECK_LABEL",
-                       "Dataframe", "CONTRADICTION_TYPE")
+  base_candidates <- c(
+    "Variables", "Segment", "DF_NAME", "CHECK_LABEL",
+    "Dataframe", "CONTRADICTION_TYPE"
+  )
   base_keep <- intersect(base_candidates, colnames(Table))
 
   select_names <- c(base_keep, colnames(indicator_cols))
@@ -26,12 +27,13 @@ util_make_data_slot_from_table_slot <- function(Table) {
 
   # 3) Prepare percent-column mask based on ORIGINAL names (before renaming)
   pct_mask <- startsWith(select_names, "PCT_")
+  num_mask <- startsWith(select_names, "NUM_")
 
   # 4) Translate headers with the helper (keep unknowns untouched)
   translated <- util_translate_indicator_metrics(
     select_names,
     short = FALSE,
-    long  = TRUE,
+    long = TRUE,
     ignore_unknown = TRUE
   )
 
@@ -63,6 +65,14 @@ util_make_data_slot_from_table_slot <- function(Table) {
         util_paste0_with_na(round(cl, 2), "%")
       }
     })
+    for (cl in colnames(Data)[pct_mask]) {
+      attr(Data[[cl]], DATA_TYPE) <- DATA_TYPES$FLOAT
+    }
+  }
+  if (any(num_mask)) {
+    for (cl in colnames(Data)[num_mask]) {
+      attr(Data[[cl]], DATA_TYPE) <- DATA_TYPES$INTEGER
+    }
   }
 
   # 8) Adjust class tags
@@ -72,6 +82,11 @@ util_make_data_slot_from_table_slot <- function(Table) {
   if (!inherits(Data, "DataSlot")) {
     class(Data) <- union("DataSlot", class(Data))
   }
+  attr(Data, "entity_grading_context") <- util_attr(
+    Table,
+    "entity_grading_context",
+    exact = TRUE
+  )
 
   Data
 }

@@ -9,7 +9,7 @@
 #' @returns [function()] the isolated function
 #' @noRd
 util_isolate_function <- function(FUN, vars = character(),
-                                  envir = parent.frame()) {
+  envir = parent.frame()) {
   # get objects to keep
   obj_list <- mget(vars, envir = envir, inherits = TRUE)
 

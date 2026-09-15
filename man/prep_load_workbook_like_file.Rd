@@ -21,6 +21,15 @@ set \code{TRUE} for study data.}
 \description{
 These can thereafter be referred to by their names only. Such files are,
 e.g., spreadsheet-workbooks or \code{RData}-files.
+For workbook-like files, each loaded sheet is cached by its sheet name and
+by qualified names that include the workbook base name, separated by \code{|}.
+For example, sheet \code{tab1} in \code{meta_data_v2.xlsx} can be referred to as
+\code{tab1}, \code{meta_data_v2.xlsx|tab1}, or \code{meta_data_v2|tab1} after the workbook
+has been loaded. The short sheet name is convenient when the whole workbook is
+loaded together. If item-level metadata are supplied without loading the full
+metadata workbook, references in item-level columns such as \code{CODE_LIST_TABLE}
+or \code{MISSING_LIST_TABLE} must use a name that is already present in the
+data-frame cache, for example the qualified name \code{meta_data_v2.xlsx|tab1}.
 }
 \details{
 Note, that this function in contrast to \link{prep_get_data_frame} does neither

@@ -4,8 +4,8 @@
 #' @concept metadata_management
 #' @noRd
 util_map_labels <- function(x, meta_data = "item_level",
-                            to = LABEL, from = VAR_NAMES, ifnotfound,
-                            warn_ambiguous = FALSE) {
+  to = LABEL, from = VAR_NAMES, ifnotfound,
+  warn_ambiguous = FALSE) {
   if (!missing(x) && length(x) == 0) {
     return(character(0))
   }
@@ -13,17 +13,22 @@ util_map_labels <- function(x, meta_data = "item_level",
 
   if (warn_ambiguous) {
     ambiguities <- vapply(as.character(x),
-                          FUN.VALUE = logical(1),
-                          FUN = function(xx) {
-                            length(which(meta_data[[from]] == xx)) > 1
-                          })
+      FUN.VALUE = logical(1),
+      FUN = function(xx) {
+        length(which(meta_data[[from]] == xx)) > 1
+      }
+    )
     if (any(ambiguities)) {
-      util_warning(paste("There are several entries '%s' in the metadata column",
-                         "%s. Mapping to metadata column %s is ambiguous."),
-                   paste0(as.character(x)[ambiguities], collapse = ", "),
-                   from,
-                   to,
-                   applicability_problem = TRUE)
+      util_warning(
+        paste(
+          "There are several entries '%s' in the metadata column",
+          "%s. Mapping to metadata column %s is ambiguous."
+        ),
+        paste0(as.character(x)[ambiguities], collapse = ", "),
+        from,
+        to,
+        applicability_problem = TRUE
+      )
     }
   }
 
@@ -43,9 +48,11 @@ util_map_labels <- function(x, meta_data = "item_level",
   x[!nzchar(as.character(x))] <- NA_character_
 
   unlist(mget(as.character(x),
-              as.environment(as.list(
-                setNames(as.character(meta_data[[to]]),
-                         nm = nm)
-              )),
-              ifnotfound = ifnotfound))
+    as.environment(as.list(
+      setNames(as.character(meta_data[[to]]),
+        nm = nm
+      )
+    )),
+    ifnotfound = ifnotfound
+  ))
 }

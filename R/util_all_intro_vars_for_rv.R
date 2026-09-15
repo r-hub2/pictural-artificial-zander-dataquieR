@@ -26,31 +26,40 @@
 #' @concept missing
 #' @noRd
 util_all_intro_vars_for_rv <- function(rv, study_data, meta_data,
-                                       label_col = LABEL,
-                                       expected_observations =
-                                         c("HIERARCHY",
-                                           "ALL",
-                                           "SEGMENT")) {
-  r <- .util_all_intro_vars_for_rv(rv, study_data, meta_data, label_col,
-                                   expected_observations)
+  label_col = LABEL,
+  expected_observations =
+    c(
+      "HIERARCHY",
+      "ALL",
+      "SEGMENT"
+    )) {
+  r <- .util_all_intro_vars_for_rv(
+    rv, study_data, meta_data, label_col,
+    expected_observations
+  )
   util_map_labels(r, meta_data, to = label_col, ifnotfound = r)
-
 }
 
+#' Internal helper: util all intro vars for rv
+#'
+#' @noRd
 .util_all_intro_vars_for_rv <-
   function(rv, study_data, meta_data, label_col = LABEL,
-           expected_observations =
-             c("HIERARCHY",
-               "ALL",
-               "SEGMENT")) {
+    expected_observations =
+    c(
+      "HIERARCHY",
+      "ALL",
+      "SEGMENT"
+    )) {
+    meta_data <- util_prepare_item_level_metadata(
+      meta_data = meta_data,
+      label_col = label_col
+    )
 
-    meta_data <- prep_meta_data_v1_to_item_level_meta_data(meta_data,
-                                                           verbose = FALSE,
-                                                           label_col =
-                                                             label_col)
-
-    util_expect_scalar(expected_observations, allow_more_than_one = TRUE,
-                       check_type = is.character)
+    util_expect_scalar(expected_observations,
+      allow_more_than_one = TRUE,
+      check_type = is.character
+    )
     expected_observations <- match.arg(expected_observations)
     util_expect_scalar(expected_observations)
 
@@ -64,7 +73,7 @@ util_all_intro_vars_for_rv <- function(rv, study_data, meta_data,
           rv,
           from = label_col,
           to = VAR_NAMES,
-          meta_data =  meta_data
+          meta_data = meta_data
         )
     }
     kss <-
@@ -72,7 +81,7 @@ util_all_intro_vars_for_rv <- function(rv, study_data, meta_data,
         rv,
         from = VAR_NAMES,
         to = PART_VAR,
-        meta_data =  meta_data
+        meta_data = meta_data
       )
     rv <- unname(rv)
     kss <- unname(kss)
@@ -80,23 +89,26 @@ util_all_intro_vars_for_rv <- function(rv, study_data, meta_data,
       return(NULL)
     }
     if (expected_observations == "HIERARCHY" &&
-        kss %in% meta_data$VAR_NAMES) {
+        kss %in% meta_data[[VAR_NAMES]]) {
       return(c(Recall(kss, study_data, meta_data, VAR_NAMES), kss))
     }
     if (expected_observations != "ALL") {
       var_kss <- kss %in% meta_data[[VAR_NAMES]]
       if (any(!var_kss)) {
-        util_warning(c("For %s = %s, %s in %s must contain names of",
-                       "study variables inidcating participation in a",
-                       "study segment. %s is/are not in %s in %s."),
-                     sQuote("expected_observations"),
-                     dQuote(expected_observations),
-                     dQuote(PART_VAR),
-                     sQuote("meta_data"),
-                     paste(dQuote(kss[!var_kss]), collapse = ", "),
-                     dQuote(VAR_NAMES),
-                     sQuote("meta_data")
-                     )
+        util_warning(
+          c(
+            "For %s = %s, %s in %s must contain names of",
+            "study variables inidcating participation in a",
+            "study segment. %s is/are not in %s in %s."
+          ),
+          sQuote("expected_observations"),
+          dQuote(expected_observations),
+          dQuote(PART_VAR),
+          sQuote("meta_data"),
+          paste(dQuote(kss[!var_kss]), collapse = ", "),
+          dQuote(VAR_NAMES),
+          sQuote("meta_data")
+        )
       }
     }
     intersect(kss, meta_data[[VAR_NAMES]])

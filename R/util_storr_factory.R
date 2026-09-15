@@ -12,7 +12,9 @@ util_storr_factory <- function(my_storr_object, my_storr_factory) {
     return(NULL)
   }
   if (!missing(my_storr_object) && missing(my_storr_factory)) {
-    my_storr_factory <- attr(my_storr_object, "storr_factory")
+    my_storr_factory <- util_attr(my_storr_object, "storr_factory",
+      exact = TRUE
+    )
   }
   if ((missing(my_storr_object) || is.null(my_storr_object)) &&
       (missing(my_storr_factory) || is.null(my_storr_factory))) {
@@ -20,7 +22,7 @@ util_storr_factory <- function(my_storr_object, my_storr_factory) {
   }
   if (!is.function(my_storr_factory) ||
       length(formals(my_storr_factory)) != 0) {
-    # util_error("No storr factory")
+    # Use util_error() here locally to debug missing storr factories.
     my_storr_factory <- function() {
       return(my_storr_object)
     }
@@ -31,12 +33,15 @@ util_storr_factory <- function(my_storr_object, my_storr_factory) {
   if (!inherits(my_storr_object, "storr")) {
     util_error("storr factory should return a storr object")
   }
-  is_rds <- identical(try(my_storr_object$driver$type(), silent = TRUE),
-                        "rds")
+  is_rds <- identical(
+    try(my_storr_object$driver$type(), silent = TRUE),
+    "rds"
+  )
   if (!is_rds) {
     rlang::warn(
       "storr classes other than RDS not yet supported, expect errors.",
-      .frequency = "regularly", .frequency_id = rlang::hash(my_storr_factory))
+      .frequency = "regularly", .frequency_id = rlang::hash(my_storr_factory)
+    )
     # for RDS, the following does not typically happen
     if (util_is_try_error(try(my_storr_object$list_hashes(), silent = TRUE))) {
       try(my_storr_object$driver$reconnect(), silent = TRUE)
@@ -78,8 +83,8 @@ util_storr_object <- function(my_storr_factory = function() {
 #'         lives in the memory, only
 #' @noRd
 util_get_storr_object_from_report <- function(r) {
-  my_storr_object <- attr(r, "my_storr_object")
-  storr_factory <- attr(my_storr_object, "storr_factory")
+  my_storr_object <- util_attr(r, "my_storr_object", exact = TRUE)
+  storr_factory <- util_attr(my_storr_object, "storr_factory", exact = TRUE)
   util_storr_factory(my_storr_object, storr_factory)
 }
 
@@ -92,14 +97,14 @@ util_get_storr_object_from_report <- function(r) {
 #' @return a (hopefully) working `storr_object`
 #' @noRd
 util_fix_storr_object <- function(my_storr_object) {
-  storr_factory <- attr(my_storr_object, "storr_factory")
+  storr_factory <- util_attr(my_storr_object, "storr_factory", exact = TRUE)
   util_storr_factory(my_storr_object, storr_factory)
 }
 
 
 # Example for thor:
-# unlink("/tmp/thor", recursive = TRUE)
-# r_rds <- dq_report2("study_data", meta_data_v2 = "meta_data_v2", dimensions = NULL, storr_factory = function(){thor::storr_thor(thor::mdb_env("/tmp/thor", mapsize =  2 * (2 ^ 10)^4))}, amend = T)
+# Use a temporary thor directory and dq_report2() locally to inspect thor storr
+# behavior.
 
 
 #' Create a factory function for `storr` objects for backing
@@ -117,7 +122,7 @@ util_fix_storr_object <- function(my_storr_object) {
 #' @return `storr` object or `NULL`, if package `storr` is not available
 #' @export
 prep_create_storr_factory <- function(db_dir = tempfile(),
-                                      namespace = "objects") {
+  namespace = "objects") {
   if (missing(db_dir)) {
     withr::defer_parent({
       if (dir.exists(db_dir) && startsWith(db_dir, tempdir())) {
@@ -128,10 +133,12 @@ prep_create_storr_factory <- function(db_dir = tempfile(),
   force(db_dir)
   force(namespace)
   function() {
-    if (util_ensure_suggested("storr", err = FALSE)) { # TODO: store somewhere the full constructor call to reproduce.
+    if (util_ensure_suggested("storr", err = FALSE)) {
       storr_factory <- function() {
-        storr::storr_rds(db_dir, default_namespace =
-                           namespace)
+        storr::storr_rds(db_dir,
+          default_namespace =
+            namespace
+        )
       }
       my_storr_object <- storr_factory()
       attr(my_storr_object, "storr_factory") <- storr_factory
@@ -141,4 +148,3 @@ prep_create_storr_factory <- function(db_dir = tempfile(),
     my_storr_object
   }
 }
-

@@ -7,10 +7,10 @@
 #' @return [data.frame] but transposed
 #'
 #' @noRd
-util_table_rotator <- function(tb) {  #TODO: should take care of the description attribute
+util_table_rotator <- function(tb) {
   util_expect_data_frame(tb)
   if (nrow(tb) == 1) {
-    is_html_escaped <- attr(tb, "is_html_escaped")
+    is_html_escaped <- util_attr(tb, "is_html_escaped", exact = TRUE)
     tb[] <- lapply(tb, FUN = as.character)
     util_attach_attr(data.frame(
       check.names = FALSE,

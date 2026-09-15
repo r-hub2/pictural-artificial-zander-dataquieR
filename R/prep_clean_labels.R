@@ -31,15 +31,10 @@
 #'                               table to process on. If missing, `label_col`
 #'                               must be a character vector with values to
 #'                               adjust.
-#' @param meta_data [data.frame] old name for `item_level`
+#' @inheritParams .template_function_indicator
 #' @param no_dups   [logical] disallow duplicates in input or output vectors of
 #'                            the function, then, prep_clean_labels would call
 #'                            `stop()` on duplicated labels.
-#' @param meta_data_v2 [character] path to workbook like metadata file, see
-#'                                 [`prep_load_workbook_like_file`] for details.
-#'                                 **ALL LOADED DATAFRAMES WILL BE PURGED**,
-#'                                 using [`prep_purge_data_frame_cache`],
-#'                                 if you specify `meta_data_v2`.
 #'
 #' @return a data.frame with:
 #'  - if `meta_data` is set, a list with:
@@ -66,8 +61,8 @@
 #' print(meta_data1)
 #' }
 prep_clean_labels <- function(label_col, item_level = "item_level",
-                              no_dups = FALSE, meta_data = item_level,
-                              meta_data_v2) {
+  no_dups = FALSE, meta_data = item_level,
+  meta_data_v2) {
   util_maybe_load_meta_data_v2()
   if (missing(label_col)) {
     util_error("Need at least on paramter")
@@ -82,8 +77,8 @@ prep_clean_labels <- function(label_col, item_level = "item_level",
     util_expect_data_frame(item_level)
   }
   util_stop_if_not((is.character(label_col) && missing(meta_data) &&
-                      missing(item_level)) ||
-              (is.data.frame(meta_data) || is.data.frame(item_level)))
+        missing(item_level)) ||
+      (is.data.frame(meta_data) || is.data.frame(item_level)))
   if (!missing(meta_data)) {
     util_expect_data_frame(meta_data, c(label_col))
     orig_col <- meta_data[[label_col]]
@@ -92,23 +87,30 @@ prep_clean_labels <- function(label_col, item_level = "item_level",
   }
   if (no_dups && any(duplicated(orig_col))) {
     util_error("Have duplicates in desired variable labels",
-               applicability_problem = TRUE)
+      applicability_problem = TRUE
+    )
   }
   adjusted_col <- gsub("[^a-zA-Z0-9_]+", "_", orig_col)
   adjusted_col <- gsub("^[^a-zA-Z]+", "", adjusted_col)
   if (no_dups && any(duplicated(adjusted_col))) {
-    util_error(c(
-      "Have duplicates in desired variable labels after",
-      "adjusting them to be valid variable names"),
-      applicability_problem = TRUE)
+    util_error(
+      c(
+        "Have duplicates in desired variable labels after",
+        "adjusting them to be valid variable names"
+      ),
+      applicability_problem = TRUE
+    )
   }
   if (any(na.omit(orig_col != adjusted_col))) {
     if (!missing(meta_data)) {
       util_message("Adjusted labels in %s to be valid variable names.",
-                   dQuote(label_col), applicability_problem = TRUE)
+        dQuote(label_col),
+        applicability_problem = TRUE
+      )
     } else {
       util_message("Adjusted labels to be valid variable names.",
-                   applicability_problem = TRUE)
+        applicability_problem = TRUE
+      )
     }
   }
   if (!missing(meta_data)) {

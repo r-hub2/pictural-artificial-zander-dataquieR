@@ -29,13 +29,8 @@
 #' @concept data_management
 #' @noRd
 util_assign_levlabs <- function(variable, string_of_levlabs, splitchar,
-                                assignchar, ordered = TRUE, variable_name = "",
-                                warn_if_inadmissible = TRUE) {
-  # FIXME: deprecate
-  # lifecycle::deprecate_soft("2.5.0",
-  #                           what = "util_assign_levlabs()",
-  #                           with = "prep_prepare_dataframes()")
-  # TODO: handle VALUE_LABELS w/o codes, e.g. male | female
+  assignchar, ordered = TRUE, variable_name = "",
+  warn_if_inadmissible = TRUE) {
   util_expect_scalar(variable_name, check_type = is.character)
   if (!util_empty(variable_name)) {
     variable_name <- sprintf(" for variable %s", dQuote(variable_name))
@@ -45,14 +40,11 @@ util_assign_levlabs <- function(variable, string_of_levlabs, splitchar,
   util_expect_scalar(assignchar, check_type = is.character)
   util_expect_scalar(ordered, check_type = is.logical)
   util_expect_scalar(variable, # not nec. numeric
-                     allow_more_than_one = TRUE,
-                     allow_null = TRUE,
-                     allow_na = TRUE)
+    allow_more_than_one = TRUE,
+    allow_null = TRUE,
+    allow_na = TRUE
+  )
 
-  #TODO: util_deparse_assignments
-  #TODO: rewrite, user should not need ot lookup metadata, this could be done here
-  #TODO: make available as a prep funciton
-  # split one string into multiple
   levlab_list <- strsplit(string_of_levlabs, split = splitchar, fixed = TRUE)
   # remove lreading/trailing blanks
   levlab_list <- trimws(unlist(levlab_list), which = "both")
@@ -60,12 +52,14 @@ util_assign_levlabs <- function(variable, string_of_levlabs, splitchar,
   levlab_list <- levlab_list[!util_empty(levlab_list)]
 
   # get levels
-  .levs <- unlist(lapply(levlab_list, function(x)
-    unlist(strsplit(x, "=", fixed = TRUE))[1]))
+  .levs <- unlist(lapply(levlab_list, function(x) {
+    unlist(strsplit(x, "=", fixed = TRUE))[1]
+  }))
   .levs <- trimws(.levs, which = "both")
   # get labels
-  labs <- unlist(lapply(levlab_list, function(x)
-    unlist(strsplit(x, "=", fixed = TRUE))[2]))
+  labs <- unlist(lapply(levlab_list, function(x) {
+    unlist(strsplit(x, "=", fixed = TRUE))[2]
+  }))
   labs <- trimws(labs, which = "both")
 
   # levels to numeric if applicable
@@ -79,19 +73,25 @@ util_assign_levlabs <- function(variable, string_of_levlabs, splitchar,
   if (length(levs) != length(labs)) {
     # Dead code?
     util_warning("Number of levels does not match number of labels%s.", # nocov
-                 variable_name, applicability_problem = TRUE) # nocov
+      variable_name,
+      applicability_problem = TRUE
+    ) # nocov
   }
 
   if (warn_if_inadmissible && length(levs) <
       length(unique(variable[!(is.na(variable))]))) {
     util_warning(
       "Number of levels in variable greater than in character string%s.",
-      variable_name, applicability_problem = TRUE)
+      variable_name,
+      applicability_problem = TRUE
+    )
   }
 
   if (warn_if_inadmissible && any(is.na(labs))) {
     util_warning("No labels assigned for some levels, use levels as labels%s",
-                 variable_name, applicability_problem = TRUE)
+      variable_name,
+      applicability_problem = TRUE
+    )
     labs[is.na(labs)] <- levs[is.na(labs)]
   }
 
@@ -101,16 +101,20 @@ util_assign_levlabs <- function(variable, string_of_levlabs, splitchar,
     #                                     length(
     #                                       unique(
     #                                         variable[!(is.na(variable))])))) {
-    if (warn_if_inadmissible & !all(variable %in% c(NA, levs))) {
+    if (warn_if_inadmissible && !all(variable %in% c(NA, levs))) {
       util_warning(
         c("Inadmissible categorical values found, use levels as labels%s"),
-                   variable_name, applicability_problem = TRUE)
+        variable_name,
+        applicability_problem = TRUE
+      )
       inadm <- unique(variable[!(variable %in% c(NA, levs))])
       levs <- c(levs, inadm)
       labs <- c(labs, inadm)
     }
-    variable <- factor(variable, levels = levs,
-                       labels = labs, ordered = ordered)
+    variable <- factor(variable,
+      levels = levs,
+      labels = labs, ordered = ordered
+    )
   }
 
   return(variable)

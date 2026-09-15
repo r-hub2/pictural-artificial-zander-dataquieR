@@ -1,10 +1,7 @@
+# nolint start: line_length_linter.
 #' Utility function to create a margins plot from linear regression models
 #'
-#' @param resp_vars  [variable] the name of the measurement variable
-#' @param group_vars [variable] the name of the observer, device or
-#'                              reader variable
-#' @param co_vars [variable list] a vector of covariables, e.g. age and sex for
-#'                              adjustment
+#' @inheritParams .template_function_indicator
 #' @param threshold_type [enum] empirical | user | none. See `acc_margins`.
 #' @param threshold_value [numeric] see `acc_margins`
 #' @param min_obs_in_subgroup [integer] from=0. This optional argument specifies
@@ -15,8 +12,6 @@
 #'                       replacing missing value codes by `NA`, excluding
 #'                       inadmissible values and transforming categorical
 #'                       variables to factors.
-#' @param label_col [variable attribute] the name of the column in the metadata
-#'                       with labels of variables
 #' @param levels [levels()] of the original ordinal variable, if applicable.
 #'                          Used for axis tick labels.
 #' @param adjusted_hint [character] hint, if adjusted for `co_vars`
@@ -37,19 +32,24 @@
 #' @import patchwork
 #'
 #' @noRd
+# nolint end
 util_margins_lm <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL,
-                            threshold_type = NULL, threshold_value,
-                            min_obs_in_subgroup = 5, ds1, label_col,
-                            levels = NULL,
-                            adjusted_hint = "",
-                            title = "",
-                            n_violin_max = getOption("dataquieR.max_group_var_levels_with_violins", dataquieR.max_group_var_levels_with_violins_default),
-                            sort_group_var_levels =
-                              getOption("dataquieR.acc_margins_sort",
-                                        dataquieR.acc_margins_sort_default),
-                            include_numbers_in_figures =
-                              getOption("dataquieR.acc_margins_num",
-                                        dataquieR.acc_margins_num_default)) {
+  threshold_type = NULL, threshold_value,
+  min_obs_in_subgroup = 5, ds1, label_col,
+  levels = NULL,
+  adjusted_hint = "",
+  title = "",
+  n_violin_max = getOption("dataquieR.max_group_var_levels_with_violins", dataquieR.max_group_var_levels_with_violins_default), # nolint: line_length_linter.
+  sort_group_var_levels =
+    getOption(
+      "dataquieR.acc_margins_sort",
+      dataquieR.acc_margins_sort_default
+    ),
+  include_numbers_in_figures =
+    getOption(
+      "dataquieR.acc_margins_num",
+      dataquieR.acc_margins_num_default
+    )) {
   # preps and checks -----------------------------------------------------------
   # to avoid "no visible binding for global variable ‘sample_size’"
   sample_size <- NULL
@@ -57,12 +57,13 @@ util_margins_lm <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL,
   var_prop <- util_dist_selection(ds1[, resp_vars, drop = FALSE])
   if (var_prop$NDistinct < 2) {
     util_error("The response variable is constant (after data preparation).",
-               applicability_problem = TRUE,
-               intrinsic_applicability_problem = TRUE)
+      applicability_problem = TRUE,
+      intrinsic_applicability_problem = TRUE
+    )
   }
   # ensure that there are enough observations for the model
   countdf <- util_table_of_vct(ds1[[group_vars]])
-  if (any(countdf[, 2] < min_obs_in_subgroup)) {
+  if (any(countdf[, 2, drop = TRUE] < min_obs_in_subgroup)) {
     util_error("Not enough observations per group (after data preparation).")
   }
 
@@ -76,16 +77,16 @@ util_margins_lm <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL,
   # if no co_vars are defined for adjustment only the intercept is modelled
   if (length(co_vars) == 0) {
     co_vars <- "1"
-    co_vars_bQ <- co_vars
+    co_vars_bq <- co_vars
   } else {
-    co_vars_bQ <- util_bQuote(co_vars)
+    co_vars_bq <- util_bQuote(co_vars)
   }
 
   # build model formula
   fmla <- as.formula(paste0(
     paste0(util_bQuote(resp_vars), "~"),
     paste0(
-      paste0(co_vars_bQ, collapse = " + "),
+      paste0(co_vars_bq, collapse = " + "),
       " + ",
       util_bQuote(group_vars)
     )
@@ -93,34 +94,43 @@ util_margins_lm <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL,
 
   model <- lm(fmla, data = ds1)
   res_df <- data.frame(emmeans::emmeans(model, group_vars, type = "response"),
-                       check.names = FALSE)
+    check.names = FALSE
+  )
 
   # adjust for covariates, if needed
   ds1$resp_var_adj <-
     # estimated mean for each level of the grouping variable
-    res_df$emmean[match(ds1[[group_vars]], res_df[, group_vars])] +
+    res_df$emmean[match(ds1[[group_vars]], res_df[, group_vars, drop = TRUE])] +
     # residuals: original value of the response variable - fitted value
     model$residuals
 
   summary_ds <- as.data.frame(
     dplyr::summarize(
-      dplyr::group_by_at(ds1[, c(resp_vars, group_vars), drop = FALSE],
-                         unname(group_vars)),
-      sample_size = dplyr::n()))
+      dplyr::group_by_at(
+        ds1[, c(resp_vars, group_vars), drop = FALSE],
+        unname(group_vars)
+      ),
+      sample_size = dplyr::n()
+    )
+  )
 
   res_df <- merge(res_df, summary_ds, by = group_vars, all.x = TRUE)
-  res_df <- dplyr::rename(res_df, c("margins" = "emmean", "LCL" = "lower.CL",
-                                    "UCL" = "upper.CL"))
+  res_df <- dplyr::rename(res_df, c(
+    "margins" = "emmean", "LCL" = "lower.CL",
+    "UCL" = "upper.CL"
+  ))
 
   # adjusted overall mean
   omv <- data.frame(emmeans::emmeans(model, "1", type = "response"))
-  omv <- dplyr::rename(omv, c("margins" = "emmean", "LCL" = "lower.CL",
-                                  "UCL" = "upper.CL"))
-  res_df$overall <- omv$margins # TODO: never used?
+  omv <- dplyr::rename(omv, c(
+    "margins" = "emmean", "LCL" = "lower.CL",
+    "UCL" = "upper.CL"
+  ))
+  res_df$overall <- omv$margins
 
   # thresholds -----------------------------------------------------------------
   if (threshold_type %in% c("empirical", "none")) {
-    th <- sd(ds1[["resp_var_adj"]])  # TODO: here we use an empirical estimate,
+    th <- sd(ds1[["resp_var_adj"]])
     # but in other margin functions we use estimates based on properties of the
     # assumed distribution
     parn <- c(
@@ -134,7 +144,7 @@ util_margins_lm <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL,
 
     res_df$threshold <- threshold_value
     res_df$GRADING <- ifelse(res_df$margins < pars[1] |
-                               res_df$margins > pars[3], 1, 0)
+        res_df$margins > pars[3], 1, 0)
   } else if (threshold_type == "user") {
     th <- threshold_value
     parn <- c("", paste0("Mean=", threshold_value, sep = ""), "")
@@ -161,9 +171,12 @@ util_margins_lm <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL,
     tbl_gr <- util_table_of_vct(ds1[[group_vars]]) %>%
       dplyr::arrange(dplyr::desc(.data$Freq))
     ds1[[group_vars]] <- factor(ds1[[group_vars]],
-                                levels = as.character(tbl_gr$Var1))
-    res_df <- res_df[match(levels(ds1[[group_vars]]),
-                           as.character(res_df[, group_vars])), ]
+      levels = as.character(tbl_gr$Var1)
+    )
+    res_df <- res_df[match(
+      levels(ds1[[group_vars]]),
+      as.character(res_df[, group_vars, drop = TRUE])
+    ), , drop = FALSE]
   }
 
   # Plot 1: hybrid density/boxplot graph
@@ -172,126 +185,173 @@ util_margins_lm <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL,
     util_error("No data left.")
   }
   p1 <-
-    util_create_lean_ggplot(ggplot(data = .ds00,
-                                   aes(x = .data[[group_vars]],
-                                       y = .data[["resp_var_adj"]])),
-                            .ds00 = .ds00,
-                            group_vars = group_vars)
+    util_create_lean_ggplot(
+      ggplot(
+        data = .ds00,
+        aes(
+          x = .data[[group_vars]],
+          y = .data[["resp_var_adj"]]
+        )
+      ),
+      .ds00 = .ds00,
+      group_vars = group_vars
+    )
   if (show_violins) {
-    p1 <- util_create_lean_ggplot(p1 +
-                                    geom_violin(alpha = 0.9,
-                                                fill = "gray99") +
-                                    ggplot2::stat_ydensity( # FIXME: ggplot2 4.0.0 now draws actual data quantiles (not “density-inferred” ones), so the lines may shift very slightly compared to pre-4.0.0 outputs, but the intent (e.g., median at 0.5) is the same. ggplot2.tidyverse.org   -- do we need to change some documentation?
-                                      geom = "violin",
-                                      alpha = 0.9,
-                                      fill  = "gray99",
-                                      quantiles = 0.5
-                                    ),
-                                  p1 = p1)
+    p1 <- util_create_lean_ggplot(
+      p1 +
+        geom_violin(
+          alpha = 0.9,
+          fill = "gray99"
+        ) +
+        ggplot2::stat_ydensity(
+          geom = "violin",
+          alpha = 0.9,
+          fill = "gray99",
+          quantiles = 0.5
+        ),
+      p1 = p1
+    )
   }
-  p1 <- util_create_lean_ggplot(p1 +
-                                  geom_boxplot(width = 0.1,
-                                               fill = "white",
-                                               color = "gray",
-                                               alpha = 0.5) +
-                                  util_geom_pointrange_robust(
-                                    data = res_df, aes(
-                                      x = factor(.data[[group_vars]]),
-                                      y = margins,
-                                      ymin = LCL,
-                                      ymax = UCL,
-                                      color = as.factor(GRADING)#, n = sample_size
-                                    ),
-                                    shape = 18,
-                                    linewidth = 1,
-                                    inherit.aes = FALSE,
-                                    size = .5) +
-                                  theme_minimal() +
-                                  labs(x = "", y = "") +
-                                  theme(
-                                    legend.position = "none",
-                                    legend.title = element_blank(),
-                                    text = element_text(size = 16),
-                                    axis.text.x = element_text(angle = 90,
-                                                               vjust = 0.5,
-                                                               hjust = 1)
-                                  ) +
-                                  scale_colour_manual(values = warn_code),
-                                p1 = p1,
-                                res_df = res_df,
-                                group_vars = group_vars,
-                                warn_code = warn_code)
+  p1 <- util_create_lean_ggplot(
+    p1 +
+      geom_boxplot(
+        width = 0.1,
+        fill = "white",
+        color = "gray",
+        alpha = 0.5
+      ) +
+      util_geom_pointrange_robust(
+        data = res_df, aes(
+          x = factor(.data[[group_vars]]),
+          y = margins,
+          ymin = LCL,
+          ymax = UCL,
+          color = as.factor(GRADING)
+        ),
+        shape = 18,
+        linewidth = 1,
+        inherit.aes = FALSE,
+        size = .5
+      ) +
+      theme_minimal() +
+      labs(x = "", y = "") +
+      theme(
+        legend.position = "none",
+        legend.title = element_blank(),
+        text = element_text(size = 16),
+        axis.text.x = element_text(
+          angle = 90,
+          vjust = 0.5,
+          hjust = 1
+        )
+      ) +
+      scale_colour_manual(values = warn_code),
+    p1 = p1,
+    res_df = res_df,
+    group_vars = group_vars,
+    warn_code = warn_code
+  )
 
   y_lims <- range(c(.ds00[["resp_var_adj"]], pars, pars + offs),
-                  finite = TRUE)
+    finite = TRUE
+  )
 
   p1 <- util_create_lean_ggplot(
     p1 +
-      ggplot2::coord_cartesian(ylim = y_lims,
-                                                            clip = "off"),
+      ggplot2::coord_cartesian(
+        ylim = y_lims,
+        clip = "off"
+      ),
     p1 = p1,
-    y_lims = y_lims)
+    y_lims = y_lims
+  )
 
   if (include_numbers_in_figures) {
-    p1 <- util_create_lean_ggplot(p1 +
-                                    geom_text(data = summary_ds,
-                                              aes(x = .data[[group_vars]],
-                                                  y = Inf,
-                                                  label = sample_size),
-                                              inherit.aes = FALSE,
-                                              hjust = 0.5,
-                                              vjust = -0.2,
-                                              angle = 90) +
-                                    annotate("text",
-                                             x = 0.5,
-                                             y = Inf,
-                                             label = "N",
-                                             vjust = -0.2) +
-                                    theme(plot.margin = ggplot2::unit(c(8, 0, 2, 0),
-                                                                      "mm")),
-                                  p1 = p1,
-                                  summary_ds = summary_ds,
-                                  group_vars = group_vars,
-                                  y_lims = y_lims
+    p1 <- util_create_lean_ggplot(
+      p1 +
+        geom_text(
+          data = summary_ds,
+          aes(
+            x = .data[[group_vars]],
+            y = Inf,
+            label = sample_size
+          ),
+          inherit.aes = FALSE,
+          hjust = 0.5,
+          vjust = -0.2,
+          angle = 90
+        ) +
+        annotate("text",
+          x = 0.5,
+          y = Inf,
+          label = "N",
+          vjust = -0.2
+        ) +
+        theme(plot.margin = ggplot2::unit(
+          c(8, 0, 2, 0),
+          "mm"
+        )),
+      p1 = p1,
+      summary_ds = summary_ds,
+      group_vars = group_vars,
+      y_lims = y_lims
     )
   }
 
   if (!is.null(levels)) {
-    try(p1 <-
-          util_create_lean_ggplot(
-            p1 +
-              ggplot2::scale_y_continuous(breaks =
-                                            as.integer(names(levels)),
-                                          labels = levels),
-            p1 = p1,
-            levels = levels),
-        silent = TRUE)
+    try(
+      p1 <-
+        util_create_lean_ggplot(
+          p1 +
+            ggplot2::scale_y_continuous(
+              breaks =
+                as.integer(names(levels)),
+              labels = levels
+            ),
+          p1 = p1,
+          levels = levels
+        ),
+      silent = TRUE
+    )
   }
 
   if (threshold_type != "none") {
-    p1 <- util_create_lean_ggplot(p1 +
-                                    geom_hline(yintercept = pars[2],
-                                               color = "red") +
-                                    geom_hline(yintercept = pars[-2],
-                                               color = "red",
-                                               linetype = 2),
-                                  p1 = p1,
-                                  pars = pars)
+    p1 <- util_create_lean_ggplot(
+      p1 +
+        geom_hline(
+          yintercept = pars[2],
+          color = "red"
+        ) +
+        geom_hline(
+          yintercept = pars[-2],
+          color = "red",
+          linetype = 2
+        ),
+      p1 = p1,
+      pars = pars
+    )
   } else {
-    p1 <- util_create_lean_ggplot(p1 +
-                                    geom_hline(yintercept = pars[2],
-                                               color = "red"),
-                                  p1 = p1,
-                                  pars = pars)
+    p1 <- util_create_lean_ggplot(
+      p1 +
+        geom_hline(
+          yintercept = pars[2],
+          color = "red"
+        ),
+      p1 = p1,
+      pars = pars
+    )
   }
 
   # Plot 2: overall distributional plot flipped on y-axis of plot 1
   .ds03 <- ds1[, "resp_var_adj", drop = FALSE]
   get_y_scale <- util_create_lean_ggplot(
-    ggplot(.ds03,
-           aes(x = .data[["resp_var_adj"]])) +
+    ggplot(
+      .ds03,
+      aes(x = .data[["resp_var_adj"]])
+    ) +
       geom_density(alpha = 0.35),
-    .ds03 = .ds03)
+    .ds03 = .ds03
+  )
 
   build <- ggplot2::ggplot_build(get_y_scale)
   data1 <- util_gg_get(build, "data")[[1]]
@@ -299,60 +359,77 @@ util_margins_lm <- function(resp_vars = NULL, group_vars = NULL, co_vars = NULL,
 
   aty <- mean(range(yvals))
 
-  p2 <- util_create_lean_ggplot(ggplot(.ds03,
-                                       aes(.data[["resp_var_adj"]])) +
-                                  geom_density(alpha = 0.35) +
-                                  coord_flip() + # util_lazy_add_coord(p, fli)
-                                  theme_minimal() +
-                                  labs(x = NULL, y = NULL) +
-                                  ggplot2::xlim(y_lims) +
-                                  theme(axis.text.y = element_blank(),
-                                        axis.text.x = element_blank(),
-                                        text = element_text(size = 16)),
-                                .ds03 = .ds03,
-                                y_lims = y_lims)
+  p2 <- util_create_lean_ggplot(
+    ggplot(
+      .ds03,
+      aes(.data[["resp_var_adj"]])
+    ) +
+      geom_density(alpha = 0.35) +
+      coord_flip() +
+      theme_minimal() +
+      labs(x = NULL, y = NULL) +
+      ggplot2::xlim(y_lims) +
+      theme(
+        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        text = element_text(size = 16)
+      ),
+    .ds03 = .ds03,
+    y_lims = y_lims
+  )
 
   if (threshold_type != "none") {
     p2 <- util_create_lean_ggplot(
       p2 +
-        annotate(geom = "text",
-                 x = pars + offs,
-                 y = aty,
-                 label = parn) +
+        annotate(
+          geom = "text",
+          x = pars + offs,
+          y = aty,
+          label = parn
+        ) +
         geom_vline(xintercept = pars[2], color = "red") +
         geom_vline(xintercept = pars[-2], color = "red", linetype = 2),
       p2 = p2,
       pars = pars,
       offs = offs,
       aty = aty,
-      parn = parn)
+      parn = parn
+    )
   } else {
     p2 <- util_create_lean_ggplot(
       p2 +
-        annotate(geom = "text",
-                 x = pars + offs,
-                 y = aty,
-                 label = c("", parn[2], "")) +
+        annotate(
+          geom = "text",
+          x = pars + offs,
+          y = aty,
+          label = c("", parn[2], "")
+        ) +
         geom_vline(xintercept = pars[2], color = "red"),
       p2 = p2,
       pars = pars,
       offs = offs,
       aty = aty,
-      parn = parn)
+      parn = parn
+    )
   }
   # combine plots and add the title
-  res_plot <- # TODO: For all patchwork-calls, add information to reproduce the layout in plot.ly
+  res_plot <-
     util_create_lean_ggplot(
       p1 +
         p2 +
-        plot_layout(nrow = 1,
-                    widths = c(5, 1)) +
-        plot_annotation(title = title,
-                        subtitle = adjusted_hint),
+        plot_layout(
+          nrow = 1,
+          widths = c(5, 1)
+        ) +
+        plot_annotation(
+          title = title,
+          subtitle = adjusted_hint
+        ),
       p1 = p1,
       p2 = p2,
       title = title,
-      adjusted_hint = adjusted_hint)
+      adjusted_hint = adjusted_hint
+    )
 
   # output ---------------------------------------------------------------------
   return(list("plot_data" = res_df, "plot" = res_plot))

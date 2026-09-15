@@ -30,10 +30,9 @@ util_dist_selection <- function(study_data, val_lab = lifecycle::deprecated()) {
     # Signal the deprecation to the user
     lifecycle::deprecate_warn(
       "2.5.0",
-      "dataquieR::util_dist_selection(val_lab = )")
+      "dataquieR::util_dist_selection(val_lab = )"
+    )
   }
-  # TODO EK: Is this function maybe deprecated?
-  # TODO: discuss function name (does not select a distance), could be named 'util_vars_properties' instead
   .x <- as.data.frame(study_data)
   .r <- data.frame(
     Variables   = colnames(.x),
@@ -42,52 +41,73 @@ util_dist_selection <- function(study_data, val_lab = lifecycle::deprecated()) {
     NCategory   = c(rep(NA, length(colnames(.x)))),
     AnyNegative = c(rep(NA, length(colnames(.x)))),
     NDistinct   = c(rep(NA, length(colnames(.x)))),
-    PropZeroes  = c(rep(NA, length(colnames(.x))))#,
-    # HasValueLabels = c(rep(NA, length(colnames(.x))))
+    PropZeroes  = c(rep(NA, length(colnames(.x))))
+    # Historical HasValueLabels column removed here.
   )
 
   # convert variables coded as factors to integers
   .x[, vapply(FUN.VALUE = logical(1), .x, is.factor)] <-
-    vapply(FUN.VALUE = integer(nrow(.x)),
-           .x[, vapply(FUN.VALUE = logical(1), .x, is.factor), drop = FALSE],
-           as.integer)
+    vapply(
+      FUN.VALUE = integer(nrow(.x)),
+      .x[, vapply(FUN.VALUE = logical(1), .x, is.factor), drop = FALSE],
+      as.integer
+    )
 
   # identify integer values (includes both positive and negative values)
-  .r$IsInteger <- vapply(FUN.VALUE = logical(1), .x,
-                         function(.y)
-                           all(util_is_integer(.y), na.rm = TRUE))
+  .r$IsInteger <- vapply(
+    FUN.VALUE = logical(1), .x,
+    function(.y) {
+      all(util_is_integer(.y), na.rm = TRUE)
+    }
+  )
 
   # identify negative values
-  .r$AnyNegative <- vapply(FUN.VALUE = logical(1), .x,
-                           function(.y)
-                             any(.y < 0, na.rm = TRUE))
+  .r$AnyNegative <- vapply(
+    FUN.VALUE = logical(1), .x,
+    function(.y) {
+      any(.y < 0, na.rm = TRUE)
+    }
+  )
 
   # count the number of distinct values, excluding `NA`s and empty fields
-  .r$NDistinct <- vapply(FUN.VALUE = numeric(1), .x,
-                         function(.y)
-                           length(unique(.y[which(!util_empty(.y))])))
+  .r$NDistinct <- vapply(
+    FUN.VALUE = numeric(1), .x,
+    function(.y) {
+      length(unique(.y[which(!util_empty(.y))]))
+    }
+  )
 
   # calculate the proportion of zeroes
-  .r$PropZeroes <- vapply(FUN.VALUE = numeric(1), .x,
-                          function(.y)
-                            length(which(.y == 0)) /
-                            length(.y[which(!util_empty(.y))]))
+  .r$PropZeroes <- vapply(
+    FUN.VALUE = numeric(1), .x,
+    function(.y) {
+      length(which(.y == 0)) /
+        length(.y[which(!util_empty(.y))])
+    }
+  )
 
-  is_char <- vapply(FUN.VALUE = logical(1), .x,
-                    function(.y)
-                      is.character(.y))
+  is_char <- vapply(
+    FUN.VALUE = logical(1), .x,
+    function(.y) {
+      is.character(.y)
+    }
+  )
   # number of categories (can be coded as integer or as string)
-  # ind_get_cat <- which(.r$IsInteger | is_char | .r$HasValueLabels)
+  # Historical HasValueLabels category heuristic removed here.
   ind_get_cat <- which(.r$IsInteger | is_char)
   .r$IsMultCat[ind_get_cat] <- FALSE
   if (length(ind_get_cat) > 0) {
     .r$NCategory[ind_get_cat] <-
-      vapply(FUN.VALUE = numeric(1), .x[, ind_get_cat, drop = FALSE],
-             function(.y)
-               length(unique(.y[which(!util_empty(.y))])))
+      vapply(
+        FUN.VALUE = numeric(1), .x[, ind_get_cat, drop = FALSE],
+        function(.y) {
+          length(unique(.y[which(!util_empty(.y))]))
+        }
+      )
     # more than two categories (can be coded as integer or as string)
     .r$IsMultCat[ind_get_cat] <- ifelse(.r$NCategory[ind_get_cat] > 2,
-                                        TRUE, FALSE)
+      TRUE, FALSE
+    )
   }
 
   ### Output

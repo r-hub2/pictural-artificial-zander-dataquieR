@@ -28,8 +28,8 @@ object derived from \code{x}}
 \item{folder_of_report}{a named vector with the location of variable and
 \code{call_names}}
 
-\item{vars_to_include}{\code{"study"}, \code{"ssi"} or \code{c("study", "ssi")}. variables
-to include}
+\item{vars_to_include}{\code{"study"}, \code{"ssi"}, \code{"variable_group"}, or a
+combination of these scopes.}
 }
 \value{
 invisible html object

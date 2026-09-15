@@ -6,7 +6,7 @@
 #' @return the escaped label
 #' @export
 #'
-prep_link_escape <- function(s, html = FALSE) { # TODO: Maybe use URLencode(), but take care: also file names are entered, here
+prep_link_escape <- function(s, html = FALSE) {
   r <- gsub("*", "X", s, fixed = TRUE)
   r <- gsub("\u00b2", "", r, fixed = TRUE)
   r <- gsub("\u00b3", "", r, fixed = TRUE)
@@ -35,6 +35,6 @@ prep_link_escape <- function(s, html = FALSE) { # TODO: Maybe use URLencode(), b
   r <- gsub(")", "", r, fixed = TRUE)
   r <- gsub("(", "", r, fixed = TRUE)
   r <- gsub("|", "\uFF5C", r, fixed = TRUE)
-  # r <- gsub("[\"/ <>&;°@µ~]", "", r, perl = TRUE)
+  # Historical combined special-character regex cleanup removed here.
   gsub("\\s+", "", r, perl = TRUE)
 }

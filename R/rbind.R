@@ -15,8 +15,10 @@ rbind.ReportSummaryTable <- function(...) {
   if (!all(vapply(a, is.data.frame, FUN.VALUE = logical(1)))) {
     util_error("Can only bind ReportSummaryTables")
   }
-  if (!all(vapply(a, inherits, what = "ReportSummaryTable",
-                  FUN.VALUE = logical(1)))) {
+  if (!all(vapply(a, inherits,
+        what = "ReportSummaryTable",
+        FUN.VALUE = logical(1)
+      ))) {
     util_error("Can only bind ReportSummaryTables")
   }
   a <- a[!!vapply(a, nrow, FUN.VALUE = integer(1))]
@@ -29,12 +31,11 @@ rbind.ReportSummaryTable <- function(...) {
         stringsAsFactors = FALSE,
         factor.exclude = TRUE
       )
-      class(x) <- union("ReportSummaryTable", class(x))
-      return(x)
+      return(util_new_report_summary_table(x))
     } else if (length(a) == 1) {
       x <- a[[1]]
-      y <- data.frame(Variables = character(0), N = character(0))
-      class(y) <- union("ReportSummaryTable", class(y))
+      y <- data.frame(Variables = character(0), N = integer(0))
+      y <- util_new_report_summary_table(y)
     } else if (length(a) == 2) {
       x <- a[[1]]
       y <- a[[2]]
@@ -52,47 +53,67 @@ rbind.ReportSummaryTable <- function(...) {
     x[setdiff(cols, colnames(x))] <- numeric(nrow(x))
     y[setdiff(cols, colnames(y))] <- numeric(nrow(y))
     r <- rbind.data.frame(x[, cols, drop = FALSE], y[, cols, drop = FALSE],
-                          deparse.level = 1,
-                          make.row.names = TRUE,
-                          stringsAsFactors = FALSE,
-                          factor.exclude = TRUE
+      deparse.level = 1,
+      make.row.names = TRUE,
+      stringsAsFactors = FALSE,
+      factor.exclude = TRUE
     )
-    class(r) <- union("ReportSummaryTable", class(r))
-    attr(r, "higher_means") <- attr(x, "higher_means")
-    attr(r, "flip_mode") <- attr(x, "flip_mode")
-    attr(r, "continuous") <- attr(x, "continuous")
-    attr(r, "colscale") <- attr(x, "colscale")
-    attr(r, "colcode") <- attr(x, "colcode")
-    attr(r, "level_names") <- attr(x, "level_names")
-    attr(r, "relative") <- attr(x, "relative")
-    attr(r, "VAR_NAMES") <- c(attr(x, "VAR_NAMES"), attr(y, "VAR_NAMES"))
+    r <- util_new_report_summary_table(r)
+    r <- util_set_report_summary_table_higher_means(
+      r, util_report_summary_table_higher_means(x)
+    )
+    r <- util_set_report_summary_table_flip_mode(
+      r, util_report_summary_table_flip_mode(x)
+    )
+    r <- util_set_report_summary_table_continuous(
+      r, util_report_summary_table_continuous(x)
+    )
+    r <- util_set_report_summary_table_colscale(
+      r, util_report_summary_table_colscale(x)
+    )
+    r <- util_set_report_summary_table_colcode(
+      r, util_report_summary_table_colcode(x)
+    )
+    r <- util_set_report_summary_table_level_names(
+      r, util_report_summary_table_level_names(x)
+    )
+    r <- util_set_report_summary_table_relative(
+      r, util_report_summary_table_relative(x)
+    )
+    r <- util_set_report_summary_table_var_names(
+      r,
+      c(
+        util_report_summary_table_var_names(x),
+        util_report_summary_table_var_names(y)
+      )
+    )
     r
-  } else { # recursive call to bind ReportSummaryTables for more than two variables
+  } else { # recursive call to bind ReportSummaryTables for more than two variables # nolint: line_length_linter.
     x <-
-      do.call(Recall,
-            c(list(
-              a[[1]],
-              a[[2]]
-            ),
-            list(
-              # deparse.level = 1,
-              # make.row.names = TRUE,
-              # stringsAsFactors = FALSE,
-              # factor.exclude = TRUE
-            ))
-    )
+      do.call(
+        Recall,
+        c(
+          list(
+            a[[1]],
+            a[[2]]
+          ),
+          list(
+            # Base rbind options are intentionally not forwarded recursively.
+          )
+        )
+      )
     y <- a[3:length(a)]
-    do.call(Recall,
-            c(list(
-              x
-            ),
-            y,
-            list(
-                # deparse.level = 1,
-                # make.row.names = TRUE,
-                # stringsAsFactors = FALSE,
-                # factor.exclude = TRUE
-              ))
+    do.call(
+      Recall,
+      c(
+        list(
+          x
+        ),
+        y,
+        list(
+          # Base rbind options are intentionally not forwarded recursively.
+        )
+      )
     )
   }
 }

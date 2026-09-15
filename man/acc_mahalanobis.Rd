@@ -30,18 +30,17 @@ attributes of study data}
 
 \item{meta_data}{\link{data.frame} old name for \code{item_level}}
 
-\item{meta_data_cross_item}{\link{data.frame} -- Cross-item level metadata}
+\item{meta_data_cross_item}{\link{data.frame} -- optional: Cross-item level
+metadata}
 
-\item{label_col}{\link{variable attribute} the name of the column in the
-metadata containing the labels of
-the variables}
+\item{label_col}{\link{variable attribute} the name of the column in the metadata
+with labels of variables}
 
-\item{meta_data_v2}{\link{character} path or file name of the workbook like
-metadata file, see
+\item{meta_data_v2}{\link{character} path to workbook like metadata file, see
 \code{\link{prep_load_workbook_like_file}} for details.
 \strong{ALL LOADED DATAFRAMES WILL BE PURGED},
 using \code{\link{prep_purge_data_frame_cache}},
-if you specify \code{meta_data_v2}}
+if you specify \code{meta_data_v2}.}
 
 \item{cross_item_level}{\link{data.frame} alias for \code{meta_data_cross_item}}
 
