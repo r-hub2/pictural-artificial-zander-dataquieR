@@ -249,7 +249,7 @@ execution. `mode = "futures"` is the supported replacement.
   [euCanSHare, grant agreement No. 825903](http://www.eucanshare.eu/) –
   [dataquieR](https://cran.r-project.org/package=dataquieR) refinements
   and implementations in the
-  [Square2](https://pubmed.ncbi.nlm.nih.gov/28423853/) web application.
+  [Square2](https://doi.org/10.3233/978-1-61499-753-5-549) web application.
 
 - [National Research Data Infrastructure for Personal Health
   Data](https://www.nfdi4health.de/): `NFDI 13/1` – extension based on

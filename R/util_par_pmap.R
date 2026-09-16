@@ -18,7 +18,6 @@
 #'                            study- and metadata on a parallel cluster
 #'
 #' @seealso `purrr::pmap`
-#' @seealso [Stack Overflow post](https://stackoverflow.com/a/47575143)
 #'
 #' @author [Aurèle](https://stackoverflow.com/users/6197649)
 #' @author S Struckmann

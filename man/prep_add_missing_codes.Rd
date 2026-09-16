@@ -43,9 +43,8 @@ an expected missing value (\code{JUMP}) or not (\code{MISSING})
 \item \code{CODE_VALUE}: The jump code or missing code
 \item \code{CODE_LABEL}: A label describing the reason for the missing value
 \item \code{RULE}: A rule in \code{REDcap} style (see, e.g.,
-\href{https://help.redcap.ualberta.ca/help-and-faq/project-best-practices/data-quality/example-data-quality-rules}{\code{REDcap} help},
-\href{https://docs.google.com/document/d/1l3nGBgqqPKi5PtMe75g7q0dny8QzGMd_/edit?tab=t.0}{\code{REDcap} how-to}), and
-\href{https://www.iths.org/wp-content/uploads/REDCap-Branching-Logic-2017-202.pdf}{\code{REDcap} branching logic}
+\href{https://help.redcap.ualberta.ca/help-and-faq/project-best-practices/data-quality/example-data-quality-rules}{\code{REDcap} help} and
+\href{https://docs.google.com/document/d/1l3nGBgqqPKi5PtMe75g7q0dny8QzGMd_/edit?tab=t.0}{\code{REDcap} how-to})
 that describes cases for the missing
 \item \code{DATA_PREPARATION}: optional. if available, and \verb{use_value_labels`` is either missing or }NA`, this columns
 controls the rule handling.

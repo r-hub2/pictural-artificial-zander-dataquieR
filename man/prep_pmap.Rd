@@ -30,8 +30,6 @@ parallel version of \code{purrr::pmap}
 }
 \seealso{
 \code{purrr::pmap}
-
-\href{https://stackoverflow.com/a/47575143}{Stack Overflow post}
 }
 \author{
 \href{https://stackoverflow.com/users/6197649}{Aurèle}

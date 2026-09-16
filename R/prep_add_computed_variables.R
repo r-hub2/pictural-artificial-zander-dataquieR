@@ -5,9 +5,8 @@
 #' @param rules [data.frame] with the columns:
 #'   - `VAR_NAMES`: [VAR_NAMES] of the variable to compute
 #'   - `COMPUTATION_RULE`: A rule in `REDcap` style (see, e.g.,
-#'   [`REDcap` help](https://help.redcap.ualberta.ca/help-and-faq/project-best-practices/data-quality/example-data-quality-rules),
-#'   [`REDcap` how-to](https://docs.google.com/document/d/1l3nGBgqqPKi5PtMe75g7q0dny8QzGMd_/edit?tab=t.0)), and
-#'   [`REDcap` branching logic](https://www.iths.org/wp-content/uploads/REDCap-Branching-Logic-2017-202.pdf)
+#'   [`REDcap` help](https://help.redcap.ualberta.ca/help-and-faq/project-best-practices/data-quality/example-data-quality-rules) and
+#'   [`REDcap` how-to](https://docs.google.com/document/d/1l3nGBgqqPKi5PtMe75g7q0dny8QzGMd_/edit?tab=t.0))
 #'   that defines, how to compute the new values
 #' @param use_value_labels [logical] In rules for factors, use the value labels,
 #'                                   not the codes. Defaults to `TRUE`, if any

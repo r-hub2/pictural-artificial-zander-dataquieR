@@ -924,7 +924,6 @@
 #'
 #' [`REDcap` rules 1](https://help.redcap.ualberta.ca/help-and-faq/project-best-practices/data-quality/example-data-quality-rules)
 #' [`REDcap` rules 2](https://docs.google.com/document/d/1l3nGBgqqPKi5PtMe75g7q0dny8QzGMd_/edit?tab=t.0)
-#' [`REDcap` rules 3](https://www.iths.org/wp-content/uploads/REDCap-Branching-Logic-2017-202.pdf)
 #'
 #'
 #' For resolving left-recursive rules,

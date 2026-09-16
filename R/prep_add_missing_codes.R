@@ -11,9 +11,8 @@
 #'   - `CODE_VALUE`: The jump code or missing code
 #'   - `CODE_LABEL`: A label describing the reason for the missing value
 #'   - `RULE`: A rule in `REDcap` style (see, e.g.,
-#'   [`REDcap` help](https://help.redcap.ualberta.ca/help-and-faq/project-best-practices/data-quality/example-data-quality-rules),
-#'   [`REDcap` how-to](https://docs.google.com/document/d/1l3nGBgqqPKi5PtMe75g7q0dny8QzGMd_/edit?tab=t.0)), and
-#'   [`REDcap` branching logic](https://www.iths.org/wp-content/uploads/REDCap-Branching-Logic-2017-202.pdf)
+#'   [`REDcap` help](https://help.redcap.ualberta.ca/help-and-faq/project-best-practices/data-quality/example-data-quality-rules) and
+#'   [`REDcap` how-to](https://docs.google.com/document/d/1l3nGBgqqPKi5PtMe75g7q0dny8QzGMd_/edit?tab=t.0))
 #'   that describes cases for the missing
 #'   - `DATA_PREPARATION`: optional. if available, and `use_value_labels`` is
 #'                                   either missing or `NA`, this columns
