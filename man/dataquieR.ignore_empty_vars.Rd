@@ -55,6 +55,7 @@ Other options:
 \code{\link{dataquieR.guess_character}},
 \code{\link{dataquieR.guess_missing_codes}},
 \code{\link{dataquieR.html_table_backend}},
+\code{\link{dataquieR.json.schema.strict.mode}},
 \code{\link{dataquieR.lang}},
 \code{\link{dataquieR.lazy_plots}},
 \code{\link{dataquieR.lazy_plots_cache}},

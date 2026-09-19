@@ -37,3 +37,34 @@ test_that("util_rbind handles NULL entries and conflicting data types", {
   expect_equal(as.vector(bound$id), c(1, 2))
   expect_true(is.na(attr(bound$id, DATA_TYPE, exact = TRUE)))
 })
+
+test_that("util_rbind aligns translated names across different columns", {
+  skip_on_cran()
+
+  first <- data.frame(id = 1L, left = "first")
+  second <- data.frame(id = 2L, right = "second")
+  util_translated_colnames(first) <- structure(
+    c("Identifier", "Left"),
+    names = c("id", "left"),
+    ns = "dashboard_table",
+    lang = "",
+    class = "dataquieR_translated"
+  )
+  util_translated_colnames(second) <- structure(
+    c("Identifier", "Right"),
+    names = c("id", "right"),
+    ns = "dashboard_table",
+    lang = "",
+    class = "dataquieR_translated"
+  )
+
+  bound <- util_rbind(first, second)
+
+  expect_identical(as.character(colnames(bound)),
+    c("Identifier", "Left", "Right")
+  )
+  expect_identical(util_untranslated_colnames(bound),
+    c("id", "left", "right")
+  )
+  expect_identical(as.vector(bound$Identifier), c(1L, 2L))
+})

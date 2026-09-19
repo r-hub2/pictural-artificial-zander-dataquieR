@@ -123,3 +123,45 @@ test_that("util_handle_complex_data_types keeps compatible count metadata", {
   expect_identical(handled[[HARD_LIMITS]], "[1; 3]")
   expect_identical(handled[[EXTENDED_DATA_TYPE]], "count")
 })
+
+test_that("structured text types become strings with format metadata", {
+  skip_on_cran()
+
+  meta_data <- data.frame(
+    VAR_NAMES = c("json_data", "yaml_data", "xml_data", "plain"),
+    DATA_TYPE = c(" JSON ", "yAmL", "xml", DATA_TYPES$STRING),
+    SCALE_LEVEL = c("nominal", "", NA, "nominal"),
+    HARD_LIMITS = c("[0; 1]", "", NA, NA),
+    stringsAsFactors = FALSE
+  )
+
+  handled <- suppressWarnings(util_handle_complex_data_types(meta_data))
+
+  expect_identical(handled[[DATA_TYPE]], rep(DATA_TYPES$STRING, 4L))
+  expect_identical(handled[[SCALE_LEVEL]][1:3],
+    rep(SCALE_LEVELS$`NA`, 3L))
+  expect_true(all(is.na(handled[[HARD_LIMITS]][1:3])))
+  expect_identical(handled[[EXTENDED_DATA_TYPE]][1:3],
+    c("json", "yaml", "xml"))
+  expect_identical(handled[["STRUCTURED_TEXT_DATA_TYPE"]][1:3],
+    c("json", "yaml", "xml"))
+  expect_identical(handled[[SCALE_LEVEL]][[4]], "nominal")
+})
+
+test_that("structured text conversion does not overwrite existing format", {
+  skip_on_cran()
+
+  meta_data <- data.frame(
+    VAR_NAMES = "json_data",
+    DATA_TYPE = "json",
+    EXTENDED_DATA_TYPE = "custom",
+    STRUCTURED_TEXT_DATA_TYPE = "xml",
+    stringsAsFactors = FALSE
+  )
+
+  handled <- suppressWarnings(util_handle_complex_data_types(meta_data))
+
+  expect_identical(handled[[DATA_TYPE]], DATA_TYPES$STRING)
+  expect_identical(handled[[EXTENDED_DATA_TYPE]], "custom")
+  expect_identical(handled[["STRUCTURED_TEXT_DATA_TYPE"]], "xml")
+})

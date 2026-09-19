@@ -31,18 +31,17 @@ as \code{\link[=character]{character()}}.
 Note, that once loaded to the data frame cache, a file won't be read again,
 except you call \code{\link[=prep_purge_data_frame_cache]{prep_purge_data_frame_cache()}} or
 \code{\link[=prep_remove_from_cache]{prep_remove_from_cache()}}. That is, if you call this function first, and
-\code{\link[=prep_get_data_frame]{prep_get_data_frame()}} later, of if \code{dataquieR} wants to read a file, e.g.,
+\code{\link[=prep_get_data_frame]{prep_get_data_frame()}} later, or if \code{dataquieR} wants to read a file, e.g.,
 for \code{\link[=dq_report2]{dq_report2()}}, the file will come from the cache in the way it was
 initially read in (\code{keep_types} may thus be used inadequately).
 
-By default, this function works not recursively, but you can tweak that by
-passing \code{...}-arguments passed through to the initially running
-\code{\link[=list.files]{list.files()}} function.
+By default, this function does not search nested folders. Pass
+\code{recursive = TRUE} through \code{...} to \code{\link[=list.files]{list.files()}} to include them.
 
-These can thereafter be referred to by their names only. Such files are,
-e.g., spreadsheet-workbooks or \code{RData}-files.
+Loaded files can thereafter be referred to by name only, for example
+spreadsheet workbooks or \code{RData} files.
 
-Note, that this function in contrast to \link{prep_get_data_frame} does neither
+Note, that this function in contrast to \link{prep_get_data_frame} does not
 support selecting specific sheets/columns from a file.
 }
 \seealso{

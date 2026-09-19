@@ -1,3 +1,5 @@
-indicator_metric,indicator_id,assessment_label
-acc_ud_shape,DQ_3_2_1_4,Unexpected distribution (joint shape-or-scale assessment)
-acc_ud_shape,DQ_3_2_1_5,Unexpected distribution (joint shape-or-scale assessment)
+function_name,indicator_metric,indicator_id,assessment_label
+acc_shape_or_scale,acc_ud_shape,DQ_3_2_1_4,Unexpected distribution (joint shape-or-scale assessment)
+acc_shape_or_scale,acc_ud_shape,DQ_3_2_1_5,Unexpected distribution (joint shape-or-scale assessment)
+acc_end_digits,acc_ud_shape,DQ_3_2_1_4,End-digit distribution (joint shape-and-proportion assessment)
+acc_end_digits,acc_ud_shape,DQ_3_2_1_6,End-digit distribution (joint shape-and-proportion assessment)

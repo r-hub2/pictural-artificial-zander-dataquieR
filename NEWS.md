@@ -1,3 +1,14 @@
+# dataquieR 2.8.13
+
+* Started support for structured text data, including syntax checks for JSON,
+  XML, and YAML and schema checks for JSON and XML.
+* The `dq_report_by()` overview now displays effective dimension and
+  indicator-function filters supplied through `...` in its recorded call.
+* Assessment-scope concept coverage now includes published DQ_OBS indicators
+  without a static function-to-entity mapping as reference goals. Additional
+  package-specific indicators remain visible, and the report links to the
+  published DQ_OBS concept for context.
+
 # dataquieR 2.8.11
 
 ## Major new features

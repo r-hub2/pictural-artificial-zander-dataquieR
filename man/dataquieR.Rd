@@ -58,6 +58,7 @@ This package features the following \code{options()}:
 \item \link{dataquieR.guess_missing_codes}
 \item \link{dataquieR.html_table_backend}
 \item \link{dataquieR.ignore_empty_vars}
+\item \link{dataquieR.json.schema.strict.mode}
 \item \link{dataquieR.lang}
 \item \link{dataquieR.lazy_plots}
 \item \link{dataquieR.lazy_plots_cache}
@@ -153,6 +154,7 @@ Other options:
 \code{\link{dataquieR.guess_missing_codes}},
 \code{\link{dataquieR.html_table_backend}},
 \code{\link{dataquieR.ignore_empty_vars}},
+\code{\link{dataquieR.json.schema.strict.mode}},
 \code{\link{dataquieR.lang}},
 \code{\link{dataquieR.lazy_plots}},
 \code{\link{dataquieR.lazy_plots_cache}},
@@ -211,6 +213,7 @@ Other contributors:
   \item German Research Foundation (DFG SCHM 2744/3-1, SCHM 2744/9-1, SCHM 2744/3-4) [funder]
   \item National Research Data Infrastructure for Personal Health Data: (NFDI 13/1) [funder]
   \item European Union’s Horizon 2020 programme (euCanSHare, grant agreement No. 825903) [funder]
+  \item German Federal Ministry of Education and Research (BMBF; NAKO Gesundheitsstudie, grants 01ER1301A and 01ER1801A) [funder]
 }
 
 }

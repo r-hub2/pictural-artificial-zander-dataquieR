@@ -1,0 +1,38 @@
+IndicatorID,public_name
+DQ_1_1_2_1,Unexp. var. count
+DQ_1_1_2_2,Unexp. var. set
+DQ_1_1_2_3,Unexp. rec. count
+DQ_1_1_2_4,Unexp. rec. set
+DQ_1_1_2_5,Duplicates
+DQ_1_1_3_1,Data record mismatch
+DQ_1_1_3_2,Data element mismatch
+DQ_1_2_4_1,Data type mismatch
+DQ_1_2_4_2,Inhomogeneous value formats
+DQ_1_2_4_3,Uncert. misg. status
+DQ_1_2_4_4,Inadm. data format
+DQ_2_1_1_1,Missing values
+DQ_2_1_2_2,Non-resp. rate
+DQ_2_1_2_3,Refusal rate
+DQ_2_1_2_4,Drop-Out rate
+DQ_2_1_2_5,Misg. reason
+DQ_3_1_1_1,Inadm. num. values
+DQ_3_1_1_2,Inadm. time-date values
+DQ_3_1_1_3,Inadmissible categorical values
+DQ_3_1_1_4,Inadmissible standardized vocabulary
+DQ_3_1_1_5,Inad. precision
+DQ_3_1_2_1,Logic. contrad.
+DQ_3_1_2_2,Empir. contrad.
+DQ_3_1_3_6,Uncert. num. values
+DQ_3_1_3_7,Uncert. time-date values
+DQ_3_2_1_1,Univariate outliers
+DQ_3_2_1_2,Multivariate outliers
+DQ_3_2_1_3,Unexp. location
+DQ_3_2_1_4,Unexp. shape
+DQ_3_2_1_5,Unexp. scale
+DQ_3_2_1_6,Unexp. prop.
+DQ_3_2_2_1,Unexp. ascn. strength
+DQ_3_2_2_2,Unexp. ascn. direct.
+DQ_3_2_2_3,Unexp. ascn. form
+DQ_3_2_3_1,Inter-class rel.
+DQ_3_2_3_2,Intra-class rel.
+DQ_3_2_3_3,Disagr. gold st.

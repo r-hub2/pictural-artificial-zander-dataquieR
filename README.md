@@ -20,8 +20,6 @@ state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![`Lifecycle`](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
 [![license](https://img.shields.io/badge/license-BSD_2_clause%20+%20file%20LICENSE-00be00.svg)](https://opensource.org/license/bsd-2-clause)
-[![DOI](https://joss.theoj.org/papers/10.21105/joss.03093/status.svg)](https://doi.org/10.21105/joss.03093)
-[![DOI](https://joss.theoj.org/papers/10.21105/joss.06581/status.svg)](https://doi.org/10.21105/joss.06581)
 
 <!-- badges: end -->
 
@@ -64,15 +62,6 @@ remotes::install_gitlab("libreumg/dataquier")
 
 For examples and additional documentation, please refer to our
 [website](https://dataquality.qihs.uni-greifswald.de).
-
-## Developer workflow
-
-Internal development happens in the upstream
-`libreumg/internal/QualityIndicatorFunctions` project. Use branches
-named `issueXXX_short_description`, for example
-`issue810_selenium_dt_dt2_reports`. The internal project protects the
-`issue*_*` branch pattern; protected runners and protected CI variables
-are only available on correctly named issue branches.
 
 ## dataquieR usage questionnaire
 
@@ -163,8 +152,9 @@ and trusting our files loaded from
   `MPI` via `Rmpi`, …).
 
 If you have already registered a cluster via
-`parallel::setDefaultCluster()`, `dataquieR` reuses it instead of
-spawning a new one and leaves its lifecycle to you.
+`parallel::setDefaultCluster()`, pass `cores = NULL` to reuse it.
+`dataquieR` then leaves its lifecycle to you. An explicit `cores` value
+or cluster takes precedence over the registered default cluster.
 
 ### Local multicore (default)
 
@@ -220,6 +210,12 @@ plan(batchtools_slurm, template = "slurm.tmpl")   # or batchtools_sge / _torque 
 dq_report2(study_data, meta_data, ..., mode = "futures")
 ```
 
+For parallel HTML rendering, the main process and rendering workers need
+a shared, writable file system at the same path. This is usually already
+true for local clusters; on distributed nodes, arrange a shared
+directory (for example via NFS). If the file-system check fails,
+`dataquieR` writes the pages serially instead.
+
 Earlier versions reached the same schedulers through
 `options(parallelMap.mode = "BatchJobs")` (or `"batchtools"`). That
 dispatch path is no longer wired up; the labels are still accepted by
@@ -228,10 +224,10 @@ execution. `mode = "futures"` is the supported replacement.
 
 ## References
 
-- [Software Paper](https://doi.org/10.21105/joss.06581) [![JOSS
-  Article](https://joss.theoj.org/papers/10.21105/joss.06581/status.svg)](https://doi.org/10.21105/joss.06581)
-- [Software Paper](https://doi.org/10.21105/joss.03093) [![JOSS
-  Article](https://joss.theoj.org/papers/10.21105/joss.03093/status.svg)](https://doi.org/10.21105/joss.03093)
+- [Software paper
+  (10.21105/joss.06581)](https://doi.org/10.21105/joss.06581)
+- [Software paper
+  (10.21105/joss.03093)](https://doi.org/10.21105/joss.03093)
 - [Data Quality Concept
   Paper](https://doi.org/10.1186/s12874-021-01252-7)
 - [Data Quality Concept and Software Web
@@ -249,7 +245,8 @@ execution. `mode = "futures"` is the supported replacement.
   [euCanSHare, grant agreement No. 825903](http://www.eucanshare.eu/) –
   [dataquieR](https://cran.r-project.org/package=dataquieR) refinements
   and implementations in the
-  [Square2](https://doi.org/10.3233/978-1-61499-753-5-549) web application.
+  [Square2](https://doi.org/10.3233/978-1-61499-753-5-549) web
+  application.
 
 - [National Research Data Infrastructure for Personal Health
   Data](https://www.nfdi4health.de/): `NFDI 13/1` – extension based on

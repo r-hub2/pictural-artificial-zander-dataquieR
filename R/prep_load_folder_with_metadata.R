@@ -9,18 +9,17 @@
 #' Note, that once loaded to the data frame cache, a file won't be read again,
 #' except you call [prep_purge_data_frame_cache()] or
 #' [prep_remove_from_cache()]. That is, if you call this function first, and
-#' [prep_get_data_frame()] later, of if `dataquieR` wants to read a file, e.g.,
+#' [prep_get_data_frame()] later, or if `dataquieR` wants to read a file, e.g.,
 #' for [dq_report2()], the file will come from the cache in the way it was
 #' initially read in (`keep_types` may thus be used inadequately).
 #'
-#' By default, this function works not recursively, but you can tweak that by
-#' passing `...`-arguments passed through to the initially running
-#' [list.files()] function.
+#' By default, this function does not search nested folders. Pass
+#' `recursive = TRUE` through `...` to [list.files()] to include them.
 #'
-#' These can thereafter be referred to by their names only. Such files are,
-#' e.g., spreadsheet-workbooks or `RData`-files.
+#' Loaded files can thereafter be referred to by name only, for example
+#' spreadsheet workbooks or `RData` files.
 #'
-#' Note, that this function in contrast to [prep_get_data_frame] does neither
+#' Note, that this function in contrast to [prep_get_data_frame] does not
 #' support selecting specific sheets/columns from a file.
 #'
 #' @param folder the folder name to load.
@@ -35,10 +34,12 @@
 #' @seealso [prep_add_data_frames]
 #' @seealso [prep_get_data_frame]
 #' @family data-frame-cache
-prep_load_folder_with_metadata <- function(folder,
+prep_load_folder_with_metadata <- function(
+  folder,
   keep_types = FALSE,
   append = FALSE,
-  ...) {
+  ...
+) {
   util_expect_scalar(append, check_type = is.logical)
   util_expect_scalar(folder, check_type = is.character)
   util_stop_if_not(
@@ -49,96 +50,9 @@ prep_load_folder_with_metadata <- function(folder,
   )
   if (startsWith(folder, "https://") ||
       startsWith(folder, "http://")) {
-    util_ensure_suggested(
-      "rvest",
-      goal =
-        "read data from the internet using prep_load_folder_with_metadata()"
-    )
-    fp <- tempfile()
-    util_stop_if_not(!file.exists(fp))
-    dir.create(fp)
-    withr::defer(try(unlink(fp, force = TRUE, recursive = TRUE, expand = FALSE),
-        silent = TRUE
-      ))
-
-    file_new <- file.path(fp, "index.html")
-    try(utils::download.file(folder,
-        destfile = file_new,
-        quiet = TRUE, mode = "wb"
-      ), silent = TRUE)
-    if (file.exists(file_new)) {
-      fl <- try(rvest::read_html(file_new), silent = TRUE)
-      if (inherits(fl, "try-error")) {
-        util_error(
-          "Could not read index from %s (%s): %s",
-          dQuote(folder),
-          dQuote(file_new),
-          conditionMessage(util_attr(fl, "condition", exact = TRUE))
-        )
-      }
-      links <- rvest::html_nodes(fl, "a")
-      all_refs <- rvest::html_attr(links, "href")
-      all_refs[!startsWith(tolower(all_refs), "http://") &
-          !startsWith(tolower(all_refs), "https://")] <-
-        paste0(
-          folder,
-          "/", all_refs[!startsWith(tolower(all_refs), "http://") &
-              !startsWith(tolower(all_refs), "https://")]
-        )
-      all_refs <- trimws(all_refs)
-      lapply(
-        all_refs,
-        function(ref) {
-          # Historical URLdecode helper variable removed here.
-          rf <- gsub("^.*\\/", "", ref, perl = TRUE)
-          rf <- gsub("\\?.*$", "", rf)
-          rf <- gsub("#.*$", "", rf)
-          # Historical rf_path extraction removed here.
-          ext <- ""
-          ext <- try(util_fetch_ext(ref), silent = TRUE)
-          # do not ignore content-disposition headers sent by the server (if
-          # they propose a file name)
-          if (length(ext) != 1 ||
-              !is.character(ext)) {
-            msg <- "unknown reason"
-            if (inherits(ext, "try-error")) {
-              msg <- conditionMessage(util_attr(ext, "condition", exact = TRUE))
-            } else if (inherits(ext, "condition")) {
-              msg <- conditionMessage(ext)
-            }
-            util_warning(
-              "Could not determine the file type of %s: %s",
-              dQuote(ref),
-              sQuote(msg)
-            )
-            ext <- ""
-          } else {
-            ext_file_name <- util_attr(ext, "file-name", exact = TRUE)
-            if (!is.null(ext_file_name)) {
-              if (length(ext_file_name) == 1 &&
-                  !is.na(ext_file_name)) {
-                rf <- ext_file_name
-              }
-            }
-            ext <- paste0(".", ext)
-          }
-
-          if (!endsWith(rf, ext)) {
-            rf <- paste0(rf, ext)
-          }
-
-          try(
-            utils::download.file(ref,
-              destfile = file.path(fp, rf),
-              quiet = TRUE, mode = "wb"
-            ),
-            silent = TRUE
-          )
-        }
-      )
-      unlink(file_new, force = TRUE)
-      folder <- fp
-    }
+    folder <- util_load_folder_from_url(folder)
+    withr::defer(unlink(folder, recursive = TRUE, force = TRUE,
+        expand = FALSE))
   }
 
   util_stop_if_not(`Folder not found` = dir.exists(folder))

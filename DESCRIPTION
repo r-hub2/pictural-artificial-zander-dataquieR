@@ -1,6 +1,6 @@
 Package: dataquieR
 Title: Data Quality in Epidemiological Research
-Version: 2.8.11
+Version: 2.8.13
 Authors@R: 
     c(person(given = "University Medicine Greifswald",
              role = "cph"),
@@ -39,6 +39,8 @@ Authors@R:
       person(given = "National Research Data Infrastructure for Personal Health Data: (NFDI 13/1)",
              role = "fnd"),
       person(given = "European Union’s Horizon 2020 programme (euCanSHare, grant agreement No. 825903)",
+             role = "fnd"),
+      person(given = "German Federal Ministry of Education and Research (BMBF; NAKO Gesundheitsstudie, grants 01ER1301A and 01ER1801A)",
              role = "fnd"))
 Description: Data quality assessments guided by a
     'data quality framework introduced by Schmidt and colleagues, 2021' 
@@ -65,7 +67,8 @@ Suggests: units, S7 (>= 0.2.1), cowplot, openxlsx2, jsonlite, cli,
         pkgload, Rdpack, callr, colorspace, plotly (>= 4.11.0),
         htmlwidgets, future, processx, R6, shiny, xml2, rvest,
         textutils, dbx, grImport2, rsvg, stringdist, rankICC, ordinal,
-        storr, reticulate, stringi, lobstr, visNetwork
+        storr, reticulate, stringi, lobstr, visNetwork, yaml12,
+        jsonvalidate
 VignetteBuilder: knitr
 Encoding: UTF-8
 KeepSource: FALSE
@@ -85,7 +88,7 @@ Config/testthat/start-first: dq_report_by_sm, dq_report2,
 BuildManual: TRUE
 Config/roxygen2/version: 8.1.0
 NeedsCompilation: no
-Packaged: 2026-09-16 08:44:29 UTC; root
+Packaged: 2026-09-19 11:50:22 UTC; root
 Author: University Medicine Greifswald [cph],
   Elisa Kasbohm [aut] (ORCID: <https://orcid.org/0000-0001-5261-538X>),
   Elena Salogni [aut] (ORCID: <https://orcid.org/0009-0007-3767-7145>),
@@ -100,5 +103,7 @@ Author: University Medicine Greifswald [cph],
   National Research Data Infrastructure for Personal Health Data: (NFDI
     13/1) [fnd],
   European Union’s Horizon 2020 programme (euCanSHare, grant agreement
-    No. 825903) [fnd]
+    No. 825903) [fnd],
+  German Federal Ministry of Education and Research (BMBF; NAKO
+    Gesundheitsstudie, grants 01ER1301A and 01ER1801A) [fnd]
 Maintainer: Stephan Struckmann <stephan.struckmann@uni-greifswald.de>

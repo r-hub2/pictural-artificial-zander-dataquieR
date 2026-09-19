@@ -43,6 +43,221 @@ test_that("prep_add_computed_variables handles empty and simple rules", {
   expect_equal(simple_result$ModifiedStudyData$sum_ab, c(11, 22))
 })
 
+test_that("file-computation ID checks use the mapped ID column", {
+  skip_on_cran()
+  folder <- withr::local_tempdir()
+  writeLines('{"id":"1"}', file.path(folder, "obs-1.json"))
+  writeLines('{"id":"3"}', file.path(folder, "obs-3.json"))
+
+  study_data <- data.frame(id = c("1", "2"))
+  meta_data <- data.frame(VAR_NAMES = c("id", "file"))
+  rules <- data.frame(
+    VAR_NAMES = "file",
+    FILE_PATH = folder,
+    ID_PATH_REGEX = "obs-([0-9]+)[.]json$",
+    ID_ENTITY_PATH = NA_character_,
+    MERGE_ID_VAR = "id"
+  )
+  withr::local_options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "subset_u")
+
+  expect_warning(
+    result <- .util_add_computed_file_paths(
+      study_data, meta_data, VAR_NAMES, rules
+    ),
+    "Some IDs extracted"
+  )
+  expect_true(file.exists(result$ModifiedStudyData$file[[1]]))
+  expect_true(is.na(result$ModifiedStudyData$file[[2]]))
+})
+
+test_that("file computation reports missing files for study-data IDs", {
+  skip_on_cran()
+  folder <- withr::local_tempdir()
+  writeLines('{"id":"1"}', file.path(folder, "obs-1.json"))
+
+  study_data <- data.frame(id = c("1", "2"))
+  meta_data <- data.frame(VAR_NAMES = c("id", "file"))
+  rules <- data.frame(
+    VAR_NAMES = "file",
+    FILE_PATH = folder,
+    ID_PATH_REGEX = "obs-([0-9]+)[.]json$",
+    ID_ENTITY_PATH = NA_character_,
+    MERGE_ID_VAR = "id"
+  )
+  withr::local_options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "subset_m")
+
+  expect_warning(
+    result <- .util_add_computed_file_paths(
+      study_data, meta_data, VAR_NAMES, rules
+    ),
+    "No file in folder"
+  )
+  expect_equal(basename(result$ModifiedStudyData$file[[1]]), "obs-1.json")
+  expect_true(is.na(result$ModifiedStudyData$file[[2]]))
+})
+
+test_that("file computation reports hidden files and unmatched IDs", {
+  skip_on_cran()
+  folder <- withr::local_tempdir()
+  writeLines('{"id":"1"}', file.path(folder, ".obs-1.json"))
+  writeLines('{"id":"3"}', file.path(folder, "obs-3.json"))
+
+  study_data <- data.frame(id = c("1", "2"))
+  meta_data <- data.frame(VAR_NAMES = c("id", "file"))
+  rules <- data.frame(
+    VAR_NAMES = "file",
+    FILE_PATH = folder,
+    ID_PATH_REGEX = "obs-([0-9]+)[.]json$",
+    ID_ENTITY_PATH = NA_character_,
+    MERGE_ID_VAR = "id"
+  )
+  withr::local_options(dataquieR.ELEMENT_MISSMATCH_CHECKTYPE = "subset_u")
+
+  expect_warning(
+    result <- .util_add_computed_file_paths(
+      study_data, meta_data, VAR_NAMES, rules
+    ),
+    "Some IDs extracted"
+  )
+  expect_equal(basename(result$ModifiedStudyData$file[[1]]), ".obs-1.json")
+  expect_true(is.na(result$ModifiedStudyData$file[[2]]))
+})
+
+test_that("prep_add_computed_variables resolves file-only rules", {
+  skip_on_cran()
+  folder <- withr::local_tempdir()
+  writeLines('{"id":"1"}', file.path(folder, "obs-1.json"))
+
+  study_data <- data.frame(id = "1")
+  meta_data <- data.frame(
+    VAR_NAMES = c("id", "file"),
+    DATA_TYPE = c(DATA_TYPES$STRING, DATA_TYPES$STRING),
+    MISSING_LIST = NA_character_,
+    JUMP_LIST = NA_character_
+  )
+  rules <- data.frame(
+    VAR_NAMES = "file",
+    COMPUTATION_RULE = NA_character_,
+    FILE_PATH = folder,
+    ID_PATH_REGEX = "obs-([0-9]+)[.]json$",
+    ID_ENTITY_PATH = NA_character_,
+    MERGE_ID_VAR = "id"
+  )
+
+  result <- suppressMessages(prep_add_computed_variables(
+    study_data = study_data,
+    meta_data = meta_data,
+    label_col = VAR_NAMES,
+    rules = rules,
+    use_value_labels = FALSE
+  ))
+  expect_equal(basename(result$ModifiedStudyData$file), "obs-1.json")
+})
+
+test_that("file computation excludes files without extractable IDs", {
+  skip_on_cran()
+  folder <- withr::local_tempdir()
+  writeLines('{"id":"1"}', file.path(folder, "obs-1.json"))
+  writeLines('{"id":"unknown"}', file.path(folder, "obs-other.json"))
+
+  study_data <- data.frame(id = "1")
+  meta_data <- data.frame(VAR_NAMES = c("id", "file"))
+  rules <- data.frame(
+    VAR_NAMES = "file",
+    FILE_PATH = folder,
+    ID_PATH_REGEX = "obs-([0-9]+)[.]json$",
+    ID_ENTITY_PATH = NA_character_,
+    MERGE_ID_VAR = "id"
+  )
+
+  expect_warning(
+    result <- .util_add_computed_file_paths(
+      study_data, meta_data, VAR_NAMES, rules
+    ),
+    "Could not extract IDs"
+  )
+  expect_equal(basename(result$ModifiedStudyData$file), "obs-1.json")
+})
+
+test_that("file computation ignores rules without item metadata", {
+  skip_on_cran()
+  folder <- withr::local_tempdir()
+  writeLines('{"id":"1"}', file.path(folder, "obs-1.json"))
+
+  study_data <- data.frame(id = "1")
+  meta_data <- data.frame(VAR_NAMES = c("id", "file"))
+  rules <- data.frame(
+    VAR_NAMES = c("file", "unknown_file"),
+    FILE_PATH = folder,
+    ID_PATH_REGEX = "obs-([0-9]+)[.]json$",
+    ID_ENTITY_PATH = NA_character_,
+    MERGE_ID_VAR = "id"
+  )
+
+  result <- suppressMessages(.util_add_computed_file_paths(
+    study_data, meta_data, VAR_NAMES, rules
+  ))
+  expect_equal(basename(result$ModifiedStudyData$file), "obs-1.json")
+  expect_false("unknown_file" %in% names(result$ModifiedStudyData))
+})
+
+test_that("file computation keeps majority format and regex ID precedence", {
+  skip_on_cran()
+  folder <- withr::local_tempdir()
+  writeLines('{"id":"1"}', file.path(folder, "obs-1.json"))
+  writeLines('{"id":"2"}', file.path(folder, "obs-2.json"))
+  writeLines("<obs><id>3</id></obs>", file.path(folder, "obs-3.xml"))
+
+  study_data <- data.frame(id = c("1", "2"))
+  meta_data <- data.frame(VAR_NAMES = c("id", "file"))
+  rules <- data.frame(
+    VAR_NAMES = "file",
+    FILE_PATH = folder,
+    ID_PATH_REGEX = "obs-([0-9]+)[.]json$",
+    ID_ENTITY_PATH = ".id",
+    MERGE_ID_VAR = "id"
+  )
+
+  expect_warning(
+    result <- suppressMessages(.util_add_computed_file_paths(
+      study_data, meta_data, VAR_NAMES, rules
+    )),
+    "Both ID_PATH_REGEX and ID_ENTITY_PATH"
+  )
+  expect_equal(basename(result$ModifiedStudyData$file),
+    c("obs-1.json", "obs-2.json"))
+
+  rules[["ID_PATH_REGEX"]] <- NA_character_
+  rules[["ID_ENTITY_PATH"]] <- NA_character_
+  expect_error(suppressMessages(.util_add_computed_file_paths(
+    study_data, meta_data, VAR_NAMES, rules
+  )), "None of ID_PATH_REGEX and ID_ENTITY_PATH")
+})
+
+test_that("file computation selects XML when XML files are the majority", {
+  skip_on_cran()
+  folder <- withr::local_tempdir()
+  writeLines('{"id":"1"}', file.path(folder, "obs-1.json"))
+  writeLines("<obs><id>2</id></obs>", file.path(folder, "obs-2.xml"))
+  writeLines("<obs><id>3</id></obs>", file.path(folder, "obs-3.xml"))
+
+  study_data <- data.frame(id = c("2", "3"))
+  meta_data <- data.frame(VAR_NAMES = c("id", "file"))
+  rules <- data.frame(
+    VAR_NAMES = "file",
+    FILE_PATH = folder,
+    ID_PATH_REGEX = "obs-([0-9]+)[.]xml$",
+    ID_ENTITY_PATH = NA_character_,
+    MERGE_ID_VAR = "id"
+  )
+
+  result <- suppressMessages(.util_add_computed_file_paths(
+    study_data, meta_data, VAR_NAMES, rules
+  ))
+  expect_equal(basename(result$ModifiedStudyData$file),
+    c("obs-2.xml", "obs-3.xml"))
+})
+
 test_that("prep_add_computed_variables applies DATA_PREPARATION split routes", {
   skip_on_cran()
 

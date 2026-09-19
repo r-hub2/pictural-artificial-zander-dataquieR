@@ -49,15 +49,19 @@ test_that("util_render_report_scope_tree creates assessment tree grids", {
   expect_match(html, "Expected results", fixed = TRUE)
   expect_match(html, "Assessed items", fixed = TRUE)
   expect_match(html, "Assessed groups", fixed = TRUE)
-  expect_match(html, "<th>Computed</th>", fixed = TRUE)
+  expect_match(html, "<th>Computed results</th>", fixed = TRUE)
   expect_false(grepl("<th>Classified</th>", html, fixed = TRUE))
   expect_false(grepl("Results with a grade", html, fixed = TRUE))
   expect_false(grepl("Expected classifications", html, fixed = TRUE))
   expect_match(html, "Result coverage", fixed = TRUE)
   expect_match(html, "dq-report-scope-header-help", fixed = TRUE)
   expect_match(html, "not applicable by definition", fixed = TRUE)
-  expect_false(grepl("intrinsic", html, ignore.case = TRUE))
-  expect_match(html, "DQ_OBS concept coverage", fixed = TRUE)
+  expect_match(
+    html,
+    "Checks not applicable by definition affect result coverage only",
+    fixed = TRUE
+  )
+  expect_match(html, "Reference concept coverage", fixed = TRUE)
   expect_match(
     html,
     "computed results divided by expected results",
@@ -65,7 +69,7 @@ test_that("util_render_report_scope_tree creates assessment tree grids", {
   )
   expect_match(
     html,
-    "requested divided by the total number of applicable reference concepts",
+    "generated calls, divided by the concepts mapped to this assessment",
     fixed = TRUE
   )
   expect_match(html, "Item-level assessment scope", fixed = TRUE)
@@ -81,21 +85,28 @@ test_that("util_render_report_scope_tree creates assessment tree grids", {
   expect_match(
     html,
     paste(
-      "The requested percentage is the number of distinct reference concepts",
-      "requested divided by the total number of applicable reference concepts."
+      "The requested percentage counts distinct concepts requested by",
+      "generated calls, divided by the concepts mapped to this assessment",
+      "entity plus published DQ_OBS concepts without a static entity mapping."
     ),
     fixed = TRUE
   )
   expect_match(
     html,
     paste(
-      "Each concept is counted once; unrequested concepts are excluded from",
-      "these two percentages."
+      paste(
+        "Checks not applicable by definition affect result coverage only;",
+        "they do"
+      ),
+      "not remove a reference concept from this denominator."
     ),
     fixed = TRUE
   )
   expect_match(html, "Requested concepts not computed", fixed = TRUE)
   expect_match(html, "Reference concepts not requested", fixed = TRUE)
+  expect_match(html, "Published concepts without a static entity mapping",
+    fixed = TRUE)
+  expect_match(html, "DQconceptNew.html", fixed = TRUE)
 })
 
 test_that("scope-tree tables keep tree parent-child relationships", {
@@ -927,6 +938,39 @@ test_that("variable-group concept coverage uses its reachable DQ_OBS subtree", {
   expect_gt(length(concepts[["possible"]]), length(concepts[["assessed"]]))
 })
 
+test_that("published reference goals are counted without losing extensions", {
+  published <- util_report_scope_published_concepts()
+  unmapped <- util_report_scope_unmapped_reference_concepts()
+  expect_length(published, 37L)
+  expect_length(unmapped, 12L)
+  expect_true(all(names(unmapped) %in% names(published)))
+  mapped <- unique(unlist(lapply(
+    c("item", "variable_group", "segment", "dataframe"),
+    util_report_scope_target_indicator_ids
+  ), use.names = FALSE))
+  expect_setequal(names(unmapped), setdiff(names(published), mapped))
+  expect_identical(unname(published[["DQ_3_2_3_2"]]),
+    "Intra-class rel.")
+
+  concepts <- util_report_scope_variable_group_concepts(
+    assessed_metrics = c("Missing responses", "Inter-Class reliability"),
+    concept_scope = list(),
+    requested_metrics = c("Missing responses", "Inter-Class reliability"),
+    computed_metrics = c("Missing responses", "Inter-Class reliability")
+  )
+  expect_true("DQ_MISS" %in% names(concepts[["possible"]]))
+  expect_true("DQ_3_2_3_2" %in% names(concepts[["possible"]]))
+  expect_true("DQ_3_2_3_1" %in% names(concepts[["computed"]]))
+  expect_true(all(names(concepts[["requested"]]) %in%
+        names(concepts[["possible"]])))
+  expect_lte(length(concepts[["requested"]]),
+    length(concepts[["possible"]]))
+  expect_lte(length(concepts[["computed"]]),
+    length(concepts[["requested"]]))
+  expect_lte(length(concepts[["assessed"]]),
+    length(concepts[["requested"]]))
+})
+
 test_that("represented concepts never have an empty denominator", {
   metric <- "Inter-Class reliability"
   mapping <- util_report_scope_variable_group_dqi_metrics(metric)
@@ -1147,6 +1191,13 @@ test_that("scope-tree item denominators distinguish applicability errors", {
   expect_true(util_report_scope_result_is_applicable(
     "com_item_missingness", "v2", report
   ))
+  expect_setequal(
+    unique(unlist(util_report_scope_coverage_concept_ids(
+      coverage,
+      "requested"
+    ))),
+    unique(unlist(util_report_scope_coverage_concept_ids(coverage)))
+  )
 })
 
 test_that("scope-tree uses the actual suffixed call summarized by function", {
@@ -1290,6 +1341,12 @@ test_that("scope-tree concept applicability respects item data types", {
   )
   expect_false(possible[dqi[["abbreviation"]] == "con_rvv_inum"])
   expect_false(possible[dqi[["abbreviation"]] == "con_rvv_unum"])
+
+  static_ids <- util_report_scope_target_indicator_ids("item", numeric_report)
+  expect_true(all(dqi[["IndicatorID"]][
+    dqi[["Level"]] == 3L &
+      dqi[["abbreviation"]] %in% c("con_rvv_inum", "con_rvv_itdat")
+  ] %in% static_ids))
 })
 
 test_that("scope-tree maps the joint shape-or-scale result to both concepts", {
@@ -1332,8 +1389,11 @@ test_that("scope-tree maps the joint shape-or-scale result to both concepts", {
     node$concept_coverage,
     node$concept_items
   )
-  possible_ids <- util_report_scope_target_indicator_ids("item", report)
-  dqi <- util_get_concept_info("dqi")
+  possible_ids <- union(
+    util_report_scope_target_indicator_ids("item", report),
+    names(util_report_scope_unmapped_reference_concepts())
+  )
+  dqi <- util_report_scope_reference_dqi()
   possible_accuracy_ids <- unique(dqi$IndicatorID[
     dqi$Level == 3L &
       dqi$Dimension == "Accuracy" &
@@ -1369,6 +1429,112 @@ test_that("scope-tree maps the joint shape-or-scale result to both concepts", {
     tooltip,
     "separate metric values were not computed",
     fixed = TRUE
+  )
+})
+
+test_that("end digits assesses shape and proportion, not scale", {
+  report <- structure(list(),
+    class = "dataquieR_resultset2",
+    matrix_list = structure(list(),
+      function2category = c(acc_end_digits = "Accuracy")
+    ),
+    meta_data = data.frame(
+      VAR_NAMES = "numeric_item",
+      DATA_TYPE = DATA_TYPES$FLOAT,
+      COMPUTED_VARIABLE_ROLE = "",
+      stringsAsFactors = FALSE
+    )
+  )
+  this <- new.env(parent = emptyenv())
+  this$result <- data.frame(
+    VAR_NAMES = "numeric_item",
+    function_name = "acc_end_digits",
+    indicator_metric = "FLG_acc_ud_shape",
+    values_raw = 0,
+    class = "Ok",
+    stringsAsFactors = FALSE
+  )
+  coverage <- util_report_scope_item_coverage(
+    report,
+    structure(list(), this = this)
+  )
+  node <- util_report_scope_item_tree_nodes(
+    data.frame(
+      Dimension = "Accuracy",
+      "No. DQ indicators" = 1,
+      check.names = FALSE
+    ),
+    report,
+    item_coverage = coverage
+  )
+
+  expect_identical(nrow(coverage), 1L)
+  expect_setequal(
+    util_report_scope_coverage_concept_ids(coverage)[[1]],
+    c("DQ_3_2_1_4", "DQ_3_2_1_6")
+  )
+  expect_setequal(
+    names(node$concept_items$computed),
+    c("DQ_3_2_1_4", "DQ_3_2_1_6")
+  )
+  expect_false("DQ_3_2_1_5" %in% names(node$concept_items$computed))
+  expect_match(coverage$indicator_label, "end-digit", ignore.case = TRUE)
+})
+
+test_that("joint concepts survive aggregation of two checks on one item", {
+  report <- structure(list(),
+    class = "dataquieR_resultset2",
+    matrix_list = structure(list(),
+      function2category = c(
+        acc_end_digits = "Accuracy",
+        acc_shape_or_scale = "Accuracy"
+      )
+    ),
+    meta_data = data.frame(
+      VAR_NAMES = "numeric_item",
+      DATA_TYPE = DATA_TYPES$FLOAT,
+      COMPUTED_VARIABLE_ROLE = "",
+      stringsAsFactors = FALSE
+    )
+  )
+  this <- new.env(parent = emptyenv())
+  this$result <- data.frame(
+    VAR_NAMES = rep("numeric_item", 2),
+    function_name = c("acc_end_digits", "acc_shape_or_scale"),
+    indicator_metric = rep("FLG_acc_ud_shape", 2),
+    values_raw = c(0, 0),
+    class = c("Ok", "Ok"),
+    stringsAsFactors = FALSE
+  )
+  coverage <- util_report_scope_item_coverage(
+    report,
+    structure(list(), this = this)
+  )
+
+  expect_identical(nrow(coverage), 1L)
+  expect_setequal(
+    util_report_scope_coverage_concept_ids(coverage)[[1]],
+    c("DQ_3_2_1_4", "DQ_3_2_1_5", "DQ_3_2_1_6")
+  )
+  expect_length(coverage$joint_assessments[[1]], 2L)
+
+  this$result$values_raw[[2]] <- NA_real_
+  this$result$class[[2]] <- NA_character_
+  partial <- util_report_scope_item_coverage(
+    report,
+    structure(list(), this = this)
+  )
+  expect_setequal(
+    util_report_scope_coverage_concept_ids(partial, "requested")[[1]],
+    c("DQ_3_2_1_4", "DQ_3_2_1_5", "DQ_3_2_1_6")
+  )
+  expect_setequal(
+    util_report_scope_coverage_concept_ids(partial, "computed")[[1]],
+    c("DQ_3_2_1_4", "DQ_3_2_1_6")
+  )
+  expect_setequal(
+    util_report_scope_coverage_concept_ids(partial, "classified")[[1]],
+    c("DQ_3_2_1_4", "DQ_3_2_1_6")
   )
 })
 

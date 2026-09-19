@@ -448,7 +448,9 @@
   if (length(only_roles) == 1 && !util_empty(only_roles)) {
     only_roles <- util_parse_assignments(only_roles)
   } else {
-    if (length(only_roles) != 1) {
+    # Unlisted (for example, experimental) functions use the default roles.
+    # Multiple DQ_OBS entries, however, are an inconsistent mapping.
+    if (length(only_roles) > 1) {
       util_warning(
         c(
           "Internal warning, sorry; please report: not exactly",

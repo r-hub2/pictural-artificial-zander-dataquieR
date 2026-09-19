@@ -1748,12 +1748,16 @@ util_by_header_from_args <- function(by_call) {
 #' @noRd
 util_compact_dq_report_by_call_from_env <- function(env = parent.frame()) {
   safe_get <- function(name) {
-    if (!exists(name, envir = env, inherits = FALSE)) {
-      return(NULL)
+    if (exists(name, envir = env, inherits = FALSE)) {
+      value <- tryCatch(get(name, envir = env, inherits = FALSE),
+        error = function(e) NULL
+      )
+    } else {
+      dots <- tryCatch(get("dots", envir = env, inherits = FALSE),
+        error = function(e) NULL
+      )
+      value <- if (is.list(dots)) dots[[name]] else NULL
     }
-    value <- tryCatch(get(name, envir = env, inherits = FALSE),
-      error = function(e) NULL
-    )
     if (rlang::is_missing(value)) {
       return(NULL)
     }
@@ -1816,6 +1820,7 @@ util_compact_dq_report_by_call_from_env <- function(env = parent.frame()) {
   named_args <- c(
     "meta_data_v2",
     "dimensions",
+    "filter_indicator_functions",
     "segment_column",
     "strata_column",
     "segment_select",

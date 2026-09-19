@@ -23,7 +23,8 @@
 #' @importFrom ggplot2 expansion waiver scale_color_gradientn
 #' @export
 #' @return the printed object
-print.ReportSummaryTable <- function(x, relative = lifecycle::deprecated(),
+print.ReportSummaryTable <- function(
+  x, relative = lifecycle::deprecated(),
   dt = FALSE,
   fillContainer = FALSE,
   displayValues = FALSE,
@@ -34,7 +35,8 @@ print.ReportSummaryTable <- function(x, relative = lifecycle::deprecated(),
       dataquieR.droplevels_ReportSummaryTable_default
     ),
   ...,
-  flip_mode = "auto") {
+  flip_mode = "auto"
+) {
   relative_arg_is_present <- lifecycle::is_present(relative)
   if (relative_arg_is_present) {
     explicit_relative <- relative
@@ -183,25 +185,31 @@ print.ReportSummaryTable <- function(x, relative = lifecycle::deprecated(),
 
   levs <- unique(tb$variable)
 
-  if (length(levs[grep("int_", levs)]) == 0 &&
-      length(levs[grep("com_", levs)]) == 0 &&
-      length(levs[grep("con_", levs)]) == 0 &&
-      length(levs[grep("acc_", levs)]) == 0) {
+  if (length(levs[grep("^int_", levs)]) == 0 &&
+      length(levs[grep("^com_", levs)]) == 0 &&
+      length(levs[grep("^con_", levs)]) == 0 &&
+      length(levs[grep("^acc_", levs)]) == 0) {
     tb$variable <- factor(tb$variable,
       levels = levs
     )
   } else {
     # Historical alphabetic sorting of levels removed here.
-    levs_int <- levs[grep("int_", levs)]
-    levs_com <- levs[grep("com_", levs)]
-    levs_con <- levs[grep("con_", levs)]
-    levs_acc <- levs[grep("acc_", levs)]
+    levs_int <- levs[grep("^int_", levs)]
+    levs_com <- levs[grep("^com_", levs)]
+    levs_con <- levs[grep("^con_", levs)]
+    levs_acc <- levs[grep("^acc_", levs)]
+
+    levs_remaining <- setdiff(
+      levs,
+      Reduce(union, c(levs_int, levs_com, levs_con, levs_acc))
+    )
 
     # order the factor levels
     tb$variable <- factor(tb$variable,
       levels = c(
         levs_int, levs_com,
-        levs_con, levs_acc
+        levs_con, levs_acc,
+        levs_remaining
       )
     )
   }
@@ -1088,11 +1096,13 @@ util_segment_missingness_grading_bands <- function(x, axis_limit) {
     threshold <- as.numeric(bar_context$threshold_value)
     if (is.finite(threshold)) {
       if (identical(bar_context$direction, "above")) {
-        rules <- c(Normal = sprintf("[0;%s]", threshold),
+        rules <- c(
+          Normal = sprintf("[0;%s]", threshold),
           Critical = sprintf("(%s;Inf]", threshold)
         )
       } else {
-        rules <- c(Critical = sprintf("[0;%s)", threshold),
+        rules <- c(
+          Critical = sprintf("[0;%s)", threshold),
           Normal = sprintf("[%s;Inf]", threshold)
         )
       }

@@ -60,6 +60,7 @@ Other options:
 \code{\link{dataquieR.guess_missing_codes}},
 \code{\link{dataquieR.html_table_backend}},
 \code{\link{dataquieR.ignore_empty_vars}},
+\code{\link{dataquieR.json.schema.strict.mode}},
 \code{\link{dataquieR.lang}},
 \code{\link{dataquieR.lazy_plots}},
 \code{\link{dataquieR.lazy_plots_cache}},

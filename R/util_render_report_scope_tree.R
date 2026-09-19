@@ -81,7 +81,7 @@ util_render_report_scope_tree_table <- function(node) {
   } else {
     "Assessed groups"
   }
-  computed_label <- "Computed"
+  computed_label <- "Computed results"
   possible_label <- "Expected results"
   coverage_label <- "Result coverage"
   assessed_unit <- if (item_level) {
@@ -109,22 +109,31 @@ util_render_report_scope_tree_table <- function(node) {
       "required for grading is unavailable. Select a value for details."
     )
   )
-  concept_label <- "DQ_OBS concept coverage"
+  concept_label <- "Reference concept coverage"
   concept_help <- paste(
     paste(
-      "The requested percentage is the number of distinct reference concepts",
-      "requested divided by the total number of applicable reference concepts."
+      "The requested percentage counts distinct concepts requested by",
+      "generated calls, divided by the concepts mapped to this assessment",
+      "entity plus published DQ_OBS concepts without a static entity mapping.",
+      "Package-specific mapped concepts also count as possible targets.",
+      "Direct results can cover a published concept even without a static",
+      "entity mapping."
     ),
     paste(
-      "Concepts that are not applicable by definition are excluded from this",
-      "denominator."
+      paste(
+        "Checks not applicable by definition affect result coverage only;",
+        "they do"
+      ),
+      "not remove a reference concept from this denominator."
     ),
     paste(
       "The computed and classified percentages use the number of requested",
       "concepts as their denominator. Their numerators count concepts with at",
       "least one computed result and concepts that were also classified,",
       "respectively. Each concept is counted once; unrequested concepts are",
-      "excluded from these two percentages. Select a value for details."
+      "excluded from these two percentages. Published concept:",
+      "https://dataquality.qihs.uni-greifswald.de/DQconceptNew.html.",
+      "Select a value for details."
     )
   )
   open_depth <- 1L
@@ -416,14 +425,13 @@ util_report_scope_item_tree_nodes <- function(
   if (!"computations" %in% colnames(item_coverage)) {
     item_coverage[["computations"]] <- item_coverage[["classifications"]]
   }
-  coverage_concepts <- util_report_scope_coverage_concept_ids(item_coverage)
-  concept_ids_for <- function(keep) {
-    unique(unlist(coverage_concepts[keep], use.names = FALSE))
+  concept_ids_for <- function(status) {
+    unique(unlist(
+      util_report_scope_coverage_concept_ids(item_coverage, status),
+      use.names = FALSE
+    ))
   }
-  represented_indicator_ids <- concept_ids_for(rep(
-    TRUE,
-    length(coverage_concepts)
-  ))
+  represented_indicator_ids <- concept_ids_for("represented")
   possible_indicator_ids <- item_possible_indicator_ids
   if (is.null(possible_indicator_ids)) {
     possible_indicator_ids <- util_report_scope_target_indicator_ids(
@@ -434,6 +442,10 @@ util_report_scope_item_tree_nodes <- function(
   possible_indicator_ids <- union(
     possible_indicator_ids,
     represented_indicator_ids
+  )
+  possible_indicator_ids <- union(
+    possible_indicator_ids,
+    names(util_report_scope_unmapped_reference_concepts())
   )
   hierarchy <- util_report_scope_dqi_hierarchy(represented_indicator_ids)
   children <- lapply(hierarchy, util_report_scope_item_hierarchy_node,
@@ -450,17 +462,15 @@ util_report_scope_item_tree_nodes <- function(
   concept_items <- util_report_scope_dqi_concepts(
     possible_indicator_ids,
     target_entity = "item",
-    assessed_ids = concept_ids_for(item_coverage$classifications > 0L),
-    computed_ids = concept_ids_for(item_coverage$computations > 0L),
-    requested_ids = concept_ids_for(item_coverage$applicable),
+    assessed_ids = concept_ids_for("classified"),
+    computed_ids = concept_ids_for("computed"),
+    requested_ids = concept_ids_for("requested"),
     report = report,
     possible_ids = possible_indicator_ids
   )
   if ("indicator_metric" %in% colnames(item_coverage)) {
     concept_items[["joint_assessments"]] <-
-      util_report_scope_joint_assessment_labels(
-        item_coverage$indicator_metric
-      )
+      util_report_scope_joint_assessment_labels(item_coverage)
   }
   concept_coverage <- util_report_scope_tree_concept_coverage(
     length(concept_items[["assessed"]]),
@@ -491,6 +501,73 @@ util_report_scope_item_tree_nodes <- function(
   )
 }
 
+#' Published DQ_OBS concepts used as fixed reference goals
+#'
+#' The website contains a subset of the package's indicator metadata. Keep its
+#' published level-three identifiers in the package so report denominators do
+#' not depend on network access or on which indicators have implementations.
+#' Source: https://dataquality.qihs.uni-greifswald.de/DQconceptNew.html
+#'
+#' @noRd
+util_report_scope_published_concepts <- function() {
+  path <- system.file("report_scope_published_concepts.csv",
+    package = "dataquieR")
+  util_stop_if_not("Published DQ_OBS concept list is missing" = nzchar(path))
+  concepts <- utils::read.csv(path, stringsAsFactors = FALSE)
+  util_stop_if_not(
+    "Published DQ_OBS concept list has invalid columns" =
+      identical(names(concepts), c("IndicatorID", "public_name")),
+    "Published DQ_OBS concept identifiers must be unique" =
+      !anyDuplicated(concepts[["IndicatorID"]]),
+    "Published DQ_OBS concept identifiers and labels must not be empty" =
+      all(!is.na(concepts[["IndicatorID"]]) &
+          nzchar(concepts[["IndicatorID"]]) &
+          !is.na(concepts[["public_name"]]) &
+          nzchar(concepts[["public_name"]]))
+  )
+  stats::setNames(concepts[["public_name"]], concepts[["IndicatorID"]])
+}
+
+#' Published concepts without a static function-to-entity mapping
+#'
+#' @noRd
+util_report_scope_unmapped_reference_concepts <- function() {
+  published <- util_report_scope_published_concepts()
+  ids <- c(
+    "DQ_1_1_3_1", "DQ_1_1_3_2", "DQ_1_2_4_2", "DQ_2_1_2_4",
+    "DQ_3_1_1_4", "DQ_3_1_1_5", "DQ_3_2_2_1", "DQ_3_2_2_2",
+    "DQ_3_2_2_3", "DQ_3_2_3_1", "DQ_3_2_3_2", "DQ_3_2_3_3"
+  )
+  published[ids]
+}
+
+#' Add published concepts absent from the package's DQI metadata
+#'
+#' @noRd
+util_report_scope_reference_dqi <- function() {
+  dqi <- util_get_concept_info("dqi")
+  published <- util_report_scope_published_concepts()
+  missing_ids <- setdiff(names(published), dqi[["IndicatorID"]])
+  for (id in missing_ids) {
+    parent_id <- sub("_[0-9]+$", "_0", id)
+    parent <- dqi[dqi[["IndicatorID"]] == parent_id, , drop = FALSE]
+    if (nrow(parent) != 1L) {
+      next
+    }
+    parent[["Level"]] <- 3L
+    parent[["IndicatorID"]] <- id
+    parent[["Parent_Element_ID"]] <- parent_id
+    parent[["Name"]] <- unname(published[[id]])
+    parent[["public_name"]] <- unname(published[[id]])
+    parent[["abbreviation"]] <- NA_character_
+    parent[["function_R"]] <- NA_character_
+    parent[["order_nr"]] <- parent[["order_nr"]] +
+      as.integer(sub("^.*_", "", id)) * 10L
+    dqi <- rbind(dqi, parent)
+  }
+  dqi
+}
+
 #' Build the represented part of the DQ_OBS indicator hierarchy
 #'
 #' @param indicator_ids Level-three DQ_OBS indicator identifiers to display.
@@ -504,7 +581,7 @@ util_report_scope_dqi_hierarchy <- function(indicator_ids) {
   if (!length(indicator_ids)) {
     return(list())
   }
-  dqi <- util_get_concept_info("dqi")
+  dqi <- util_report_scope_reference_dqi()
   columns <- c(
     "Level", "IndicatorID", "Parent_Element_ID", "Name", "public_name",
     "order_nr"
@@ -591,9 +668,11 @@ util_report_scope_item_hierarchy_node <- function(
     any(ids %in% spec[["indicator_ids"]])
   }, logical(1))
   rows <- coverage_rows[in_scope, , drop = FALSE]
-  row_concepts <- coverage_concepts[in_scope]
-  concept_ids_for <- function(keep) {
-    unique(unlist(row_concepts[keep], use.names = FALSE))
+  concept_ids_for <- function(status) {
+    unique(unlist(
+      util_report_scope_coverage_concept_ids(rows, status),
+      use.names = FALSE
+    ))
   }
   coverage <- util_report_scope_tree_coverage(
     sum(rows$classifications),
@@ -603,15 +682,15 @@ util_report_scope_item_hierarchy_node <- function(
   concept_items <- util_report_scope_dqi_concepts(
     spec[["indicator_ids"]],
     target_entity = "item",
-    assessed_ids = concept_ids_for(rows$classifications > 0L),
-    computed_ids = concept_ids_for(rows$computations > 0L),
-    requested_ids = concept_ids_for(rows$applicable),
+    assessed_ids = concept_ids_for("classified"),
+    computed_ids = concept_ids_for("computed"),
+    requested_ids = concept_ids_for("requested"),
     report = report,
     possible_ids = possible_indicator_ids
   )
   if ("indicator_metric" %in% colnames(rows)) {
     concept_items[["joint_assessments"]] <-
-      util_report_scope_joint_assessment_labels(rows$indicator_metric)
+      util_report_scope_joint_assessment_labels(rows)
   }
   util_report_scope_tree_node(
     sprintf(
@@ -666,7 +745,7 @@ util_report_scope_dqi_concepts <- function(
   report = NULL,
   possible_ids = NULL
 ) {
-  dqi <- util_get_concept_info("dqi")
+  dqi <- util_report_scope_reference_dqi()
   if (is.null(possible_ids)) {
     possible_ids <- util_report_scope_target_indicator_ids(
       target_entity,
@@ -1096,6 +1175,7 @@ util_report_scope_normalize_indicator_metrics <- function(metrics) {
 #' @noRd
 util_report_scope_joint_assessment_mapping <- function() {
   empty <- data.frame(
+    function_name = character(),
     indicator_metric = character(),
     indicator_id = character(),
     assessment_label = character(),
@@ -1113,7 +1193,8 @@ util_report_scope_joint_assessment_mapping <- function() {
   util_stop_if_not(
     "Joint-assessment mappings must have the expected columns" =
       identical(colnames(mapping), required),
-    "Joint-assessment metrics and indicator IDs must not be empty" =
+    "Joint-assessment functions, metrics and IDs must not be empty" =
+      !any(util_empty(mapping$function_name)) &&
       !any(util_empty(mapping$indicator_metric)) &&
       !any(util_empty(mapping$indicator_id))
   )
@@ -1125,11 +1206,16 @@ util_report_scope_joint_assessment_mapping <- function() {
 #' Resolve all DQ_OBS concepts represented by result metrics
 #'
 #' @param metrics Indicator-metric column names or normalized abbreviations.
+#' @param function_names Functions that produced the metrics.
 #'
 #' @return A list of character vectors aligned with `metrics`.
 #'
 #' @noRd
-util_report_scope_metric_indicator_ids <- function(metrics) {
+util_report_scope_metric_indicator_ids <- function(
+  metrics,
+  function_names = rep(NA_character_, length(metrics))
+) {
+  util_stop_if_not(length(metrics) == length(function_names))
   abbreviations <- util_report_scope_normalize_indicator_metrics(metrics)
   dqi <- util_get_concept_info("dqi")
   dqi <- dqi[
@@ -1140,10 +1226,15 @@ util_report_scope_metric_indicator_ids <- function(metrics) {
     drop = FALSE
   ]
   joint <- util_report_scope_joint_assessment_mapping()
-  lapply(abbreviations, function(abbreviation) {
-    joint_ids <- joint$indicator_id[
-      joint$indicator_metric == abbreviation
-    ]
+  lapply(seq_along(abbreviations), function(index) {
+    abbreviation <- abbreviations[[index]]
+    joint_ids <- character()
+    if (!is.na(function_names[[index]])) {
+      joint_ids <- joint$indicator_id[
+        joint$function_name == function_names[[index]] &
+          joint$indicator_metric == abbreviation
+      ]
+    }
     ids <- if (length(joint_ids)) {
       joint_ids
     } else {
@@ -1155,16 +1246,27 @@ util_report_scope_metric_indicator_ids <- function(metrics) {
 
 #' Resolve labels for joint DQ_OBS assessments
 #'
-#' @param metrics Indicator-metric column names or normalized abbreviations.
+#' @param metrics Indicator-metric column names or normalized abbreviations,
+#'   or item-coverage rows with precomputed joint-assessment labels.
+#' @param function_names Functions that produced the metrics.
 #'
 #' @return Unique non-empty labels from the declarative mapping.
 #'
 #' @noRd
-util_report_scope_joint_assessment_labels <- function(metrics) {
+util_report_scope_joint_assessment_labels <- function(
+  metrics,
+  function_names = rep(NA_character_, length(metrics))
+) {
+  if (is.data.frame(metrics) &&
+      "joint_assessments" %in% colnames(metrics)) {
+    return(unique(unlist(metrics$joint_assessments, use.names = FALSE)))
+  }
+  util_stop_if_not(length(metrics) == length(function_names))
   mapping <- util_report_scope_joint_assessment_mapping()
   abbreviations <- util_report_scope_normalize_indicator_metrics(metrics)
   labels <- mapping$assessment_label[
-    mapping$indicator_metric %in% abbreviations
+    paste(mapping$function_name, mapping$indicator_metric, sep = "\f") %in%
+      paste(function_names, abbreviations, sep = "\f")
   ]
   unique(labels[!is.na(labels) & !util_empty(labels)])
 }
@@ -1172,20 +1274,51 @@ util_report_scope_joint_assessment_labels <- function(metrics) {
 #' Resolve DQ_OBS concepts represented by item-coverage rows
 #'
 #' @param coverage Item-coverage data frame.
+#' @param status Which concept status to retrieve.
 #'
 #' @return A list of character vectors aligned with the coverage rows.
 #'
 #' @noRd
-util_report_scope_coverage_concept_ids <- function(coverage) {
+util_report_scope_coverage_concept_ids <- function(
+  coverage,
+  status = c("represented", "requested", "computed", "classified")
+) {
+  status <- match.arg(status)
   if (!nrow(coverage)) {
     return(list())
   }
-  if ("indicator_metric" %in% colnames(coverage)) {
-    return(util_report_scope_metric_indicator_ids(
-      coverage$indicator_metric
-    ))
+  column <- switch(status,
+    represented = "concept_ids",
+    requested = "requested_concept_ids",
+    computed = "computed_concept_ids",
+    classified = "classified_concept_ids"
+  )
+  if (column %in% colnames(coverage)) {
+    return(coverage[[column]])
   }
-  lapply(coverage$indicator_id, function(id) id)
+  if ("indicator_metric" %in% colnames(coverage)) {
+    ids <- util_report_scope_metric_indicator_ids(
+      coverage$indicator_metric,
+      if ("function_name" %in% colnames(coverage)) {
+        coverage$function_name
+      } else {
+        rep(NA_character_, nrow(coverage))
+      }
+    )
+  } else {
+    ids <- lapply(coverage$indicator_id, function(id) id)
+  }
+  if (status == "represented") {
+    return(ids)
+  }
+  include <- switch(status,
+    requested = coverage$applicable,
+    computed = coverage$computations > 0L,
+    classified = coverage$classifications > 0L
+  )
+  lapply(seq_along(ids), function(index) {
+    if (isTRUE(include[[index]])) ids[[index]] else character()
+  })
 }
 
 #' Identify aggregate variable-group metrics
@@ -1432,6 +1565,11 @@ util_report_scope_item_coverage <- function(report = NULL, repsum = NULL) {
     applicable = logical(0),
     stringsAsFactors = FALSE
   )
+  empty$concept_ids <- I(list())
+  empty$requested_concept_ids <- I(list())
+  empty$computed_concept_ids <- I(list())
+  empty$classified_concept_ids <- I(list())
+  empty$joint_assessments <- I(list())
   if (is.null(report)) {
     return(empty)
   }
@@ -1471,16 +1609,6 @@ util_report_scope_item_coverage <- function(report = NULL, repsum = NULL) {
     has_call_name <- !is.na(call_names) & !util_empty(call_names)
     result[[".scope_call_name"]][has_call_name] <- call_names[has_call_name]
   }
-  applicable_calls <- unique(result[[".scope_call_name"]])
-  applicable_calls <- applicable_calls[vapply(
-    applicable_calls,
-    util_report_scope_function_is_applicable,
-    logical(1),
-    report = report
-  )]
-  result <- result[result[[".scope_call_name"]] %in% applicable_calls, ,
-    drop = FALSE
-  ]
   applicable_results <- mapply(
     util_report_scope_result_is_applicable,
     function_name = result[[".scope_call_name"]],
@@ -1546,8 +1674,8 @@ util_report_scope_item_coverage <- function(report = NULL, repsum = NULL) {
   ]
   joint <- util_report_scope_joint_assessment_mapping()
   joint_labels <- joint$assessment_label[match(
-    abbreviations,
-    joint$indicator_metric
+    paste(result$function_name, abbreviations, sep = "\f"),
+    paste(joint$function_name, joint$indicator_metric, sep = "\f")
   )]
   has_joint_label <- !is.na(joint_labels) & !util_empty(joint_labels)
   result$indicator_label[has_joint_label] <- joint_labels[has_joint_label]
@@ -1557,7 +1685,13 @@ util_report_scope_item_coverage <- function(report = NULL, repsum = NULL) {
   split_rows <- split(result, key)
   rows <- lapply(split_rows, function(x) {
     applicable <- x[[".scope_applicable"]]
-    data.frame(
+    concepts_for <- function(keep) {
+      unique(unlist(util_report_scope_metric_indicator_ids(
+        x$indicator_metric[keep],
+        x$function_name[keep]
+      ), use.names = FALSE))
+    }
+    row <- data.frame(
       dimension = x$dimension[[1]],
       function_name = x$function_name[[1]],
       indicator_metric = x$indicator_metric[[1]],
@@ -1570,6 +1704,23 @@ util_report_scope_item_coverage <- function(report = NULL, repsum = NULL) {
       applicable = any(applicable),
       stringsAsFactors = FALSE
     )
+    row$concept_ids <- I(list(concepts_for(rep(TRUE, nrow(x)))))
+    # Concept coverage records calls and their results independently of
+    # intrinsic applicability. Applicability remains part of result coverage.
+    row$requested_concept_ids <- I(list(concepts_for(rep(TRUE, nrow(x)))))
+    row$computed_concept_ids <- I(list(concepts_for(
+      x[[".scope_computed"]]
+    )))
+    row$classified_concept_ids <- I(list(concepts_for(
+      !is.na(x$class)
+    )))
+    row$joint_assessments <- I(list(
+      util_report_scope_joint_assessment_labels(
+        x$indicator_metric[x[[".scope_computed"]]],
+        x$function_name[x[[".scope_computed"]]]
+      )
+    ))
+    row
   })
   rows <- do.call(rbind, rows)
   variables <- unique(rows$variable)
@@ -1785,11 +1936,15 @@ util_report_scope_variable_group_concepts <- function(
     return(empty)
   }
 
-  dqi <- util_get_concept_info("dqi")
+  dqi <- util_report_scope_reference_dqi()
   dqi <- dqi[dqi[["Level"]] == 3L, , drop = FALSE]
   reachable_ids <- util_report_scope_target_indicator_ids(
     "variable_group",
     report = report
+  )
+  reachable_ids <- union(
+    reachable_ids,
+    names(util_report_scope_unmapped_reference_concepts())
   )
   assessed_mapping <- util_report_scope_variable_group_dqi_metrics(
     assessed_metrics
@@ -1899,26 +2054,12 @@ util_report_scope_target_indicator_ids <- function(
   dqi <- util_get_concept_info("dqi")
   indicator_functions <- unique(dqi[["function_R"]][dqi[["Level"]] == 3L])
   target_functions <- intersect(target_functions, indicator_functions)
-  target_functions <- target_functions[vapply(
-    target_functions,
-    util_report_scope_function_is_applicable,
-    logical(1),
-    report = report
-  )]
   if (!length(target_functions)) {
     return(character())
   }
   indicator_ids <- dqi[["IndicatorID"]][
     dqi[["Level"]] == 3L & dqi[["function_R"]] %in% target_functions
   ]
-  possible_by_data_type <- util_report_scope_indicator_data_type_is_possible(
-    dqi[["abbreviation"]],
-    report
-  )
-  indicator_ids <- intersect(
-    indicator_ids,
-    dqi[["IndicatorID"]][dqi[["Level"]] == 3L & possible_by_data_type]
-  )
   if (target_entity == "variable_group") {
     computed_mapping <- util_get_concept_info("computed_vars_ind_mapping")
     indicator_ids <- c(indicator_ids, dqi[["IndicatorID"]][
@@ -2671,6 +2812,13 @@ util_report_scope_tree_concept_coverage_tooltip <- function(
     names(not_computed) %in% names(requested)
   ]
   not_requested <- possible[setdiff(names(possible), names(requested))]
+  unmapped_reference <- util_report_scope_unmapped_reference_concepts()
+  unmapped_reference <- not_requested[
+    names(not_requested) %in% names(unmapped_reference)
+  ]
+  not_requested <- not_requested[
+    !names(not_requested) %in% names(unmapped_reference)
+  ]
   pretty <- function(values) {
     if (!length(values)) {
       return("None")
@@ -2683,7 +2831,14 @@ util_report_scope_tree_concept_coverage_tooltip <- function(
       "max-height:min(60vh,22em); overflow-y:auto;",
       "padding-right:1.6em; text-align:left;"
     ),
-    htmltools::tags$strong("DQ_OBS concept coverage"),
+    htmltools::tags$strong("Reference concept coverage"),
+    htmltools::tags$br(),
+    htmltools::tags$a(
+      "Published DQ_OBS concept",
+      href = "https://dataquality.qihs.uni-greifswald.de/DQconceptNew.html",
+      target = "_blank",
+      rel = "noopener noreferrer"
+    ),
     htmltools::tags$br(),
     util_report_scope_tree_concept_coverage_label(coverage),
     if (length(joint_assessments)) {
@@ -2742,7 +2897,14 @@ util_report_scope_tree_concept_coverage_tooltip <- function(
       length(not_requested)
     )),
     htmltools::tags$br(),
-    htmltools::HTML(pretty(not_requested))
+    htmltools::HTML(pretty(not_requested)),
+    htmltools::tags$hr(),
+    htmltools::tags$strong(sprintf(
+      "Published concepts without a static entity mapping (%s)",
+      length(unmapped_reference)
+    )),
+    htmltools::tags$br(),
+    htmltools::HTML(pretty(unmapped_reference))
   )), collapse = "")
 }
 

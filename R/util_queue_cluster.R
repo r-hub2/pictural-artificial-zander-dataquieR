@@ -165,8 +165,10 @@ util_queue_cluster_setup <- function(n_nodes,
         for (i in seq_len(concurrency)) {
           rs <- callr::r_session$new(wait = FALSE)
           # https://github.com/r-lib/callr/issues/90#issuecomment-444278278
-          rs$poll_process(1000)
-          rs$read()
+          while (rs$get_state() == "starting") {
+            rs$poll_process(1000)
+            rs$read()
+          }
 
           private$tasks <- tibble::add_row(private$tasks,
             id = paste0(".idle-", i), idle = TRUE, state = "ready", # state = "running", # nolint: line_length_linter.

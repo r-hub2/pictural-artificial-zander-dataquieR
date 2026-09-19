@@ -27,6 +27,10 @@ with labels of variables}
 \href{https://help.redcap.ualberta.ca/help-and-faq/project-best-practices/data-quality/example-data-quality-rules}{\code{REDcap} help} and
 \href{https://docs.google.com/document/d/1l3nGBgqqPKi5PtMe75g7q0dny8QzGMd_/edit?tab=t.0}{\code{REDcap} how-to})
 that defines, how to compute the new values
+\item \code{FILE_PATH}: Path to a folder of structured text files (JSON/XML) for generating a variable with a file-based value
+\item \code{MERGE_ID_VAR}: ID Variable for matching structured text files to variable rows
+\item \code{ID_PATH_REGEX}: How to get an ID for matching from the file path (first regex match group).
+\item \code{ID_ENTITY_PATH}: How to find an ID for matching in the JSON/XML file. A jq program or an XPath depending on file type.
 }}
 
 \item{use_value_labels}{\link{logical} In rules for factors, use the value labels,

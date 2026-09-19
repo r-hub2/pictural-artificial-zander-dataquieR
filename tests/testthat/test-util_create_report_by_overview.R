@@ -23,6 +23,24 @@ test_that("dq_report_by overview call text is compact", {
   expect_false(grepl("^function", call_text))
 })
 
+test_that("dq_report_by overview includes scope arguments passed in dots", {
+  env <- new.env(parent = emptyenv())
+  env$study_data <- data.frame(a = 1)
+  env$dots <- list(
+    dimensions = "int",
+    filter_indicator_functions = "^int_datatype_matrix$"
+  )
+
+  call_text <- util_compact_dq_report_by_call_from_env(env)
+
+  expect_match(call_text, 'dimensions = "int"', fixed = TRUE)
+  expect_match(call_text,
+    'filter_indicator_functions = "^int_datatype_matrix$"',
+    fixed = TRUE
+  )
+  expect_match(call_text, "segment_column = NULL", fixed = TRUE)
+})
+
 test_that("dq_report_by overview call text handles scalar edge values", {
   env <- new.env(parent = emptyenv())
   env$study_data <- "/tmp/study.csv"

@@ -90,6 +90,48 @@ test_that("pretty-print result wrapper retains literal stored calls", {
   )
 })
 
+test_that("pretty-print shows flagged data only outside a pipeline", {
+  skip_on_cran()
+  skip_if_not_installed("htmltools")
+
+  dqr <- structure(
+    list(
+      SummaryData = data.frame(Variables = "var1", value = 1),
+      FlaggedStudyData = data.frame(flagged = "var1")
+    ),
+    class = c("dataquieR_result", "list")
+  )
+  attr(dqr, "call") <- quote(acc_test(study_data, meta_data))
+  testthat::local_mocked_bindings(
+    util_all_ind_functions = function() "acc_test",
+    util_get_concept_info = function(...) {
+      data.frame(Reportoutputs = "")
+    },
+    util_html_table = function(tb, ...) {
+      htmltools::span(paste(names(tb), collapse = "|"))
+    },
+    util_generate_anchor_tag = function(...) htmltools::span(),
+    util_generate_anchor_link = function(...) htmltools::span(),
+    util_link_result_references = identity
+  )
+
+  render <- function() {
+    out <- util_pretty_print(
+      dqr,
+      nm = "acc_test.var1",
+      is_single_var = TRUE,
+      meta_data = data.frame(VAR_NAMES = "var1"),
+      label_col = VAR_NAMES,
+      use_plot_ly = FALSE,
+      dir = tempdir()
+    )
+    paste(as.character(out), collapse = "")
+  }
+
+  expect_match(without_pipeline(render()), "flagged")
+  expect_no_match(with_pipeline(render()), "flagged")
+})
+
 test_that("pretty-print filters result slots using concept report outputs", {
   skip_on_cran()
   skip_if_not_installed("htmltools")

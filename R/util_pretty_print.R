@@ -13,12 +13,14 @@
 #'
 #' @return `dqr`, invisibly, with the attribute `dq_layout` set.
 #' @noRd
-util_mark_result_layout <- function(dqr,
+util_mark_result_layout <- function(
+  dqr,
   layout = c(
     "default",
     "1-column-fig-top",
     "2-columns-fig-left"
-  )) {
+  )
+) {
   layout <- match.arg(layout)
   attr(dqr, "dq_layout") <- layout
   invisible(dqr)
@@ -101,14 +103,16 @@ util_result_group_heading <- function(dqr) {
 #'
 #' @return `shiny.tag` `div.dataquieR_result`.
 #' @noRd
-util_wrap_dqr_result <- function(inner,
+util_wrap_dqr_result <- function(
+  inner,
   nm,
   dqr,
   errors,
   warnings,
   messages,
   extra_classes = NULL,
-  popup_nm = NULL) {
+  popup_nm = NULL
+) {
   cll <- util_attr(dqr, "call", exact = TRUE)
   if (is.language(cll)) {
     cll <- deparse(cll)
@@ -155,7 +159,8 @@ util_wrap_dqr_result <- function(inner,
 #' @return `htmltools` compatible object with rendered `dqr`
 #'
 #' @noRd
-util_pretty_print <- function(dqr, nm, is_single_var,
+util_pretty_print <- function(
+  dqr, nm, is_single_var,
   meta_data,
   meta_data_cross_item = NULL,
   label_col,
@@ -166,7 +171,8 @@ util_pretty_print <- function(dqr, nm, is_single_var,
   ssi_link_target = c("role", "cross_item"),
   rotate_for_one_row = TRUE,
   link_variables = TRUE,
-  popup_nm = NULL) {
+  popup_nm = NULL
+) {
   variable_name_context <- FALSE
   ssi_link_target <- util_match_arg(ssi_link_target)
   util_expect_scalar(rotate_for_one_row, check_type = is.logical)
@@ -780,14 +786,37 @@ util_pretty_print <- function(dqr, nm, is_single_var,
       }
     }
 
-    x <- htmltools::tagList(
-      anchor = anchor,
-      link = link,
-      result_group_heading,
-      caption,
-      x,
-      y
-    )
+    if (!isTRUE(dynGet("old_called_in_pipeline",
+          ifnotfound = .called_in_pipeline
+        )) &&
+        "FlaggedStudyData" %in% names(dqr)) {
+      z <- util_html_table(
+        dqr[["FlaggedStudyData"]],
+        meta_data = meta_data,
+        label_col = label_col,
+        dl_fn = nm,
+        rotate_for_one_row = TRUE,
+        df_escape = TRUE
+      )
+      x <- htmltools::tagList(
+        anchor = anchor,
+        link = link,
+        result_group_heading,
+        caption,
+        x,
+        y,
+        z
+      )
+    } else {
+      x <- htmltools::tagList(
+        anchor = anchor,
+        link = link,
+        result_group_heading,
+        caption,
+        x,
+        y
+      )
+    }
     # the link is most easily added here, but still in the wrong position, so
     # later it must be moved
   }

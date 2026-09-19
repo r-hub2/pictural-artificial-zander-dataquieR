@@ -98,11 +98,23 @@ util_rbind <- function(..., data_frames_list = list()) {
   }
 
   if (tnsltd) {
+    translated_labels <- unlist(lapply(all_cn, as.character),
+      use.names = FALSE
+    )
+    untranslated_labels <- unlist(lapply(all_cn, names),
+      use.names = FALSE
+    )
+    untranslated_labels <- untranslated_labels[
+      match(colnames(r), translated_labels)
+    ]
+    missing_labels <- is.na(untranslated_labels) |
+      !nzchar(untranslated_labels)
+    untranslated_labels[missing_labels] <- colnames(r)[missing_labels]
     util_translated_colnames(r) <-
       util_attach_attr(
         colnames(r),
         class = "dataquieR_translated",
-        names = unname(unlist(unique(lapply(all_cn, function(x) setNames(nm = as.character(x), ifelse(names(x) == "", as.character(x), names(x)))[colnames(r)])))), # nolint: line_length_linter.
+        names = untranslated_labels,
         ns = ns,
         lang = lang
       )

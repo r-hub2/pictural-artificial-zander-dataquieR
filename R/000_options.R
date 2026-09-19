@@ -961,3 +961,15 @@ dataquieR.parallel.show.info_default <- FALSE
 #' @family options
 #' @docType data
 NULL
+
+dataquieR.json.schema.strict.mode_default <- FALSE
+#' @name dataquieR.json.schema.strict.mode
+#' @title Use strict mode when loading JSON schemas
+#' @description
+#' Logical. Sets the value of strict mode when calling
+#' ajv through jsonvalidate::json_schema. This controls
+#' e.g. if ajv throws errors on unknown schema keywords.
+#'
+#' @family options
+#' @docType data
+NULL

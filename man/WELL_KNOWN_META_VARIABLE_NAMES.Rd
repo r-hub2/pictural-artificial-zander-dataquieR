@@ -67,6 +67,7 @@
 \alias{UNIVARIATE_OUTLIER_CHECKTYPE}
 \alias{N_RULES}
 \alias{EXTENDED_DATA_TYPE}
+\alias{STRUCTURED_TEXT_SCHEMA}
 \alias{COMPUTED_VARIABLE_ROLE}
 \alias{ITEM_TYPE}
 \title{Well-known metadata column names, names of metadata columns}
@@ -154,6 +155,7 @@ environment directly, i.e. they are available directly by their names too:
 \item \link{UNIVARIATE_OUTLIER_CHECKTYPE}
 \item \link{N_RULES}
 \item \link{EXTENDED_DATA_TYPE}
+\item \link{STRUCTURED_TEXT_SCHEMA}
 \item \link{COMPUTED_VARIABLE_ROLE}
 \item \link{ITEM_TYPE}
 }
